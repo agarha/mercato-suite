@@ -3,10 +3,21 @@
   "namespace": "Mercato\\Shippo",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-orders@^0.1"],
-  "capabilities": ["mercato_shippo_admin"],
-  "tables": ["wp_mercato_shippo_shipments", "wp_mercato_shippo_events"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_shippo_admin"
+  ],
+  "tables": [
+    "wp_mercato_shippo_shipments",
+    "wp_mercato_shippo_events"
+  ],
   "tier": "adapter",
   "feature_flag": "mercato.integration.shippo",
   "phase": "P2"
 }
+

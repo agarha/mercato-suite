@@ -3,10 +3,23 @@
   "namespace": "Mercato\\Subscriptions",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-payouts@^0.1"],
-  "capabilities": ["mercato_subscriptions_read", "mercato_subscriptions_write", "mercato_subscriptions_admin"],
-  "tables": ["wp_mercato_subscriptions", "wp_mercato_subscription_events"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-payouts@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_subscriptions_read",
+    "mercato_subscriptions_write",
+    "mercato_subscriptions_admin"
+  ],
+  "tables": [
+    "wp_mercato_subscriptions",
+    "wp_mercato_subscription_events"
+  ],
   "tier": "domain",
   "feature_flag": "mercato.subscriptions",
   "phase": "P3"
 }
+

@@ -3,10 +3,20 @@
   "namespace": "Mercato\\Avalara",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-tax-engine@^0.1"],
-  "capabilities": ["mercato_avalara_admin"],
-  "tables": ["wp_mercato_avalara_events"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-tax-engine@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_avalara_admin"
+  ],
+  "tables": [
+    "wp_mercato_avalara_events"
+  ],
   "tier": "adapter",
   "feature_flag": "mercato.integration.avalara",
   "phase": "P3"
 }
+
