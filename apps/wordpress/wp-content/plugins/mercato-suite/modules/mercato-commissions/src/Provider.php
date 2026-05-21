@@ -24,6 +24,8 @@ final class Provider extends ServiceProvider
             return;
         }
 
-        \add_action('mercato_suborder_created', [$this->container->get(Calculator::class), 'recordForSuborder'], 10, 1);
+        $calculator = $this->container->get(Calculator::class);
+        \add_action('mercato_suborder_created', [$calculator, 'recordForSuborder'], 10, 1);
+        \add_action('mercato_refund_created', [$calculator, 'reverseForRefund'], 10, 1);
     }
 }

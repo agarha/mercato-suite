@@ -23,7 +23,8 @@
   ],
   "tables": [
     "wp_mercato_commissions",
-    "wp_mercato_commission_rules"
+    "wp_mercato_commission_rules",
+    "wp_mercato_commission_reversals"
   ],
   "tier": "domain",
   "feature_flag": "mercato.commissions"

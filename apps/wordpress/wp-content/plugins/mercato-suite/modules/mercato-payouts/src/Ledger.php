@@ -51,13 +51,31 @@ final class Ledger
         $tenantId ??= $this->tenantResolver->currentTenantId();
         $commissions = $wpdb->prefix . 'mercato_commissions';
         $balances = $wpdb->prefix . 'mercato_vendor_balances';
+        $reversals = $wpdb->prefix . 'mercato_commission_reversals';
         $rows = $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM `{$commissions}` WHERE `tenant_id` = %d AND `status` = 'pending' AND `available_at` <= UTC_TIMESTAMP(3)", $tenantId),
+            $wpdb->prepare(
+                "SELECT c.*,
+                    GREATEST(0, c.`vendor_net_minor` - COALESCE(SUM(r.`vendor_net_reversal_minor`), 0)) AS releasable_minor
+                 FROM `{$commissions}` c
+                 LEFT JOIN `{$reversals}` r
+                   ON r.`tenant_id` = c.`tenant_id`
+                  AND r.`commission_id` = c.`commission_id`
+                 WHERE c.`tenant_id` = %d
+                   AND c.`status` = 'pending'
+                   AND c.`available_at` <= UTC_TIMESTAMP(3)
+                 GROUP BY c.`commission_id`",
+                $tenantId
+            ),
             ARRAY_A
         ) ?: [];
 
         foreach ($rows as $row) {
-            $amount = (int) $row['vendor_net_minor'];
+            $amount = (int) $row['releasable_minor'];
+            if ($amount < 1) {
+                $wpdb->update($commissions, ['status' => 'reversed'], ['commission_id' => (int) $row['commission_id']]);
+                continue;
+            }
+
             $wpdb->query($wpdb->prepare(
                 "UPDATE `{$balances}` SET `pending_minor` = GREATEST(0, `pending_minor` - %d), `available_minor` = `available_minor` + %d WHERE `tenant_id` = %d AND `vendor_id` = %d AND `currency` = %s",
                 $amount,

@@ -34,6 +34,7 @@ $envArgs = @(
     "-e", "WORDPRESS_TABLE_PREFIX=wp_"
 )
 
+docker run --rm @envArgs --volumes-from $cid --network $network wordpress:cli wp plugin deactivate mercato-suite --path=/var/www/html 2>$null | Out-Null
 docker run --rm @envArgs --volumes-from $cid --network $network wordpress:cli wp plugin activate mercato-suite --path=/var/www/html | Out-Null
 
 $rand = Get-Random
@@ -110,6 +111,23 @@ echo `$order->get_id();
 "@
 $orderId = docker run --rm @envArgs --volumes-from $cid --network $network wordpress:cli wp eval $orderCode --path=/var/www/html
 
+$paymentIntent = Invoke-MercatoApi -Path "/stripe/payment-intents" -Method "POST" -Body @{
+    wc_order_id = [int]$orderId
+    amount_minor = 6400
+    currency = "USD"
+}
+$paidSuborders = Invoke-MercatoApi -Path "/orders/$orderId/payment-complete" -Method "POST" -Body @{}
+$suborderId = [int]$paidSuborders[0].suborder_id
+$stripeRefund = Invoke-MercatoApi -Path "/stripe/refunds" -Method "POST" -Body @{
+    payment_intent_id = $paymentIntent.stripe_payment_intent_id
+    amount_minor = 1600
+}
+$orderRefund = Invoke-MercatoApi -Path "/orders/suborders/$suborderId/refund" -Method "POST" -Body @{
+    amount_minor = 1600
+    stripe_refund_id = $stripeRefund.stripe_refund_id
+    reason = "smoke_partial_refund"
+}
+
 $mysql = (docker ps --filter name=mercato-mysql --format "{{.ID}}" | Select-Object -First 1)
 docker exec $mysql mysql -umercato -pmercato -D mercato -e "UPDATE wp_mercato_commissions SET available_at=UTC_TIMESTAMP(3) WHERE status='pending';" | Out-Null
 
@@ -130,7 +148,7 @@ $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POS
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 
-$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id);"
+$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id);"
 
 $result = [pscustomobject]@{
     vendor_id = $vendor.vendor_id
@@ -142,6 +160,10 @@ $result = [pscustomobject]@{
     media_id = $media.media_id
     media_scan = $mediaDone.scan_status
     order_id = $orderId
+    suborder_id = $suborderId
+    payment_intent_id = $paymentIntent.stripe_payment_intent_id
+    stripe_refund_id = $stripeRefund.stripe_refund_id
+    order_refund_id = $orderRefund.refund_id
     payout_batch = $batch
     stripe_execute = $stripeExecute
     delivery_id = $delivery.delivery_id
@@ -155,6 +177,12 @@ if ($mediaDone.scan_status -ne "clean") { throw "Media scan did not complete cle
 if ([int]$stripeExecute.created -lt 1) { throw "Stripe transfer was not created." }
 if ($reconciliation.status -ne "passed") { throw "Reconciliation did not pass." }
 if (!$delivery.delivery_id) { throw "SendGrid delivery was not created." }
-if (($summary -join "`n") -notmatch "approved") { throw "KYC did not approve the vendor." }
+$joinedSummary = $summary -join "`n"
+if ($joinedSummary -notmatch "approved") { throw "KYC did not approve the vendor." }
+if ($joinedSummary -notmatch "stripe_payment_intents\s+1") { throw "Stripe PaymentIntent was not recorded." }
+if ($joinedSummary -notmatch "stripe_refunds\s+1") { throw "Stripe refund was not recorded." }
+if ($joinedSummary -notmatch "order_refunds\s+1") { throw "Order refund was not recorded." }
+if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission reversal was not recorded." }
+if ($joinedSummary -notmatch "partially_refunded\s+1600") { throw "Partial refund did not update suborder payment status." }
 
 $result | ConvertTo-Json -Depth 10

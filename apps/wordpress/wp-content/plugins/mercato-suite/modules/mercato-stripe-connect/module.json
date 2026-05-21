@@ -8,6 +8,7 @@
   ],
   "provides_events": [
     "mercato.stripe.account.updated.v1",
+    "mercato.stripe.payment_intent.created.v1",
     "mercato.stripe.transfer.created.v1",
     "mercato.stripe.transfer.failed.v1",
     "mercato.stripe.charge.refunded.v1",
@@ -22,7 +23,9 @@
   "tables": [
     "wp_mercato_stripe_accounts",
     "wp_mercato_stripe_webhook_events",
-    "wp_mercato_stripe_transfers"
+    "wp_mercato_stripe_transfers",
+    "wp_mercato_stripe_payment_intents",
+    "wp_mercato_stripe_refunds"
   ],
   "tier": "adapter",
   "feature_flag": "mercato.integration.stripe"

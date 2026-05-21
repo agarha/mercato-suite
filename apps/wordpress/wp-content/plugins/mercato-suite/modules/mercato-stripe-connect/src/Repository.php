@@ -102,6 +102,104 @@ final class Repository
     }
 
     /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function createPaymentIntent(array $data): array
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $wcOrderId = (int) ($data['wc_order_id'] ?? 0);
+        $amount = (int) ($data['amount_minor'] ?? 0);
+        $currency = \strtoupper((string) ($data['currency'] ?? 'USD'));
+        if ($wcOrderId < 1 || $amount < 1) {
+            throw new RuntimeException('Order ID and positive amount are required.');
+        }
+
+        $stripe = $this->isLiveConfigured()
+            ? $this->createStripePaymentIntent($amount, $currency)
+            : [
+                'id' => 'pi_test_' . $tenantId . '_' . $wcOrderId . '_' . \bin2hex(\random_bytes(4)),
+                'client_secret' => 'pi_test_secret_' . \bin2hex(\random_bytes(8)),
+                'status' => 'succeeded',
+            ];
+
+        $table = $wpdb->prefix . 'mercato_stripe_payment_intents';
+        $wpdb->insert($table, [
+            'tenant_id' => $tenantId,
+            'wc_order_id' => $wcOrderId,
+            'stripe_payment_intent_id' => (string) $stripe['id'],
+            'amount_minor' => $amount,
+            'currency' => $currency,
+            'status' => (string) ($stripe['status'] ?? 'requires_confirmation'),
+            'client_secret' => (string) ($stripe['client_secret'] ?? ''),
+        ]);
+
+        if ($wpdb->insert_id < 1) {
+            throw new RuntimeException('Unable to record Stripe PaymentIntent: ' . (string) $wpdb->last_error);
+        }
+
+        $intent = $this->paymentIntent((string) $stripe['id']);
+        $this->outbox->publish('mercato.stripe.payment_intent.created.v1', $intent, (string) $intent['payment_intent_id'], $tenantId);
+
+        return $intent;
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function createRefund(array $data): array
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $paymentIntentId = (string) ($data['payment_intent_id'] ?? '');
+        $amount = (int) ($data['amount_minor'] ?? 0);
+        if ($paymentIntentId === '' || $amount < 1) {
+            throw new RuntimeException('PaymentIntent ID and positive amount are required.');
+        }
+
+        $intent = $this->paymentIntent($paymentIntentId);
+        $stripe = $this->isLiveConfigured()
+            ? $this->createStripeRefund($paymentIntentId, $amount)
+            : [
+                'id' => 're_test_' . \bin2hex(\random_bytes(8)),
+                'status' => 'succeeded',
+            ];
+
+        $table = $wpdb->prefix . 'mercato_stripe_refunds';
+        $wpdb->insert($table, [
+            'tenant_id' => $tenantId,
+            'wc_order_id' => (int) $intent['wc_order_id'],
+            'stripe_payment_intent_id' => $paymentIntentId,
+            'stripe_refund_id' => (string) $stripe['id'],
+            'amount_minor' => $amount,
+            'currency' => (string) $intent['currency'],
+            'status' => (string) ($stripe['status'] ?? 'succeeded'),
+        ]);
+
+        if ($wpdb->insert_id < 1) {
+            throw new RuntimeException('Unable to record Stripe refund: ' . (string) $wpdb->last_error);
+        }
+
+        $refund = [
+            'stripe_refund_row_id' => (int) $wpdb->insert_id,
+            'tenant_id' => $tenantId,
+            'wc_order_id' => (int) $intent['wc_order_id'],
+            'payment_intent_id' => $paymentIntentId,
+            'stripe_refund_id' => (string) $stripe['id'],
+            'amount_minor' => $amount,
+            'currency' => (string) $intent['currency'],
+            'status' => (string) ($stripe['status'] ?? 'succeeded'),
+        ];
+        $this->outbox->publish('mercato.stripe.charge.refunded.v1', $refund, (string) $refund['stripe_refund_id'], $tenantId);
+
+        return $refund;
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public function executePayoutBatch(int $batchId): array
@@ -284,6 +382,52 @@ final class Repository
         ]);
 
         return (string) $response['id'];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function paymentIntent(string $paymentIntentId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_stripe_payment_intents';
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `stripe_payment_intent_id` = %s",
+            $this->tenantResolver->currentTenantId(),
+            $paymentIntentId
+        ), ARRAY_A);
+
+        if (!\is_array($row)) {
+            throw new RuntimeException('Stripe PaymentIntent not found.');
+        }
+
+        return $row;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function createStripePaymentIntent(int $amountMinor, string $currency): array
+    {
+        return $this->stripeRequest('POST', 'https://api.stripe.com/v1/payment_intents', [
+            'amount' => (string) $amountMinor,
+            'currency' => \strtolower($currency),
+            'automatic_payment_methods[enabled]' => 'true',
+            'confirm' => 'true',
+            'payment_method' => 'pm_card_visa',
+        ]);
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function createStripeRefund(string $paymentIntentId, int $amountMinor): array
+    {
+        return $this->stripeRequest('POST', 'https://api.stripe.com/v1/refunds', [
+            'payment_intent' => $paymentIntentId,
+            'amount' => (string) $amountMinor,
+        ]);
     }
 
     /**

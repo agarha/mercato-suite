@@ -74,6 +74,63 @@ final class Calculator
     }
 
     /**
+     * @param array<string,mixed> $refund
+     * @return array<string,mixed>
+     */
+    public function reverseForRefund(array $refund): array
+    {
+        global $wpdb;
+
+        $tenantId = (int) ($refund['tenant_id'] ?? $this->tenantResolver->currentTenantId());
+        $suborderId = (int) $refund['suborder_id'];
+        $refundId = (int) $refund['refund_id'];
+        $amount = (int) $refund['amount_minor'];
+        $commission = $this->findBySuborder($tenantId, $suborderId);
+        $grossMinor = (int) $commission['gross_minor'];
+        if ($grossMinor < 1) {
+            throw new RuntimeException('Commission has no refundable gross amount.');
+        }
+
+        $commissionReversal = (int) \round(((int) $commission['commission_minor']) * $amount / $grossMinor);
+        $vendorNetReversal = \max(0, $amount - $commissionReversal);
+        $reversals = $wpdb->prefix . 'mercato_commission_reversals';
+        $wpdb->replace($reversals, [
+            'tenant_id' => $tenantId,
+            'commission_id' => (int) $commission['commission_id'],
+            'refund_id' => $refundId,
+            'suborder_id' => $suborderId,
+            'vendor_id' => (int) $commission['vendor_id'],
+            'currency' => (string) $commission['currency'],
+            'gross_reversal_minor' => $amount,
+            'commission_reversal_minor' => $commissionReversal,
+            'vendor_net_reversal_minor' => $vendorNetReversal,
+        ]);
+
+        if ($wpdb->insert_id < 1 && $wpdb->last_error !== '') {
+            throw new RuntimeException('Unable to record commission reversal: ' . (string) $wpdb->last_error);
+        }
+
+        $totalReversed = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(`gross_reversal_minor`), 0) FROM `{$reversals}` WHERE `tenant_id` = %d AND `commission_id` = %d",
+            $tenantId,
+            (int) $commission['commission_id']
+        ));
+
+        if ($totalReversed >= $grossMinor) {
+            $wpdb->update($wpdb->prefix . 'mercato_commissions', ['status' => 'reversed'], [
+                'tenant_id' => $tenantId,
+                'commission_id' => (int) $commission['commission_id'],
+            ]);
+        }
+
+        $this->reduceVendorBalance($tenantId, (int) $commission['vendor_id'], (string) $commission['currency'], $vendorNetReversal);
+        $reversal = $this->findReversal($tenantId, $refundId, (int) $commission['commission_id']);
+        $this->outbox->publish('mercato.commission.reversed.v1', $reversal, (string) $reversal['reversal_id'], $tenantId);
+
+        return $reversal;
+    }
+
+    /**
      * @return array<string,mixed>
      */
     private function findBySuborder(int $tenantId, int $suborderId): array
@@ -88,6 +145,62 @@ final class Calculator
 
         if (!$row) {
             throw new RuntimeException('Commission not found.');
+        }
+
+        return $row;
+    }
+
+    private function reduceVendorBalance(int $tenantId, int $vendorId, string $currency, int $amount): void
+    {
+        global $wpdb;
+
+        if ($amount < 1) {
+            return;
+        }
+
+        $table = $wpdb->prefix . 'mercato_vendor_balances';
+        $balance = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `vendor_id` = %d AND `currency` = %s",
+            $tenantId,
+            $vendorId,
+            $currency
+        ), ARRAY_A);
+
+        if (!\is_array($balance)) {
+            return;
+        }
+
+        $pending = (int) $balance['pending_minor'];
+        $available = (int) $balance['available_minor'];
+        $pendingReduction = \min($pending, $amount);
+        $availableReduction = \min($available, $amount - $pendingReduction);
+        $wpdb->update($table, [
+            'pending_minor' => $pending - $pendingReduction,
+            'available_minor' => $available - $availableReduction,
+        ], [
+            'tenant_id' => $tenantId,
+            'vendor_id' => $vendorId,
+            'currency' => $currency,
+        ]);
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function findReversal(int $tenantId, int $refundId, int $commissionId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_commission_reversals';
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `refund_id` = %d AND `commission_id` = %d",
+            $tenantId,
+            $refundId,
+            $commissionId
+        ), ARRAY_A);
+
+        if (!\is_array($row)) {
+            throw new RuntimeException('Commission reversal not found.');
         }
 
         return $row;

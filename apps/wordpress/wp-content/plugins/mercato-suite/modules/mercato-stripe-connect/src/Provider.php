@@ -52,6 +52,18 @@ final class Provider extends ServiceProvider
                 'callback' => [$this, 'executeBatch'],
                 'permission_callback' => '__return_true',
             ]);
+
+            \register_rest_route('mercato/v1', '/stripe/payment-intents', [
+                'methods' => 'POST',
+                'callback' => [$this, 'createPaymentIntent'],
+                'permission_callback' => '__return_true',
+            ]);
+
+            \register_rest_route('mercato/v1', '/stripe/refunds', [
+                'methods' => 'POST',
+                'callback' => [$this, 'createRefund'],
+                'permission_callback' => '__return_true',
+            ]);
         });
     }
 
@@ -92,6 +104,24 @@ final class Provider extends ServiceProvider
             return new WP_REST_Response($this->repo()->executePayoutBatch((int) $request->get_param('batch_id')), 200);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_stripe_transfer_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function createPaymentIntent(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->repo()->createPaymentIntent((array) $request->get_json_params()), 201);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_stripe_payment_intent_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function createRefund(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->repo()->createRefund((array) $request->get_json_params()), 201);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_stripe_refund_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 
