@@ -111,6 +111,15 @@ final class Ledger
                 'amount_minor' => $amount,
                 'status' => 'scheduled',
             ]);
+
+            $wpdb->update($balances, [
+                'available_minor' => 0,
+                'paid_minor' => (int) $vendor['paid_minor'] + $amount,
+            ], [
+                'tenant_id' => $tenantId,
+                'vendor_id' => (int) $vendor['vendor_id'],
+                'currency' => (string) $vendor['currency'],
+            ]);
         }
 
         $event = ['batch_id' => $batchId, 'tenant_id' => $tenantId, 'total_minor' => $total, 'item_count' => \count($vendors)];
