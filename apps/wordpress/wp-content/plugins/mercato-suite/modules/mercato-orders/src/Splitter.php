@@ -112,6 +112,17 @@ final class Splitter
             'total_minor' => $subtotal,
         ], (string) $suborderId, $tenantId);
 
+        if (\function_exists('do_action')) {
+            \do_action('mercato_suborder_created', [
+                'suborder_id' => $suborderId,
+                'tenant_id' => $tenantId,
+                'wc_order_id' => $order->get_id(),
+                'vendor_id' => $vendorId,
+                'total_minor' => $subtotal,
+                'currency' => $order->get_currency(),
+            ]);
+        }
+
         return $suborderId;
     }
 
