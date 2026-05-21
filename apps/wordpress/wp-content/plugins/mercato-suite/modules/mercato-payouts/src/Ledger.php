@@ -127,4 +127,59 @@ final class Ledger
 
         return $event;
     }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function reconcile(?int $tenantId = null): array
+    {
+        global $wpdb;
+
+        $tenantId ??= $this->tenantResolver->currentTenantId();
+        $items = $wpdb->prefix . 'mercato_payout_items';
+        $transfers = $wpdb->prefix . 'mercato_stripe_transfers';
+        $runs = $wpdb->prefix . 'mercato_reconciliation_runs';
+
+        $ledgerMinor = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(amount_minor), 0) FROM `{$items}` WHERE tenant_id = %d AND status = 'succeeded'",
+            $tenantId
+        ));
+        $providerMinor = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(amount_minor), 0) FROM `{$transfers}` WHERE tenant_id = %d AND status = 'succeeded'",
+            $tenantId
+        ));
+        $driftMinor = $ledgerMinor - $providerMinor;
+        $status = \abs($driftMinor) <= 1 ? 'passed' : 'failed';
+        $upload = \function_exists('wp_upload_bits')
+            ? \wp_upload_bits('mercato-reconciliation-' . $tenantId . '-' . \gmdate('Ymd-His') . '.csv', null, $this->reconciliationCsv($tenantId, $ledgerMinor, $providerMinor, $driftMinor, $status))
+            : ['url' => null, 'error' => null];
+
+        $wpdb->insert($runs, [
+            'tenant_id' => $tenantId,
+            'status' => $status,
+            'ledger_minor' => $ledgerMinor,
+            'provider_minor' => $providerMinor,
+            'drift_minor' => $driftMinor,
+            'report_url' => empty($upload['error']) ? ($upload['url'] ?? null) : null,
+        ]);
+
+        $run = [
+            'run_id' => (int) $wpdb->insert_id,
+            'tenant_id' => $tenantId,
+            'status' => $status,
+            'ledger_minor' => $ledgerMinor,
+            'provider_minor' => $providerMinor,
+            'drift_minor' => $driftMinor,
+            'report_url' => empty($upload['error']) ? ($upload['url'] ?? null) : null,
+        ];
+        $this->outbox->publish('mercato.payout.reconciled.v1', $run, (string) $run['run_id'], $tenantId);
+
+        return $run;
+    }
+
+    private function reconciliationCsv(int $tenantId, int $ledgerMinor, int $providerMinor, int $driftMinor, string $status): string
+    {
+        return "tenant_id,status,ledger_minor,provider_minor,drift_minor,generated_at\n"
+            . $tenantId . ',' . $status . ',' . $ledgerMinor . ',' . $providerMinor . ',' . $driftMinor . ',' . \gmdate('c') . "\n";
+    }
 }

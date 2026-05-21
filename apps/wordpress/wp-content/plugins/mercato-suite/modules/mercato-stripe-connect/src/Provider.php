@@ -78,7 +78,8 @@ final class Provider extends ServiceProvider
         try {
             return new WP_REST_Response($this->repo()->recordWebhook(
                 (array) $request->get_json_params(),
-                (string) $request->get_header('stripe-signature')
+                (string) $request->get_header('stripe-signature'),
+                (string) $request->get_body()
             ), 202);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_stripe_webhook_failed', $e->getMessage(), ['status' => 400]);

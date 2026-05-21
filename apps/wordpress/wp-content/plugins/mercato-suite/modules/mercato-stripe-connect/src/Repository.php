@@ -79,9 +79,11 @@ final class Repository
      * @param array<string,mixed> $payload
      * @return array<string,mixed>
      */
-    public function recordWebhook(array $payload, ?string $signature = null): array
+    public function recordWebhook(array $payload, ?string $signature = null, ?string $rawBody = null): array
     {
         global $wpdb;
+
+        $this->verifyWebhookSignature($rawBody ?? \wp_json_encode($payload, JSON_THROW_ON_ERROR), $signature);
 
         $eventId = (string) ($payload['id'] ?? ('evt_local_' . \bin2hex(\random_bytes(8))));
         $type = (string) ($payload['type'] ?? 'unknown');
@@ -147,7 +149,14 @@ final class Repository
                 ++$created;
             } catch (\Throwable $e) {
                 ++$failed;
-                $wpdb->update($items, ['status' => 'failed'], ['payout_item_id' => (int) $row['payout_item_id'], 'tenant_id' => $tenantId]);
+                $attempts = (int) $row['attempt_count'] + 1;
+                $wpdb->update($items, [
+                    'status' => 'failed',
+                    'attempt_count' => $attempts,
+                    'next_retry_at' => $attempts >= 3 ? null : \gmdate('Y-m-d H:i:s.v', \time() + 86400),
+                    'manual_review_required' => $attempts >= 3 ? 1 : 0,
+                    'last_error' => $e->getMessage(),
+                ], ['payout_item_id' => (int) $row['payout_item_id'], 'tenant_id' => $tenantId]);
                 $this->outbox->publish('mercato.stripe.transfer.failed.v1', [
                     'batch_id' => $batchId,
                     'payout_item_id' => (int) $row['payout_item_id'],
@@ -156,7 +165,53 @@ final class Repository
             }
         }
 
+        $batches = $wpdb->prefix . 'mercato_payout_batches';
+        if ($failed === 0 && $created > 0) {
+            $wpdb->update($batches, ['status' => 'succeeded', 'processed_at' => \gmdate('Y-m-d H:i:s.v')], ['tenant_id' => $tenantId, 'batch_id' => $batchId]);
+            $this->outbox->publish('mercato.payout.succeeded.v1', ['batch_id' => $batchId, 'created' => $created], (string) $batchId, $tenantId);
+        } elseif ($failed > 0) {
+            $wpdb->update($batches, ['status' => 'failed', 'processed_at' => \gmdate('Y-m-d H:i:s.v')], ['tenant_id' => $tenantId, 'batch_id' => $batchId]);
+            $this->outbox->publish('mercato.payout.failed.v1', ['batch_id' => $batchId, 'created' => $created, 'failed' => $failed], (string) $batchId, $tenantId);
+        }
+
         return ['batch_id' => $batchId, 'created' => $created, 'failed' => $failed];
+    }
+
+    private function verifyWebhookSignature(string $rawBody, ?string $signature): void
+    {
+        $secret = (string) \getenv('STRIPE_WEBHOOK_SECRET');
+        if ($secret === '' || \str_contains($secret, 'replace_me')) {
+            return;
+        }
+
+        if ($signature === null || $signature === '') {
+            throw new RuntimeException('Missing Stripe webhook signature.');
+        }
+
+        $parts = [];
+        foreach (\explode(',', $signature) as $part) {
+            [$key, $value] = \array_pad(\explode('=', $part, 2), 2, '');
+            $parts[$key][] = $value;
+        }
+
+        $timestamp = (string) ($parts['t'][0] ?? '');
+        $signatures = $parts['v1'] ?? [];
+        if ($timestamp === '' || $signatures === []) {
+            throw new RuntimeException('Malformed Stripe webhook signature.');
+        }
+
+        if (\abs(\time() - (int) $timestamp) > 300) {
+            throw new RuntimeException('Expired Stripe webhook signature.');
+        }
+
+        $expected = \hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
+        foreach ($signatures as $candidate) {
+            if (\hash_equals($expected, $candidate)) {
+                return;
+            }
+        }
+
+        throw new RuntimeException('Invalid Stripe webhook signature.');
     }
 
     /**
