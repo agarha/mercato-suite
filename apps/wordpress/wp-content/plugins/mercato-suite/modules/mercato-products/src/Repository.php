@@ -153,7 +153,12 @@ final class Repository
             $product->set_sku($this->cleanText((string) $data['sku']));
         }
 
-        return (int) $product->save();
+        $productId = (int) $product->save();
+        if ($productId > 0 && \function_exists('update_post_meta') && isset($data['vendor_id'])) {
+            \update_post_meta($productId, '_mercato_vendor_id', (int) $data['vendor_id']);
+        }
+
+        return $productId;
     }
 
     private function cleanText(string $value): string
