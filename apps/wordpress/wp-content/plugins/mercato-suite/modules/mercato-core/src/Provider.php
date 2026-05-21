@@ -15,6 +15,10 @@ final class Provider extends ServiceProvider
         $this->container->bind(Events\Outbox::class, fn (): Events\Outbox => new Events\Outbox($this->container->get(Tenant\Resolver::class)));
         $this->container->bind(Idempotency\Store::class, fn (): Idempotency\Store => new Idempotency\Store($this->container->get(Tenant\Resolver::class)));
         $this->container->bind(Audit\Writer::class, fn (): Audit\Writer => new Audit\Writer($this->container->get(Tenant\Resolver::class)));
+        $this->container->bind(Observability\Health::class, fn (): Observability\Health => new Observability\Health(
+            $this->container->get(Tenant\Resolver::class),
+            $this->container->get(DB\Migrator::class),
+        ));
         $this->container->bind(RBAC\Engine::class, fn (): RBAC\Engine => new RBAC\Engine($this->container->get(Tenant\Resolver::class)));
         $this->container->bind(WooCommerce\HookAdapter::class, fn (): WooCommerce\HookAdapter => new WooCommerce\HookAdapter($this->container->get(Events\Outbox::class)));
     }
@@ -26,7 +30,29 @@ final class Provider extends ServiceProvider
         if (\function_exists('add_action')) {
             \add_action('admin_menu', [$this, 'registerAdminPages']);
             \add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
+            \add_action('rest_api_init', [$this, 'registerHealthRoutes']);
         }
+    }
+
+    public function registerHealthRoutes(): void
+    {
+        \register_rest_route('mercato/v1', '/health/live', [
+            'methods' => 'GET',
+            'callback' => fn (): \WP_REST_Response => new \WP_REST_Response($this->container->get(Observability\Health::class)->live(), 200),
+            'permission_callback' => [Rest\Permissions::class, 'canPublicHealth'],
+        ]);
+
+        \register_rest_route('mercato/v1', '/health/readiness', [
+            'methods' => 'GET',
+            'callback' => [$this, 'readiness'],
+            'permission_callback' => [Rest\Permissions::class, 'canManage'],
+        ]);
+    }
+
+    public function readiness(): \WP_REST_Response
+    {
+        $health = $this->container->get(Observability\Health::class)->readiness();
+        return new \WP_REST_Response($health, $health['status'] === 'ok' ? 200 : 503);
     }
 
     public function registerAdminPages(): void

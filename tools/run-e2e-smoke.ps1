@@ -38,6 +38,11 @@ if ($unauthorizedStatus -lt 400) {
     throw "Protected product creation route did not reject an unauthenticated request."
 }
 
+$live = Invoke-RestMethod -Uri "$baseUrl/?rest_route=/mercato/v1/health/live" -Method GET
+if ($live.status -ne "ok") {
+    throw "Liveness endpoint failed."
+}
+
 $network = (docker inspect $cid --format "{{range `$name, `$_ := .NetworkSettings.Networks}}{{`$name}}{{end}}")
 $envArgs = @(
     "-e", "WORDPRESS_DB_HOST=mysql",
@@ -160,6 +165,7 @@ $delivery = Invoke-MercatoApi -Path "/sendgrid/send" -Method "POST" -Body @{
 $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POST" -Body @{}
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
+$readiness = Invoke-MercatoApi -Path "/health/readiness"
 
 $summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id);"
 
@@ -185,6 +191,7 @@ $result = [pscustomobject]@{
     report_refunded_minor = $report.refunded_minor
     report_net_gmv_minor = $report.net_gmv_minor
     report_net_take_minor = $report.net_take_minor
+    readiness_status = $readiness.status
     export_id = $export.export_id
     database_summary = $summary
 }
@@ -202,5 +209,6 @@ if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission rev
 if ($joinedSummary -notmatch "partially_refunded\s+1600") { throw "Partial refund did not update suborder payment status." }
 if ([int]$report.refunded_minor -lt 1600) { throw "Dashboard did not include refund totals." }
 if ([int]$report.net_take_minor -lt 1) { throw "Dashboard did not include net take." }
+if ($readiness.status -ne "ok") { throw "Readiness endpoint did not return ok." }
 
 $result | ConvertTo-Json -Depth 10

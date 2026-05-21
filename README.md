@@ -36,12 +36,30 @@ docker compose up --build
 
 Local services:
 
-- WordPress: http://localhost:8080
-- Mailpit: http://localhost:8025
-- MinIO: http://localhost:9001
-- Kafka: localhost:9092
-- MySQL: localhost:3306
-- Redis: localhost:6379
+- WordPress: http://localhost:8092
+- Mailpit: http://localhost:8026
+- MinIO: http://localhost:9003
+- Kafka: localhost:9093
+- MySQL: localhost:3316
+- Redis: localhost:6382
+
+Run the full local verification cycle:
+
+```powershell
+$env:MERCATO_RUN_E2E='1'
+powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1
+```
+
+Run deployment preflight checks against the local stack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\deploy-preflight.ps1
+```
+
+Operational health endpoints:
+
+- Public liveness: `GET /?rest_route=/mercato/v1/health/live`
+- Secured readiness: `GET /?rest_route=/mercato/v1/health/readiness`
 
 ## Repository Layout
 
@@ -61,4 +79,4 @@ tools/                                            Build and automation scripts
 
 ## Current Status
 
-Initial scaffold is in place. The current foundation includes every module named by the documentation suite, with MVP modules marked build-first and post-MVP modules represented as disabled/deferred modules. The first build milestone is a bootable WordPress container with WooCommerce and an activatable `mercato-suite` plugin that can discover and sort the complete module manifest graph.
+MVP/P1 development is active on `codex/e2e-developed`. The local stack includes WordPress/WooCommerce, MySQL, Redis, Kafka, Mailpit, MinIO, and the outbox relay. The E2E smoke cycle covers vendor onboarding, Stripe Connect test-mode, Stripe Identity KYC, S3/MinIO upload, product publishing, WooCommerce order split, PaymentIntent, partial refund, commission reversal, payout, Stripe transfer, SendGrid delivery, reconciliation, net reporting, REST security, and readiness checks.

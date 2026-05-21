@@ -26,6 +26,11 @@ final class Permissions
         return true;
     }
 
+    public static function canPublicHealth(): bool
+    {
+        return true;
+    }
+
     private static function isAuthenticated(): bool
     {
         return \function_exists('is_user_logged_in') && \is_user_logged_in();
