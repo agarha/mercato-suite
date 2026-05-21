@@ -33,15 +33,7 @@ final class Bootstrap
     {
         $this->guardEnvironment();
 
-        $registry = new ModuleRegistry($this->modulesPath);
-        $registry->discover();
-
-        /** @var list<ServiceProvider> $providers */
-        $providers = [];
-
-        foreach ($registry->ordered() as $manifest) {
-            $providers[] = $this->createProvider($manifest);
-        }
+        $providers = $this->providers();
 
         // 1. register() — pure container wiring, no WP calls
         foreach ($providers as $provider) {
@@ -59,6 +51,38 @@ final class Bootstrap
         if (\function_exists('do_action')) {
             \do_action('mercato_suite_booted', \MERCATO_SUITE_VERSION);
         }
+    }
+
+    public function activate(): void
+    {
+        $this->guardEnvironment();
+
+        foreach ($this->providers() as $provider) {
+            $provider->register();
+        }
+
+        if ($this->container->has(DB\Migrator::class)) {
+            $this->container->get(DB\Migrator::class)->migrate();
+        }
+    }
+
+    /**
+     * @return list<ServiceProvider>
+     */
+    private function providers(): array
+    {
+        $registry = new ModuleRegistry($this->modulesPath);
+        $registry->discover();
+
+        /** @var list<ServiceProvider> $providers */
+        $providers = [];
+
+        foreach ($registry->ordered() as $manifest) {
+            $this->loadModuleSource($manifest);
+            $providers[] = $this->createProvider($manifest);
+        }
+
+        return $providers;
     }
 
     private function guardEnvironment(): void
@@ -125,5 +149,22 @@ final class Bootstrap
                 // No-op default for modules that have not implemented Provider yet.
             }
         };
+    }
+
+    private function loadModuleSource(ModuleManifest $manifest): void
+    {
+        $src = $this->modulesPath . '/' . $manifest->slug . '/src';
+
+        if (!\is_dir($src)) {
+            return;
+        }
+
+        $files = \glob($src . '/**/*.php') ?: [];
+        $files = \array_merge(\glob($src . '/*.php') ?: [], $files);
+        \sort($files);
+
+        foreach (\array_unique($files) as $file) {
+            require_once $file;
+        }
     }
 }

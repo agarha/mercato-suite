@@ -25,6 +25,11 @@ require_once MERCATO_SUITE_DIR . '/modules/mercato-core/src/ModuleRegistry.php';
 require_once MERCATO_SUITE_DIR . '/modules/mercato-core/src/ServiceProvider.php';
 require_once MERCATO_SUITE_DIR . '/modules/mercato-core/src/Bootstrap.php';
 
+register_activation_hook(__FILE__, static function (): void {
+    $bootstrap = new \Mercato\Core\Bootstrap(MERCATO_SUITE_DIR . '/modules');
+    $bootstrap->activate();
+});
+
 add_action('plugins_loaded', static function (): void {
     $bootstrap = new \Mercato\Core\Bootstrap(MERCATO_SUITE_DIR . '/modules');
     $bootstrap->boot();

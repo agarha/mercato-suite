@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}mercato_tenants` (
   `display_name`     VARCHAR(255)    NOT NULL,
   `plan_code`        VARCHAR(32)     NOT NULL,
   `isolation_mode`   ENUM('pooled','silo','dedicated') NOT NULL DEFAULT 'pooled',
-  `region_code`      CHAR(8)         NOT NULL DEFAULT 'us-east-1',
+  `region_code`      VARCHAR(32)     NOT NULL DEFAULT 'us-east-1',
   `status`           ENUM('provisioning','active','suspended','closed') NOT NULL DEFAULT 'provisioning',
   `blog_id`          BIGINT UNSIGNED DEFAULT NULL,
   `control_plane_id` VARCHAR(64)     NOT NULL,
@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}mercato_rbac_user_roles` (
   `tenant_id`  BIGINT UNSIGNED NOT NULL,
   `user_id`    BIGINT UNSIGNED NOT NULL,
   `role_id`    INT UNSIGNED    NOT NULL,
-  `scope_type` VARCHAR(32)     DEFAULT NULL,
-  `scope_id`   BIGINT UNSIGNED DEFAULT NULL,
+  `scope_type` VARCHAR(32)     NOT NULL DEFAULT '',
+  `scope_id`   BIGINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`tenant_id`, `user_id`, `role_id`, `scope_type`, `scope_id`),
   KEY `idx_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
