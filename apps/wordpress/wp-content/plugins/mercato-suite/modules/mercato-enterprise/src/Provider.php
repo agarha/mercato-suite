@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Enterprise;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -31,22 +32,22 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/enterprise/tenants', [
                 'methods' => 'POST',
                 'callback' => [$this, 'provision'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
             \register_rest_route('mercato/v1', '/enterprise/capabilities', [
                 'methods' => 'GET',
                 'callback' => [$this, 'capabilities'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
             \register_rest_route('mercato/v1', '/enterprise/features/(?P<feature>[A-Za-z0-9_.-]+)', [
                 'methods' => 'POST',
                 'callback' => [$this, 'setFlag'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
             \register_rest_route('mercato/v1', '/enterprise/branding', [
                 'methods' => 'POST',
                 'callback' => [$this, 'branding'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

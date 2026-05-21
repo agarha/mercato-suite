@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Payouts;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_REST_Response;
@@ -32,13 +33,13 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/payouts/batches', [
                 'methods' => 'POST',
                 'callback' => fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Ledger::class)->triggerBatch(), 201),
-                'permission_callback' => fn (): bool => \function_exists('current_user_can') && \current_user_can('manage_options'),
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
             \register_rest_route('mercato/v1', '/payouts/reconciliation', [
                 'methods' => 'POST',
                 'callback' => [$this, 'reconcile'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

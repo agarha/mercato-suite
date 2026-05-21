@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\AwsS3;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -31,13 +32,13 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/media/presign', [
                 'methods' => 'POST',
                 'callback' => [$this, 'presign'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
             \register_rest_route('mercato/v1', '/media/(?P<id>\d+)/complete', [
                 'methods' => 'POST',
                 'callback' => [$this, 'complete'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

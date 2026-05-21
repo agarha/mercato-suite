@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\KycKyb;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -27,17 +28,17 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/kyc/(?P<vendor_id>\d+)/start', [
                 'methods' => 'POST',
                 'callback' => [$this, 'start'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
             \register_rest_route('mercato/v1', '/kyc/(?P<vendor_id>\d+)/status', [
                 'methods' => 'POST',
                 'callback' => [$this, 'status'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
             \register_rest_route('mercato/v1', '/kyc/stripe/webhook', [
                 'methods' => 'POST',
                 'callback' => [$this, 'stripeWebhook'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canWebhook'],
             ]);
         });
     }

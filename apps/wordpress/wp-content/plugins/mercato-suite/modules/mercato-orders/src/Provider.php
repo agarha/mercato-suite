@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Orders;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -36,13 +37,13 @@ final class Provider extends ServiceProvider
                 \register_rest_route('mercato/v1', '/orders/(?P<wc_order_id>\d+)/payment-complete', [
                     'methods' => 'POST',
                     'callback' => [$this, 'paymentComplete'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canManage'],
                 ]);
 
                 \register_rest_route('mercato/v1', '/orders/suborders/(?P<suborder_id>\d+)/refund', [
                     'methods' => 'POST',
                     'callback' => [$this, 'refundSuborder'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canManage'],
                 ]);
             });
         }

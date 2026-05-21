@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Messaging;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -28,12 +29,12 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/messages/threads', [
                 'methods' => 'POST',
                 'callback' => [$this, 'createThread'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canRead'],
             ]);
             \register_rest_route('mercato/v1', '/messages/threads/(?P<id>\d+)/reply', [
                 'methods' => 'POST',
                 'callback' => [$this, 'reply'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canRead'],
             ]);
         });
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Sendgrid;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use RuntimeException;
@@ -28,13 +29,13 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/sendgrid/send', [
                 'methods' => 'POST',
                 'callback' => [$this, 'send'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
             \register_rest_route('mercato/v1', '/sendgrid/events', [
                 'methods' => 'POST',
                 'callback' => [$this, 'webhook'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canWebhook'],
             ]);
         });
     }

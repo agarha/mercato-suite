@@ -13,16 +13,29 @@ function Invoke-MercatoApi {
     )
 
     $uri = "$baseUrl/?rest_route=/mercato/v1$Path"
+    $headers = @{
+        "X-Mercato-Test-Secret" = $(if ($env:MERCATO_TEST_API_SECRET) { $env:MERCATO_TEST_API_SECRET } else { "mercato-local-test-secret" })
+    }
     if ($Body -eq $null) {
-        return Invoke-RestMethod -Uri $uri -Method $Method
+        return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers
     }
 
-    return Invoke-RestMethod -Uri $uri -Method $Method -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 10)
+    return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 10)
 }
 
 $cid = (docker ps --filter name=mercato-wordpress --format "{{.ID}}" | Select-Object -First 1)
 if (!$cid) {
     throw "Mercato WordPress container is not running."
+}
+
+$unauthorizedStatus = 0
+try {
+    Invoke-WebRequest -Uri "$baseUrl/?rest_route=/mercato/v1/products" -Method Post -ContentType "application/json" -Body "{}" -UseBasicParsing | Out-Null
+} catch {
+    $unauthorizedStatus = [int]$_.Exception.Response.StatusCode
+}
+if ($unauthorizedStatus -lt 400) {
+    throw "Protected product creation route did not reject an unauthenticated request."
 }
 
 $network = (docker inspect $cid --format "{{range `$name, `$_ := .NetworkSettings.Networks}}{{`$name}}{{end}}")

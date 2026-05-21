@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Notifications;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -28,7 +29,7 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/notifications/email', [
                 'methods' => 'POST',
                 'callback' => [$this, 'send'],
-                'permission_callback' => fn (): bool => \function_exists('current_user_can') && \current_user_can('manage_options'),
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

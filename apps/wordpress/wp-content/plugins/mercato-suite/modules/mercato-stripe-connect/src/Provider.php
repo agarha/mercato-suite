@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\StripeConnect;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -32,37 +33,37 @@ final class Provider extends ServiceProvider
                 [
                     'methods' => 'POST',
                     'callback' => [$this, 'createAccount'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canManage'],
                 ],
                 [
                     'methods' => 'GET',
                     'callback' => [$this, 'account'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canRead'],
                 ],
             ]);
 
             \register_rest_route('mercato/v1', '/stripe/webhook', [
                 'methods' => 'POST',
                 'callback' => [$this, 'webhook'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canWebhook'],
             ]);
 
             \register_rest_route('mercato/v1', '/stripe/payout-batches/(?P<batch_id>\d+)/execute', [
                 'methods' => 'POST',
                 'callback' => [$this, 'executeBatch'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
             \register_rest_route('mercato/v1', '/stripe/payment-intents', [
                 'methods' => 'POST',
                 'callback' => [$this, 'createPaymentIntent'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
             \register_rest_route('mercato/v1', '/stripe/refunds', [
                 'methods' => 'POST',
                 'callback' => [$this, 'createRefund'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

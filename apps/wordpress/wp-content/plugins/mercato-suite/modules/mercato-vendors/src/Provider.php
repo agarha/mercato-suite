@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Vendors;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -32,19 +33,19 @@ final class Provider extends ServiceProvider
                 [
                     'methods' => 'GET',
                     'callback' => [$this, 'list'],
-                    'permission_callback' => [$this, 'canManageVendors'],
+                    'permission_callback' => [Permissions::class, 'canManage'],
                 ],
                 [
                     'methods' => 'POST',
                     'callback' => [$this, 'registerVendor'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canPublicRegister'],
                 ],
             ]);
 
             \register_rest_route('mercato/v1', '/vendors/(?P<id>\d+)/status', [
                 'methods' => 'POST',
                 'callback' => [$this, 'setStatus'],
-                'permission_callback' => [$this, 'canManageVendors'],
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }
@@ -77,11 +78,6 @@ final class Provider extends ServiceProvider
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_status_failed', $e->getMessage(), ['status' => 400]);
         }
-    }
-
-    public function canManageVendors(): bool
-    {
-        return \function_exists('current_user_can') && \current_user_can('manage_options');
     }
 
     private function repo(): Repository

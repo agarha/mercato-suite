@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mercato\Reports;
 
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -27,17 +28,17 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/reports/dashboard', [
                 'methods' => 'GET',
                 'callback' => [$this, 'dashboard'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canRead'],
             ]);
             \register_rest_route('mercato/v1', '/reports/vendors', [
                 'methods' => 'GET',
                 'callback' => [$this, 'vendors'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canRead'],
             ]);
             \register_rest_route('mercato/v1', '/reports/export', [
                 'methods' => 'POST',
                 'callback' => [$this, 'export'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }

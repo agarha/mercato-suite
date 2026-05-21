@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Products;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
@@ -32,19 +33,19 @@ final class Provider extends ServiceProvider
                 [
                     'methods' => 'GET',
                     'callback' => [$this, 'list'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canRead'],
                 ],
                 [
                     'methods' => 'POST',
                     'callback' => [$this, 'create'],
-                    'permission_callback' => '__return_true',
+                    'permission_callback' => [Permissions::class, 'canManage'],
                 ],
             ]);
 
             \register_rest_route('mercato/v1', '/products/(?P<id>\d+)/archive', [
                 'methods' => 'POST',
                 'callback' => [$this, 'archive'],
-                'permission_callback' => '__return_true',
+                'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
     }
