@@ -72,6 +72,8 @@
     root.querySelector('[data-metrics]').innerHTML = [
       ['GMV', money(dashboard.gmv_minor)],
       ['Take', money(dashboard.take_minor)],
+      ['AOV', money(dashboard.aov_minor)],
+      ['Payouts', money(dashboard.payout_volume_minor)],
       ['Vendors', dashboard.vendor_count],
       ['Products', dashboard.product_count],
       ['Suborders', dashboard.suborder_count],

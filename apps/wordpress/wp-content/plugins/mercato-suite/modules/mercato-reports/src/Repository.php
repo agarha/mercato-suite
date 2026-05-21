@@ -25,21 +25,31 @@ final class Repository
         $suborders = $wpdb->prefix . 'mercato_suborders';
         $commissions = $wpdb->prefix . 'mercato_commissions';
         $products = $wpdb->prefix . 'mercato_products';
+        $payoutItems = $wpdb->prefix . 'mercato_payout_items';
+        $reconciliation = $wpdb->prefix . 'mercato_reconciliation_runs';
 
         $vendorCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$vendors} WHERE tenant_id = %d", $tenantId));
         $productCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$products} WHERE tenant_id = %d", $tenantId));
         $orderCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$suborders} WHERE tenant_id = %d", $tenantId));
         $gmvMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(total_minor), 0) FROM {$suborders} WHERE tenant_id = %d", $tenantId));
         $takeMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(commission_minor), 0) FROM {$commissions} WHERE tenant_id = %d", $tenantId));
+        $payoutVolumeMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(amount_minor), 0) FROM {$payoutItems} WHERE tenant_id = %d AND status = 'succeeded'", $tenantId));
+        $latestReconciliation = $wpdb->get_row($wpdb->prepare(
+            "SELECT status, drift_minor, report_url, created_at FROM {$reconciliation} WHERE tenant_id = %d ORDER BY created_at DESC LIMIT 1",
+            $tenantId
+        ), ARRAY_A);
 
         return [
             'tenant_id' => $tenantId,
             'currency' => 'USD',
             'gmv_minor' => $gmvMinor,
             'take_minor' => $takeMinor,
+            'aov_minor' => $orderCount > 0 ? (int) \round($gmvMinor / $orderCount) : 0,
+            'payout_volume_minor' => $payoutVolumeMinor,
             'vendor_count' => $vendorCount,
             'product_count' => $productCount,
             'suborder_count' => $orderCount,
+            'latest_reconciliation' => $latestReconciliation ?: null,
             'generated_at' => \gmdate('c'),
         ];
     }
