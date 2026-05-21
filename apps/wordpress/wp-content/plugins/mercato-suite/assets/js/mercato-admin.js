@@ -70,8 +70,9 @@
       api('/reports/vendors'),
     ]);
     root.querySelector('[data-metrics]').innerHTML = [
-      ['GMV', money(dashboard.gmv_minor)],
-      ['Take', money(dashboard.take_minor)],
+      ['Net GMV', money(dashboard.net_gmv_minor)],
+      ['Refunds', money(dashboard.refunded_minor)],
+      ['Net Take', money(dashboard.net_take_minor)],
       ['AOV', money(dashboard.aov_minor)],
       ['Payouts', money(dashboard.payout_volume_minor)],
       ['Vendors', dashboard.vendor_count],
@@ -84,12 +85,13 @@
       esc(v.status),
       esc(v.stripe_account_id || ''),
     ]));
-    root.querySelector('[data-vendor-report]').innerHTML = table(['Vendor', 'Suborders', 'GMV', 'Take', 'Vendor Net'], (vendorReport.vendors || []).map((v) => [
+    root.querySelector('[data-vendor-report]').innerHTML = table(['Vendor', 'Suborders', 'Net GMV', 'Refunds', 'Net Take', 'Net Vendor'], (vendorReport.vendors || []).map((v) => [
       v.vendor_id,
       v.suborder_count,
-      money(v.gmv_minor),
-      money(v.take_minor),
-      money(v.vendor_net_minor),
+      money(v.net_gmv_minor),
+      money(v.refunded_minor),
+      money(v.net_take_minor),
+      money(v.net_vendor_minor),
     ]));
     setStatus(`Updated ${new Date().toLocaleTimeString()}`);
   }

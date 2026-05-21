@@ -169,6 +169,9 @@ $result = [pscustomobject]@{
     delivery_id = $delivery.delivery_id
     reconciliation = $reconciliation
     report_gmv_minor = $report.gmv_minor
+    report_refunded_minor = $report.refunded_minor
+    report_net_gmv_minor = $report.net_gmv_minor
+    report_net_take_minor = $report.net_take_minor
     export_id = $export.export_id
     database_summary = $summary
 }
@@ -184,5 +187,7 @@ if ($joinedSummary -notmatch "stripe_refunds\s+1") { throw "Stripe refund was no
 if ($joinedSummary -notmatch "order_refunds\s+1") { throw "Order refund was not recorded." }
 if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission reversal was not recorded." }
 if ($joinedSummary -notmatch "partially_refunded\s+1600") { throw "Partial refund did not update suborder payment status." }
+if ([int]$report.refunded_minor -lt 1600) { throw "Dashboard did not include refund totals." }
+if ([int]$report.net_take_minor -lt 1) { throw "Dashboard did not include net take." }
 
 $result | ConvertTo-Json -Depth 10

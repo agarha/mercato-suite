@@ -24,6 +24,8 @@ final class Repository
         $vendors = $wpdb->prefix . 'mercato_vendors';
         $suborders = $wpdb->prefix . 'mercato_suborders';
         $commissions = $wpdb->prefix . 'mercato_commissions';
+        $refunds = $wpdb->prefix . 'mercato_refunds';
+        $reversals = $wpdb->prefix . 'mercato_commission_reversals';
         $products = $wpdb->prefix . 'mercato_products';
         $payoutItems = $wpdb->prefix . 'mercato_payout_items';
         $reconciliation = $wpdb->prefix . 'mercato_reconciliation_runs';
@@ -32,7 +34,11 @@ final class Repository
         $productCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$products} WHERE tenant_id = %d", $tenantId));
         $orderCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$suborders} WHERE tenant_id = %d", $tenantId));
         $gmvMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(total_minor), 0) FROM {$suborders} WHERE tenant_id = %d", $tenantId));
+        $refundedMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(amount_minor), 0) FROM {$refunds} WHERE tenant_id = %d AND status = 'succeeded'", $tenantId));
+        $netGmvMinor = \max(0, $gmvMinor - $refundedMinor);
         $takeMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(commission_minor), 0) FROM {$commissions} WHERE tenant_id = %d", $tenantId));
+        $takeReversedMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(commission_reversal_minor), 0) FROM {$reversals} WHERE tenant_id = %d", $tenantId));
+        $netTakeMinor = \max(0, $takeMinor - $takeReversedMinor);
         $payoutVolumeMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(amount_minor), 0) FROM {$payoutItems} WHERE tenant_id = %d AND status = 'succeeded'", $tenantId));
         $latestReconciliation = $wpdb->get_row($wpdb->prepare(
             "SELECT status, drift_minor, report_url, created_at FROM {$reconciliation} WHERE tenant_id = %d ORDER BY created_at DESC LIMIT 1",
@@ -43,8 +49,12 @@ final class Repository
             'tenant_id' => $tenantId,
             'currency' => 'USD',
             'gmv_minor' => $gmvMinor,
+            'refunded_minor' => $refundedMinor,
+            'net_gmv_minor' => $netGmvMinor,
             'take_minor' => $takeMinor,
-            'aov_minor' => $orderCount > 0 ? (int) \round($gmvMinor / $orderCount) : 0,
+            'take_reversed_minor' => $takeReversedMinor,
+            'net_take_minor' => $netTakeMinor,
+            'aov_minor' => $orderCount > 0 ? (int) \round($netGmvMinor / $orderCount) : 0,
             'payout_volume_minor' => $payoutVolumeMinor,
             'vendor_count' => $vendorCount,
             'product_count' => $productCount,
@@ -64,6 +74,7 @@ final class Repository
         $tenantId = $this->tenantResolver->currentTenantId();
         $suborders = $wpdb->prefix . 'mercato_suborders';
         $commissions = $wpdb->prefix . 'mercato_commissions';
+        $reversals = $wpdb->prefix . 'mercato_commission_reversals';
         $where = 's.tenant_id = %d';
         $args = [$tenantId];
         if ($vendorId !== null) {
@@ -72,12 +83,26 @@ final class Repository
         }
 
         $sql = $wpdb->prepare(
-            "SELECT s.vendor_id, COUNT(*) suborder_count, COALESCE(SUM(s.total_minor), 0) gmv_minor, COALESCE(SUM(c.commission_minor), 0) take_minor, COALESCE(SUM(c.vendor_net_minor), 0) vendor_net_minor
+            "SELECT s.vendor_id,
+                COUNT(DISTINCT s.suborder_id) suborder_count,
+                COALESCE(SUM(s.total_minor), 0) gmv_minor,
+                COALESCE(SUM(s.refunded_minor), 0) refunded_minor,
+                GREATEST(0, COALESCE(SUM(s.total_minor), 0) - COALESCE(SUM(s.refunded_minor), 0)) net_gmv_minor,
+                COALESCE(SUM(c.commission_minor), 0) take_minor,
+                COALESCE(SUM(rv.commission_reversal_minor), 0) take_reversed_minor,
+                GREATEST(0, COALESCE(SUM(c.commission_minor), 0) - COALESCE(SUM(rv.commission_reversal_minor), 0)) net_take_minor,
+                COALESCE(SUM(c.vendor_net_minor), 0) vendor_net_minor,
+                GREATEST(0, COALESCE(SUM(c.vendor_net_minor), 0) - COALESCE(SUM(rv.vendor_net_reversal_minor), 0)) net_vendor_minor
             FROM {$suborders} s
             LEFT JOIN {$commissions} c ON c.tenant_id = s.tenant_id AND c.suborder_id = s.suborder_id
+            LEFT JOIN (
+                SELECT tenant_id, commission_id, SUM(commission_reversal_minor) commission_reversal_minor, SUM(vendor_net_reversal_minor) vendor_net_reversal_minor
+                FROM {$reversals}
+                GROUP BY tenant_id, commission_id
+            ) rv ON rv.tenant_id = c.tenant_id AND rv.commission_id = c.commission_id
             WHERE {$where}
             GROUP BY s.vendor_id
-            ORDER BY gmv_minor DESC",
+            ORDER BY net_gmv_minor DESC",
             ...$args
         );
 
