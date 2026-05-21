@@ -3,6 +3,10 @@
 .vscode/
 node_modules/
 vendor/
+composer.phar
+cacert.pem
+tools/phpunit.phar
+tools/.cache/
 coverage/
 dist/
 build/
