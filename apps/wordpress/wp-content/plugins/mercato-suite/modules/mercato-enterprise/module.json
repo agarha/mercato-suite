@@ -1,0 +1,11 @@
+{
+  "slug": "mercato-enterprise",
+  "namespace": "Mercato\\Enterprise",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1"],
+  "capabilities": ["mercato_enterprise_admin"],
+  "tables": ["wp_mercato_tenants", "wp_mercato_feature_flags", "wp_mercato_branding_tokens"],
+  "tier": "domain",
+  "feature_flag": "mercato.enterprise"
+}

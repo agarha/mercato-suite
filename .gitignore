@@ -1,0 +1,13 @@
+.env
+.idea/
+.vscode/
+node_modules/
+vendor/
+coverage/
+dist/
+build/
+.phpunit.cache/
+.wordpress/
+*.log
+*.zip
+*.tar.gz

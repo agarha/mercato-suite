@@ -1,0 +1,11 @@
+{
+  "slug": "mercato-payouts",
+  "namespace": "Mercato\\Payouts",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-commissions@^0.1", "mercato-stripe-connect@^0.1"],
+  "capabilities": ["mercato_payouts_read_own", "mercato_payouts_admin"],
+  "tables": ["wp_mercato_vendor_balances", "wp_mercato_payout_batches", "wp_mercato_payout_items", "wp_mercato_reconciliation_runs"],
+  "tier": "domain",
+  "feature_flag": "mercato.payouts"
+}

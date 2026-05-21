@@ -1,0 +1,11 @@
+{
+  "slug": "mercato-core",
+  "namespace": "Mercato\\Core",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [],
+  "capabilities": ["mercato_core_admin"],
+  "tables": ["wp_mercato_event_outbox", "wp_mercato_idempotency_keys", "wp_mercato_audit_log"],
+  "tier": "foundation",
+  "feature_flag": "mercato.core"
+}

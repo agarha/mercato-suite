@@ -1,0 +1,11 @@
+{
+  "slug": "mercato-products",
+  "namespace": "Mercato\\Products",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-vendors@^0.1"],
+  "capabilities": ["mercato_products_read_own", "mercato_products_write_own", "mercato_products_admin"],
+  "tables": ["wp_mercato_products", "wp_mercato_product_images"],
+  "tier": "domain",
+  "feature_flag": "mercato.products"
+}

@@ -1,0 +1,11 @@
+{
+  "slug": "mercato-notifications",
+  "namespace": "Mercato\\Notifications",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-sendgrid@^0.1"],
+  "capabilities": ["mercato_notifications_admin"],
+  "tables": ["wp_mercato_notification_templates", "wp_mercato_notification_deliveries", "wp_mercato_suppression_list"],
+  "tier": "domain",
+  "feature_flag": "mercato.notifications"
+}
