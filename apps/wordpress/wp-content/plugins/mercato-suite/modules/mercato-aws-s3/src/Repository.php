@@ -27,7 +27,7 @@ final class Repository
         $visibility = $this->enum((string) ($data['visibility'] ?? 'private'), ['public', 'private'], 'private');
         $fileName = \sanitize_file_name((string) ($data['file_name'] ?? ('upload-' . \time())));
         $contentType = (string) ($data['content_type'] ?? 'application/octet-stream');
-        $bucket = (string) ($data['bucket'] ?? ($ownerType === 'kyc' ? 'mercato-kyc' : 'mercato-public'));
+        $bucket = (string) ($data['bucket'] ?? $this->bucket());
         $objectKey = $this->objectKey($tenantId, $ownerType, $fileName);
         $table = $wpdb->prefix . 'mercato_media';
 
@@ -50,10 +50,7 @@ final class Repository
         }
 
         $mediaId = (int) $wpdb->insert_id;
-        $uploadUrl = \add_query_arg([
-            'rest_route' => '/mercato/v1/media/' . $mediaId . '/complete',
-            'token' => \wp_create_nonce('mercato_media_' . $mediaId),
-        ], \home_url('/'));
+        $uploadUrl = $this->presignedPutUrl($bucket, $objectKey, $contentType);
 
         $this->outbox->publish('mercato.media.uploaded.v1', [
             'media_id' => $mediaId,
@@ -71,7 +68,6 @@ final class Repository
             'expires_in' => 900,
             'headers' => [
                 'content-type' => $contentType,
-                'x-amz-server-side-encryption' => 'aws:kms',
             ],
         ];
     }
@@ -108,6 +104,54 @@ final class Repository
     private function objectKey(int $tenantId, string $ownerType, string $fileName): string
     {
         return \sprintf('tenant-%d/%s/%s-%s', $tenantId, $ownerType, \gmdate('YmdHis'), $fileName);
+    }
+
+    private function bucket(): string
+    {
+        return (string) (\getenv('MERCATO_S3_BUCKET') ?: 'mercato-local');
+    }
+
+    private function presignedPutUrl(string $bucket, string $objectKey, string $contentType): string
+    {
+        $endpoint = \rtrim((string) (\getenv('MERCATO_S3_PUBLIC_ENDPOINT') ?: \getenv('MERCATO_S3_ENDPOINT') ?: 'http://localhost:9002'), '/');
+        $accessKey = (string) (\getenv('MERCATO_S3_ACCESS_KEY') ?: 'mercato');
+        $secretKey = (string) (\getenv('MERCATO_S3_SECRET_KEY') ?: 'mercato-local-secret');
+        $region = (string) (\getenv('MERCATO_S3_REGION') ?: 'us-east-1');
+        $host = (string) \parse_url($endpoint, PHP_URL_HOST);
+        $port = \parse_url($endpoint, PHP_URL_PORT);
+        $scheme = (string) (\parse_url($endpoint, PHP_URL_SCHEME) ?: 'http');
+        $hostHeader = $host . ($port === null ? '' : ':' . $port);
+        $date = \gmdate('Ymd');
+        $timestamp = \gmdate('Ymd\THis\Z');
+        $scope = "{$date}/{$region}/s3/aws4_request";
+        $encodedKey = \str_replace('%2F', '/', \rawurlencode($objectKey));
+        $canonicalUri = '/' . \rawurlencode($bucket) . '/' . $encodedKey;
+        $query = [
+            'X-Amz-Algorithm' => 'AWS4-HMAC-SHA256',
+            'X-Amz-Credential' => $accessKey . '/' . $scope,
+            'X-Amz-Date' => $timestamp,
+            'X-Amz-Expires' => '900',
+            'X-Amz-SignedHeaders' => 'content-type;host',
+        ];
+        \ksort($query);
+        $canonicalQuery = \http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $canonicalHeaders = "content-type:{$contentType}\nhost:{$hostHeader}\n";
+        $canonicalRequest = "PUT\n{$canonicalUri}\n{$canonicalQuery}\n{$canonicalHeaders}\ncontent-type;host\nUNSIGNED-PAYLOAD";
+        $stringToSign = "AWS4-HMAC-SHA256\n{$timestamp}\n{$scope}\n" . \hash('sha256', $canonicalRequest);
+        $signature = \hash_hmac('sha256', $stringToSign, $this->signingKey($secretKey, $date, $region));
+
+        return "{$scheme}://{$hostHeader}{$canonicalUri}?{$canonicalQuery}&X-Amz-Signature={$signature}";
+    }
+
+    /**
+     * @return string binary signing key
+     */
+    private function signingKey(string $secretKey, string $date, string $region): string
+    {
+        $dateKey = \hash_hmac('sha256', $date, 'AWS4' . $secretKey, true);
+        $dateRegionKey = \hash_hmac('sha256', $region, $dateKey, true);
+        $dateRegionServiceKey = \hash_hmac('sha256', 's3', $dateRegionKey, true);
+        return \hash_hmac('sha256', 'aws4_request', $dateRegionServiceKey, true);
     }
 
     /**
