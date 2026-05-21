@@ -1,0 +1,26 @@
+{
+  "slug": "mercato-reviews",
+  "namespace": "Mercato\\Reviews",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_reviews_read",
+    "mercato_reviews_write",
+    "mercato_reviews_admin"
+  ],
+  "tables": [
+    "wp_mercato_reviews",
+    "wp_mercato_review_votes"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.reviews",
+  "phase": "P2"
+}
+

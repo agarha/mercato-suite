@@ -1,0 +1,25 @@
+{
+  "slug": "mercato-collaboration",
+  "namespace": "Mercato\\Collaboration",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-messaging@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_collaboration_read",
+    "mercato_collaboration_write",
+    "mercato_collaboration_admin"
+  ],
+  "tables": [
+    "wp_mercato_workspaces",
+    "wp_mercato_workspace_members"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.collaboration",
+  "phase": "P4"
+}
+

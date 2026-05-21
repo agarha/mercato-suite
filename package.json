@@ -1,0 +1,14 @@
+{
+  "name": "mercato-suite",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/admin-spa",
+    "apps/vendor-spa",
+    "packages/sdk-js"
+  ],
+  "scripts": {
+    "test": "echo \"No JS tests wired yet\"",
+    "lint": "echo \"No JS lint wired yet\""
+  }
+}

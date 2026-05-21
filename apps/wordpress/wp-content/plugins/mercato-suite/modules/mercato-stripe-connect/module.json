@@ -1,0 +1,28 @@
+{
+  "slug": "mercato-stripe-connect",
+  "namespace": "Mercato\\StripeConnect",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.stripe.account.updated.v1",
+    "mercato.stripe.transfer.created.v1",
+    "mercato.stripe.transfer.failed.v1",
+    "mercato.stripe.charge.refunded.v1",
+    "mercato.stripe.charge.dispute.opened.v1"
+  ],
+  "consumes_events": [
+    "mercato.payout.scheduled.v1"
+  ],
+  "capabilities": [
+    "mercato_stripe_admin"
+  ],
+  "tables": [
+    "wp_mercato_stripe_accounts",
+    "wp_mercato_stripe_webhook_events"
+  ],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.stripe"
+}

@@ -1,0 +1,22 @@
+{
+  "slug": "mercato-taxjar",
+  "namespace": "Mercato\\Taxjar",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-tax-engine@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_taxjar_admin"
+  ],
+  "tables": [
+    "wp_mercato_taxjar_events"
+  ],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.taxjar",
+  "phase": "P2"
+}
+

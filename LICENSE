@@ -1,0 +1,13 @@
+Proprietary. © 2026 Mercato Enterprise Marketplace Platform. All rights reserved.
+
+This software and all associated source code, configuration, documentation, and
+related materials are the confidential intellectual property of the Mercato
+project owners. No part of this software may be copied, modified, distributed,
+sublicensed, published, or used for any commercial purpose without explicit
+written permission from the project owners.
+
+Third-party dependencies retain their original licenses; see vendor/ and
+node_modules/ for individual notices.
+
+The plugin SDK published separately under `mercato/mercato-sdk` is open-source
+(MIT) and governed by its own LICENSE file.

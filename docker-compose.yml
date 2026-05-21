@@ -1,0 +1,112 @@
+services:
+  wordpress:
+    build:
+      context: .
+      dockerfile: docker/wordpress/Dockerfile
+    ports:
+      - "${WORDPRESS_PORT:-8080}:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-mercato}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-mercato}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-mercato}
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      MERCATO_REDIS_HOST: redis
+      MERCATO_KAFKA_BROKERS: kafka:9092
+      MERCATO_S3_ENDPOINT: http://minio:9000
+      MERCATO_S3_BUCKET: ${MINIO_BUCKET:-mercato-local}
+      MERCATO_MAIL_HOST: mailpit
+      MERCATO_MAIL_PORT: 1025
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./apps/wordpress/wp-content/plugins/mercato-suite:/var/www/html/wp-content/plugins/mercato-suite
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      minio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mercato}
+      MYSQL_USER: ${MYSQL_USER:-mercato}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mercato}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  minio:
+    image: minio/minio:RELEASE.2026-04-09T18-10-56Z
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-mercato}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-mercato-local-secret}
+    volumes:
+      - minio_data:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  outbox-relay:
+    build:
+      context: .
+      dockerfile: services/outbox-relay/Dockerfile
+    environment:
+      DATABASE_DSN: mercato:mercato@tcp(mysql:3306)/mercato
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+volumes:
+  wordpress_data:
+  mysql_data:
+  minio_data:

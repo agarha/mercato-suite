@@ -1,0 +1,22 @@
+{
+  "slug": "mercato-paypal-marketplace",
+  "namespace": "Mercato\\PaypalMarketplace",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_paypal_admin"
+  ],
+  "tables": [
+    "wp_mercato_paypal_accounts",
+    "wp_mercato_paypal_events"
+  ],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.paypal",
+  "phase": "P2"
+}
+

@@ -1,0 +1,24 @@
+{
+  "slug": "mercato-sendgrid",
+  "namespace": "Mercato\\Sendgrid",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.sendgrid.delivered.v1",
+    "mercato.sendgrid.bounced.v1"
+  ],
+  "consumes_events": [
+    "mercato.notification.requested.v1"
+  ],
+  "capabilities": [
+    "mercato_sendgrid_admin"
+  ],
+  "tables": [
+    "wp_mercato_sendgrid_events"
+  ],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.sendgrid"
+}

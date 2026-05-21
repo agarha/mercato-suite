@@ -1,0 +1,26 @@
+{
+  "slug": "mercato-disputes",
+  "namespace": "Mercato\\Disputes",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1",
+    "mercato-payouts@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_disputes_read",
+    "mercato_disputes_write",
+    "mercato_disputes_admin"
+  ],
+  "tables": [
+    "wp_mercato_disputes",
+    "wp_mercato_dispute_events"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.disputes",
+  "phase": "P2"
+}
+

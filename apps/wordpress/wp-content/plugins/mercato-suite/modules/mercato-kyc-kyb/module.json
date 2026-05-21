@@ -1,0 +1,28 @@
+{
+  "slug": "mercato-kyc-kyb",
+  "namespace": "Mercato\\KycKyb",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1",
+    "mercato-stripe-connect@^0.1",
+    "mercato-aws-s3@^0.1"
+  ],
+  "provides_events": [
+    "mercato.vendor.kyc.completed.v1",
+    "mercato.vendor.kyc.required.v1"
+  ],
+  "consumes_events": [
+    "mercato.vendor.registered.v1"
+  ],
+  "capabilities": [
+    "mercato_kyc_read_own",
+    "mercato_kyc_admin"
+  ],
+  "tables": [
+    "wp_mercato_kyc_records"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.kyc"
+}

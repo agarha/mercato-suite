@@ -1,0 +1,30 @@
+{
+  "slug": "mercato-commissions",
+  "namespace": "Mercato\\Commissions",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [
+    "mercato.commission.recorded.v1",
+    "mercato.commission.reversed.v1"
+  ],
+  "consumes_events": [
+    "mercato.order.suborder.created.v1",
+    "mercato.refund.created.v1"
+  ],
+  "capabilities": [
+    "mercato_commissions_read",
+    "mercato_commissions_write",
+    "mercato_commissions_admin"
+  ],
+  "tables": [
+    "wp_mercato_commissions",
+    "wp_mercato_commission_rules"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.commissions"
+}

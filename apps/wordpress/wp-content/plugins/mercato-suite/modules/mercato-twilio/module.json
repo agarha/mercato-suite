@@ -1,0 +1,21 @@
+{
+  "slug": "mercato-twilio",
+  "namespace": "Mercato\\Twilio",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_twilio_admin"
+  ],
+  "tables": [
+    "wp_mercato_twilio_events"
+  ],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.twilio",
+  "phase": "P2"
+}
+

@@ -1,0 +1,22 @@
+{
+  "slug": "mercato-migration",
+  "namespace": "Mercato\\Migration",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_migration_admin"
+  ],
+  "tables": [
+    "wp_mercato_migration_runs",
+    "wp_mercato_migration_items"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.migration",
+  "phase": "P4"
+}
+
