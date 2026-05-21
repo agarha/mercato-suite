@@ -1,0 +1,12 @@
+{
+  "slug": "mercato-fraud-risk",
+  "namespace": "Mercato\\FraudRisk",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-orders@^0.1", "mercato-vendors@^0.1"],
+  "capabilities": ["mercato_fraud_read", "mercato_fraud_admin"],
+  "tables": ["wp_mercato_risk_scores", "wp_mercato_risk_rules"],
+  "tier": "domain",
+  "feature_flag": "mercato.fraud",
+  "phase": "P3"
+}

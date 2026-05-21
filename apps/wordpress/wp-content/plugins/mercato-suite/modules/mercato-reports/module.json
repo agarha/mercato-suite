@@ -1,0 +1,12 @@
+{
+  "slug": "mercato-reports",
+  "namespace": "Mercato\\Reports",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1"],
+  "capabilities": ["mercato_reports_read", "mercato_reports_export", "mercato_reports_admin"],
+  "tables": ["wp_mercato_report_exports", "wp_mercato_metric_snapshots"],
+  "tier": "domain",
+  "feature_flag": "mercato.reports",
+  "phase": "P2"
+}

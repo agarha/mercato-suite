@@ -3,9 +3,30 @@
   "namespace": "Mercato\\Vendors",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1"],
-  "capabilities": ["mercato_vendors_read", "mercato_vendors_write", "mercato_vendors_admin"],
-  "tables": ["wp_mercato_vendors", "wp_mercato_vendor_profiles"],
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.vendor.registered.v1",
+    "mercato.vendor.kyc.required.v1",
+    "mercato.vendor.kyc.completed.v1",
+    "mercato.vendor.activated.v1",
+    "mercato.vendor.suspended.v1",
+    "mercato.vendor.reinstated.v1",
+    "mercato.vendor.closed.v1"
+  ],
+  "consumes_events": [
+    "mercato.vendor.kyc.completed.v1"
+  ],
+  "capabilities": [
+    "mercato_vendors_read",
+    "mercato_vendors_write",
+    "mercato_vendors_admin"
+  ],
+  "tables": [
+    "wp_mercato_vendors",
+    "wp_mercato_vendor_staff"
+  ],
   "tier": "domain",
   "feature_flag": "mercato.vendors"
 }

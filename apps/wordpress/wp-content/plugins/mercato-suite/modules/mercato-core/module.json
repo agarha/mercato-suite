@@ -4,8 +4,31 @@
   "version": "0.1.0",
   "sdk_version": "^0.1",
   "requires": [],
-  "capabilities": ["mercato_core_admin"],
-  "tables": ["wp_mercato_event_outbox", "wp_mercato_idempotency_keys", "wp_mercato_audit_log"],
+  "provides_events": [
+    "mercato.core.migration.applied.v1",
+    "mercato.audit.admin_action.logged.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_core_admin"
+  ],
+  "tables": [
+    "wp_mercato_event_outbox",
+    "wp_mercato_event_consumed",
+    "wp_mercato_webhook_inbox",
+    "wp_mercato_idempotency",
+    "wp_mercato_audit_log",
+    "wp_mercato_jobs",
+    "wp_mercato_tenants",
+    "wp_mercato_tenant_settings",
+    "wp_mercato_tenant_feature_flags",
+    "wp_mercato_rbac_roles",
+    "wp_mercato_rbac_capabilities",
+    "wp_mercato_rbac_role_caps",
+    "wp_mercato_rbac_user_roles",
+    "wp_mercato_migrations",
+    "wp_mercato_deprecation_log"
+  ],
   "tier": "foundation",
   "feature_flag": "mercato.core"
 }

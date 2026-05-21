@@ -1,0 +1,12 @@
+{
+  "slug": "mercato-ai-copilot",
+  "namespace": "Mercato\\AiCopilot",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-messaging@^0.1", "mercato-products@^0.1"],
+  "capabilities": ["mercato_ai_use", "mercato_ai_admin"],
+  "tables": ["wp_mercato_ai_requests", "wp_mercato_ai_usage"],
+  "tier": "domain",
+  "feature_flag": "mercato.ai",
+  "phase": "P3"
+}

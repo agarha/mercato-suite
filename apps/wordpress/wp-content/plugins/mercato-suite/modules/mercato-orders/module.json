@@ -3,9 +3,33 @@
   "namespace": "Mercato\\Orders",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-vendors@^0.1", "mercato-products@^0.1"],
-  "capabilities": ["mercato_orders_read_own", "mercato_orders_write_own", "mercato_orders_admin"],
-  "tables": ["wp_mercato_suborders", "wp_mercato_suborder_items", "wp_mercato_order_shipments"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1",
+    "mercato-products@^0.1"
+  ],
+  "provides_events": [
+    "mercato.order.parent.created.v1",
+    "mercato.order.suborder.created.v1",
+    "mercato.order.status.changed.v1",
+    "mercato.order.shipped.v1",
+    "mercato.refund.created.v1",
+    "mercato.payment.complete.v1"
+  ],
+  "consumes_events": [
+    "mercato.product.archived.v1"
+  ],
+  "capabilities": [
+    "mercato_orders_read_own",
+    "mercato_orders_write_own",
+    "mercato_orders_admin"
+  ],
+  "tables": [
+    "wp_mercato_suborders",
+    "wp_mercato_suborder_items",
+    "wp_mercato_refunds",
+    "wp_mercato_tax_records"
+  ],
   "tier": "domain",
   "feature_flag": "mercato.orders"
 }

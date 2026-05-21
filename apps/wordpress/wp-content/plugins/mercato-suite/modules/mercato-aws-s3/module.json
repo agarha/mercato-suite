@@ -3,9 +3,20 @@
   "namespace": "Mercato\\AwsS3",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1"],
-  "capabilities": ["mercato_s3_admin"],
-  "tables": ["wp_mercato_uploads"],
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.media.uploaded.v1",
+    "mercato.media.scanned.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_s3_admin"
+  ],
+  "tables": [
+    "wp_mercato_media"
+  ],
   "tier": "adapter",
   "feature_flag": "mercato.integration.aws_s3"
 }

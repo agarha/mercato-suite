@@ -24,7 +24,7 @@ MVP modules:
 - `mercato-sendgrid`
 - `mercato-aws-s3`
 
-Deferred modules stay out of the runtime until their phase begins.
+Deferred modules are represented from the beginning with manifests, folders, and coverage rows. They stay disabled at runtime until their phase begins, but they are not invisible to architecture, tests, CI, or planning.
 
 ## Local Development
 
@@ -61,4 +61,4 @@ tools/                                            Build and automation scripts
 
 ## Current Status
 
-Initial scaffold is in place. The first build milestone is a bootable WordPress container with WooCommerce and an activatable `mercato-suite` plugin that can discover and sort MVP module manifests.
+Initial scaffold is in place. The current foundation includes every module named by the documentation suite, with MVP modules marked build-first and post-MVP modules represented as disabled/deferred modules. The first build milestone is a bootable WordPress container with WooCommerce and an activatable `mercato-suite` plugin that can discover and sort the complete module manifest graph.

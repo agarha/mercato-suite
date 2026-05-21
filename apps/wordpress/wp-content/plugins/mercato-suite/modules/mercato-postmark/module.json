@@ -1,0 +1,12 @@
+{
+  "slug": "mercato-postmark",
+  "namespace": "Mercato\\Postmark",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1"],
+  "capabilities": ["mercato_postmark_admin"],
+  "tables": ["wp_mercato_postmark_events"],
+  "tier": "adapter",
+  "feature_flag": "mercato.integration.postmark",
+  "phase": "P2"
+}

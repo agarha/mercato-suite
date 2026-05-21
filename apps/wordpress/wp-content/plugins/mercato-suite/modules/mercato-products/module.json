@@ -3,9 +3,29 @@
   "namespace": "Mercato\\Products",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-vendors@^0.1"],
-  "capabilities": ["mercato_products_read_own", "mercato_products_write_own", "mercato_products_admin"],
-  "tables": ["wp_mercato_products", "wp_mercato_product_images"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [
+    "mercato.product.upserted.v1",
+    "mercato.product.archived.v1"
+  ],
+  "consumes_events": [
+    "mercato.vendor.suspended.v1"
+  ],
+  "capabilities": [
+    "mercato_products_read_own",
+    "mercato_products_write_own",
+    "mercato_products_admin"
+  ],
+  "tables": [
+    "wp_mercato_products",
+    "wp_mercato_product_variations",
+    "wp_mercato_product_media",
+    "wp_mercato_categories",
+    "wp_mercato_shipping_zones"
+  ],
   "tier": "domain",
   "feature_flag": "mercato.products"
 }

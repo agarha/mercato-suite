@@ -31,15 +31,21 @@ modules/
   mercato-aws-s3
 ```
 
-## 2. MVP Milestones
+## 2. Coverage From the Beginning
+
+The project must not start with only the happy-path MVP code. Every target module and every cross-cutting concern is represented immediately, even when runtime behavior is deferred. The foundation therefore includes manifests, source directories, migration directories, OpenAPI directories, event-schema directories, and test directories for every named module.
+
+Deferred modules are disabled by feature flag and phase, not omitted from the repository.
+
+## 3. MVP Milestones
 
 ### M0: Bootstrap
 
 - Create independent Git repository.
 - Add Docker Compose for local WordPress/WooCommerce development.
 - Add plugin bundle scaffold.
-- Add MVP module manifests.
-- Add module dependency ordering smoke test.
+- Add full target module manifests, including deferred modules and adapters.
+- Add module dependency ordering and inventory smoke test.
 - Add release zip script.
 
 ### M1: Core Runtime
@@ -117,7 +123,7 @@ modules/
 - Observability baseline: Prometheus, Grafana, FluentBit, OpenTelemetry, Tempo lite.
 - Backup and restore runbook support.
 
-## 3. GitHub Plan
+## 4. GitHub Plan
 
 Preferred GitHub repository:
 

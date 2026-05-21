@@ -3,9 +3,24 @@
   "namespace": "Mercato\\Messaging",
   "version": "0.1.0",
   "sdk_version": "^0.1",
-  "requires": ["mercato-core@^0.1", "mercato-vendors@^0.1"],
-  "capabilities": ["mercato_messages_read", "mercato_messages_write"],
-  "tables": ["wp_mercato_message_threads", "wp_mercato_messages"],
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [
+    "mercato.message.posted.v1",
+    "mercato.message.flagged.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_messages_read",
+    "mercato_messages_write"
+  ],
+  "tables": [
+    "wp_mercato_message_threads",
+    "wp_mercato_messages",
+    "wp_mercato_message_attachments"
+  ],
   "tier": "domain",
   "feature_flag": "mercato.messaging"
 }

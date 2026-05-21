@@ -1,0 +1,12 @@
+{
+  "slug": "mercato-search",
+  "namespace": "Mercato\\Search",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": ["mercato-core@^0.1", "mercato-products@^0.1"],
+  "capabilities": ["mercato_search_admin"],
+  "tables": ["wp_mercato_search_index_jobs"],
+  "tier": "domain",
+  "feature_flag": "mercato.search",
+  "phase": "P2"
+}
