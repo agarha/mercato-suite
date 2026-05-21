@@ -20,6 +20,7 @@ services:
       MERCATO_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-mercato-local-secret}
       MERCATO_MAIL_HOST: mailpit
       MERCATO_MAIL_PORT: 1025
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-SG.replace_me}
     volumes:
       - wordpress_data:/var/www/html
       - ./apps/wordpress/wp-content/plugins/mercato-suite:/var/www/html/wp-content/plugins/mercato-suite
