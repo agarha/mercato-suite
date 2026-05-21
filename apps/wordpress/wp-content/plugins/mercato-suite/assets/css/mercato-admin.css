@@ -136,6 +136,62 @@
   color: #0b5cab;
 }
 
+.mercato-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mercato-icon-button,
+.mercato-status-button {
+  min-height: 30px;
+  border: 1px solid #bcccdc;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #243b53;
+  cursor: pointer;
+}
+
+.mercato-icon-button {
+  width: 30px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.mercato-status-button {
+  padding: 4px 8px;
+}
+
+.mercato-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid #d9e2ec;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #f5f7fa;
+  color: #334e68;
+  font-size: 12px;
+}
+
+.mercato-health {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mercato-health span {
+  display: block;
+  color: #52606d;
+  font-size: 12px;
+}
+
+.mercato-health strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 18px;
+}
+
 .mercato-status {
   min-height: 20px;
   color: #52606d;

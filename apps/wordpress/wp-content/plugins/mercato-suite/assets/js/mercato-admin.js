@@ -42,6 +42,7 @@
         <div class="mercato-grid" data-metrics></div>
         <div class="mercato-grid">
           <div class="mercato-panel"><h2>Vendors</h2><div data-vendors></div></div>
+          <div class="mercato-panel"><h2>Operations Health</h2><div data-health></div></div>
           <div class="mercato-panel"><h2>Send Test Email</h2>${emailForm()}</div>
         </div>
         <div class="mercato-panel"><h2>Vendor Performance</h2><div data-vendor-report></div></div>
@@ -50,6 +51,7 @@
     root.querySelector('[data-refresh]').addEventListener('click', loadAdmin);
     root.querySelector('[data-payout]').addEventListener('click', schedulePayout);
     root.querySelector('[data-email-form]').addEventListener('submit', sendEmail);
+    root.querySelector('[data-vendors]').addEventListener('click', updateVendorStatus);
     await loadAdmin();
   }
 
@@ -64,10 +66,11 @@
 
   async function loadAdmin() {
     setStatus('Loading marketplace data...');
-    const [dashboard, vendors, vendorReport] = await Promise.all([
+    const [dashboard, vendors, vendorReport, health] = await Promise.all([
       api('/reports/dashboard'),
       api('/vendors'),
       api('/reports/vendors'),
+      api('/health/readiness'),
     ]);
     root.querySelector('[data-metrics]').innerHTML = [
       ['Net GMV', money(dashboard.net_gmv_minor)],
@@ -79,12 +82,8 @@
       ['Products', dashboard.product_count],
       ['Suborders', dashboard.suborder_count],
     ].map(([label, value]) => `<div class="mercato-panel mercato-metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
-    root.querySelector('[data-vendors]').innerHTML = table(['ID', 'Business', 'Status', 'Stripe'], vendors.map((v) => [
-      v.vendor_id,
-      esc(v.business_name),
-      esc(v.status),
-      esc(v.stripe_account_id || ''),
-    ]));
+    root.querySelector('[data-vendors]').innerHTML = vendorTable(vendors);
+    root.querySelector('[data-health]').innerHTML = healthPanel(health);
     root.querySelector('[data-vendor-report]').innerHTML = table(['Vendor', 'Suborders', 'Net GMV', 'Refunds', 'Net Take', 'Net Vendor'], (vendorReport.vendors || []).map((v) => [
       v.vendor_id,
       v.suborder_count,
@@ -94,6 +93,39 @@
       money(v.net_vendor_minor),
     ]));
     setStatus(`Updated ${new Date().toLocaleTimeString()}`);
+  }
+
+  function vendorTable(vendors) {
+    if (!vendors.length) return '<p>No records yet.</p>';
+    return `<table class="mercato-table"><thead><tr><th>ID</th><th>Business</th><th>Status</th><th>Stripe</th><th>Actions</th></tr></thead><tbody>${vendors.map((v) => {
+      const id = esc(v.vendor_id);
+      const status = esc(v.status);
+      const actions = [
+        `<button class="mercato-status-button" type="button" title="Approve" data-vendor-status="approved" data-vendor-id="${id}">Approve</button>`,
+        `<button class="mercato-icon-button" type="button" title="Suspend" data-vendor-status="suspended" data-vendor-id="${id}">!</button>`,
+      ].join('');
+      return `<tr><td>${id}</td><td>${esc(v.business_name)}</td><td><span class="mercato-badge">${status}</span></td><td>${esc(v.stripe_account_id || '')}</td><td><div class="mercato-row-actions">${actions}</div></td></tr>`;
+    }).join('')}</tbody></table>`;
+  }
+
+  function healthPanel(health) {
+    const checks = health.checks || {};
+    return `<div class="mercato-health">
+      <div><span>Status</span><strong>${esc(health.status)}</strong></div>
+      <div><span>Modules</span><strong>${esc(checks.modules && checks.modules.count)}</strong></div>
+      <div><span>Outbox Pending</span><strong>${esc(checks.outbox && checks.outbox.pending_count)}</strong></div>
+      <div><span>Outbox DLQ</span><strong>${esc(checks.outbox && checks.outbox.dlq_count)}</strong></div>
+    </div>`;
+  }
+
+  async function updateVendorStatus(event) {
+    const button = event.target.closest('[data-vendor-status]');
+    if (!button) return;
+    const status = button.dataset.vendorStatus;
+    const vendorId = button.dataset.vendorId;
+    setStatus(`Updating vendor ${vendorId}...`);
+    await api(`/vendors/${vendorId}/status`, { method: 'POST', body: JSON.stringify({ status, reason: status === 'suspended' ? 'admin_action' : null }) });
+    await loadAdmin();
   }
 
   async function schedulePayout() {

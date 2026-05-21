@@ -84,8 +84,13 @@ final class Provider extends ServiceProvider
         }
 
         $baseUrl = \plugin_dir_url(\MERCATO_SUITE_FILE);
-        \wp_enqueue_style('mercato-admin', $baseUrl . 'assets/css/mercato-admin.css', [], \MERCATO_SUITE_VERSION);
-        \wp_enqueue_script('mercato-admin', $baseUrl . 'assets/js/mercato-admin.js', [], \MERCATO_SUITE_VERSION, true);
+        $baseDir = \plugin_dir_path(\MERCATO_SUITE_FILE);
+        $css = 'assets/css/mercato-admin.css';
+        $js = 'assets/js/mercato-admin.js';
+        $cssVersion = \file_exists($baseDir . $css) ? (string) \filemtime($baseDir . $css) : \MERCATO_SUITE_VERSION;
+        $jsVersion = \file_exists($baseDir . $js) ? (string) \filemtime($baseDir . $js) : \MERCATO_SUITE_VERSION;
+        \wp_enqueue_style('mercato-admin', $baseUrl . $css, [], $cssVersion);
+        \wp_enqueue_script('mercato-admin', $baseUrl . $js, [], $jsVersion, true);
         \wp_localize_script('mercato-admin', 'MercatoAdmin', [
             'restBase' => \esc_url_raw(\rest_url('mercato/v1')),
             'nonce' => \wp_create_nonce('wp_rest'),
