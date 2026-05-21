@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, codex/initial-scaffold]
+    branches: [main, codex/initial-scaffold, codex/e2e-developed]
   pull_request:
     branches: [main]
 
@@ -68,3 +68,12 @@ jobs:
         run: docker build -f docker/wordpress/Dockerfile -t mercato/wp:ci .
       - name: Build outbox-relay image
         run: docker build -f services/outbox-relay/Dockerfile -t mercato/outbox-relay:ci .
+
+  release-artifact:
+    name: Build release artifact
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build plugin ZIP
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
