@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Sendgrid;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
@@ -43,11 +44,13 @@ final class Provider extends ServiceProvider
     public function send(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->sendEmail(
+            $delivery = $this->sendEmail(
                 (string) $request->get_param('recipient'),
                 (string) $request->get_param('subject'),
                 (string) $request->get_param('body')
-            ), 201);
+            );
+            $this->container->get(Writer::class)->log('notification.email.sent', 'notification_delivery', (int) $delivery['delivery_id'], null, $delivery);
+            return new WP_REST_Response($delivery, 201);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_sendgrid_send_failed', $e->getMessage(), ['status' => 400]);
         }

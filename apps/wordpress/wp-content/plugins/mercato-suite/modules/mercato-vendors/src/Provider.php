@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Vendors;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
@@ -60,6 +61,7 @@ final class Provider extends ServiceProvider
         try {
             $ownerUserId = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
             $vendor = $this->repo()->register((array) $request->get_json_params(), $ownerUserId);
+            $this->audit('vendor.registered', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
             return new WP_REST_Response($vendor, 201);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_registration_failed', $e->getMessage(), ['status' => 400]);
@@ -74,6 +76,7 @@ final class Provider extends ServiceProvider
                 (string) $request->get_param('status'),
                 $request->get_param('reason') === null ? null : (string) $request->get_param('reason')
             );
+            $this->audit('vendor.status.updated', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
             return new WP_REST_Response($vendor, 200);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_status_failed', $e->getMessage(), ['status' => 400]);
@@ -83,5 +86,14 @@ final class Provider extends ServiceProvider
     private function repo(): Repository
     {
         return $this->container->get(Repository::class);
+    }
+
+    /**
+     * @param array<string,mixed>|null $before
+     * @param array<string,mixed>|null $after
+     */
+    private function audit(string $action, string $entityType, int $entityId, ?array $before, ?array $after): void
+    {
+        $this->container->get(Writer::class)->log($action, $entityType, $entityId, $before, $after);
     }
 }

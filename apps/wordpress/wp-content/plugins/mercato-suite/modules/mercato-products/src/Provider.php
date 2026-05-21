@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Products;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
@@ -59,7 +60,9 @@ final class Provider extends ServiceProvider
     public function create(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->repo()->create((array) $request->get_json_params()), 201);
+            $product = $this->repo()->create((array) $request->get_json_params());
+            $this->audit('product.created', 'product', (int) $product['product_id'], null, $product);
+            return new WP_REST_Response($product, 201);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_product_create_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -68,7 +71,9 @@ final class Provider extends ServiceProvider
     public function archive(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->repo()->archive((int) $request->get_param('id')), 200);
+            $product = $this->repo()->archive((int) $request->get_param('id'));
+            $this->audit('product.archived', 'product', (int) $product['product_id'], null, $product);
+            return new WP_REST_Response($product, 200);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_product_archive_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -77,5 +82,14 @@ final class Provider extends ServiceProvider
     private function repo(): Repository
     {
         return $this->container->get(Repository::class);
+    }
+
+    /**
+     * @param array<string,mixed>|null $before
+     * @param array<string,mixed>|null $after
+     */
+    private function audit(string $action, string $entityType, int $entityId, ?array $before, ?array $after): void
+    {
+        $this->container->get(Writer::class)->log($action, $entityType, $entityId, $before, $after);
     }
 }

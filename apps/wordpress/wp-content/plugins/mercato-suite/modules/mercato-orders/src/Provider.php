@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Orders;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
@@ -52,7 +53,9 @@ final class Provider extends ServiceProvider
     public function paymentComplete(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Splitter::class)->markPaymentComplete((int) $request->get_param('wc_order_id')), 200);
+            $suborders = $this->container->get(Splitter::class)->markPaymentComplete((int) $request->get_param('wc_order_id'));
+            $this->audit('order.payment.completed', 'order', (int) $request->get_param('wc_order_id'), null, ['suborders' => $suborders]);
+            return new WP_REST_Response($suborders, 200);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_payment_complete_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -61,12 +64,23 @@ final class Provider extends ServiceProvider
     public function refundSuborder(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Splitter::class)->refundSuborder(
+            $refund = $this->container->get(Splitter::class)->refundSuborder(
                 (int) $request->get_param('suborder_id'),
                 (array) $request->get_json_params()
-            ), 201);
+            );
+            $this->audit('order.refund.created', 'refund', (int) $refund['refund_id'], null, $refund);
+            return new WP_REST_Response($refund, 201);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_refund_failed', $e->getMessage(), ['status' => 400]);
         }
+    }
+
+    /**
+     * @param array<string,mixed>|null $before
+     * @param array<string,mixed>|null $after
+     */
+    private function audit(string $action, string $entityType, int $entityId, ?array $before, ?array $after): void
+    {
+        $this->container->get(Writer::class)->log($action, $entityType, $entityId, $before, $after);
     }
 }

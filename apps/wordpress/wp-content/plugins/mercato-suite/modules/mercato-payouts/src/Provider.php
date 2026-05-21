@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mercato\Payouts;
 
 use Mercato\Core\Events\Outbox;
+use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
@@ -32,7 +33,7 @@ final class Provider extends ServiceProvider
         \add_action('rest_api_init', function (): void {
             \register_rest_route('mercato/v1', '/payouts/batches', [
                 'methods' => 'POST',
-                'callback' => fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Ledger::class)->triggerBatch(), 201),
+                'callback' => [$this, 'triggerBatch'],
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
@@ -47,9 +48,22 @@ final class Provider extends ServiceProvider
     public function reconcile(): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Ledger::class)->reconcile(), 201);
+            $run = $this->container->get(Ledger::class)->reconcile();
+            $this->container->get(Writer::class)->log('payout.reconciled', 'reconciliation_run', (int) $run['run_id'], null, $run);
+            return new WP_REST_Response($run, 201);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_payout_reconciliation_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function triggerBatch(): WP_REST_Response|WP_Error
+    {
+        try {
+            $batch = $this->container->get(Ledger::class)->triggerBatch();
+            $this->container->get(Writer::class)->log('payout.batch.scheduled', 'payout_batch', (int) $batch['batch_id'], null, $batch);
+            return new WP_REST_Response($batch, 201);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_payout_batch_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 }
