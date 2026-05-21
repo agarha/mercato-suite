@@ -34,6 +34,11 @@ final class Provider extends ServiceProvider
                 'callback' => [$this, 'status'],
                 'permission_callback' => '__return_true',
             ]);
+            \register_rest_route('mercato/v1', '/kyc/stripe/webhook', [
+                'methods' => 'POST',
+                'callback' => [$this, 'stripeWebhook'],
+                'permission_callback' => '__return_true',
+            ]);
         });
     }
 
@@ -52,6 +57,15 @@ final class Provider extends ServiceProvider
             return new WP_REST_Response($this->container->get(Repository::class)->updateStatus((int) $request->get_param('vendor_id'), (string) $request->get_param('status')), 200);
         } catch (\Throwable $e) {
             return new WP_Error('mercato_kyc_status_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function stripeWebhook(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->container->get(Repository::class)->handleStripeWebhook((array) $request->get_json_params()), 202);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_kyc_webhook_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 }

@@ -11,7 +11,10 @@
   ],
   "provides_events": [
     "mercato.vendor.kyc.completed.v1",
-    "mercato.vendor.kyc.required.v1"
+    "mercato.vendor.kyc.required.v1",
+    "mercato.kyc.started.v1",
+    "mercato.kyc.verified.v1",
+    "mercato.kyc.rejected.v1"
   ],
   "consumes_events": [
     "mercato.vendor.registered.v1"
@@ -21,7 +24,8 @@
     "mercato_kyc_admin"
   ],
   "tables": [
-    "wp_mercato_kyc_records"
+    "wp_mercato_kyc_cases",
+    "wp_mercato_kyc_documents"
   ],
   "tier": "domain",
   "feature_flag": "mercato.kyc"
