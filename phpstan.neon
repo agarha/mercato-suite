@@ -1,0 +1,14 @@
+parameters:
+  level: 6
+  paths:
+    - apps/wordpress/wp-content/plugins/mercato-suite/modules
+  excludePaths:
+    - apps/wordpress/wp-content/plugins/mercato-suite/modules/*/tests
+    - apps/wordpress/wp-content/plugins/mercato-suite/modules/*/vendor
+  treatPhpDocTypesAsCertain: false
+  ignoreErrors:
+    # WordPress and WooCommerce globals/functions are not statically known.
+    - identifier: function.notFound
+    - identifier: class.notFound
+    - identifier: constant.notFound
+    - '#Call to an undefined function (do_action|add_action|esc_html|deactivate_plugins|plugin_basename|get_bloginfo)\(\)#'
