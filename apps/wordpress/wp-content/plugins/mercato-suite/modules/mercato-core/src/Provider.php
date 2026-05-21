@@ -22,5 +22,58 @@ final class Provider extends ServiceProvider
     public function boot(): void
     {
         $this->container->get(WooCommerce\HookAdapter::class)->register();
+
+        if (\function_exists('add_action')) {
+            \add_action('admin_menu', [$this, 'registerAdminPages']);
+            \add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
+        }
+    }
+
+    public function registerAdminPages(): void
+    {
+        \add_menu_page(
+            'Mercato',
+            'Mercato',
+            'manage_options',
+            'mercato-admin',
+            [$this, 'renderAdminApp'],
+            'dashicons-store',
+            56
+        );
+
+        \add_submenu_page(
+            'mercato-admin',
+            'Vendor Console',
+            'Vendor Console',
+            'read',
+            'mercato-vendor',
+            [$this, 'renderVendorApp']
+        );
+    }
+
+    public function enqueueAdminAssets(string $hook): void
+    {
+        if (!\str_contains($hook, 'mercato')) {
+            return;
+        }
+
+        $baseUrl = \plugin_dir_url(\MERCATO_SUITE_FILE);
+        \wp_enqueue_style('mercato-admin', $baseUrl . 'assets/css/mercato-admin.css', [], \MERCATO_SUITE_VERSION);
+        \wp_enqueue_script('mercato-admin', $baseUrl . 'assets/js/mercato-admin.js', [], \MERCATO_SUITE_VERSION, true);
+        \wp_localize_script('mercato-admin', 'MercatoAdmin', [
+            'restBase' => \esc_url_raw(\rest_url('mercato/v1')),
+            'nonce' => \wp_create_nonce('wp_rest'),
+            'page' => \str_contains($hook, 'mercato-vendor') ? 'vendor' : 'admin',
+        ]);
+    }
+
+    public function renderAdminApp(): void
+    {
+        echo '<div id="mercato-admin-root" class="mercato-shell"></div>';
+    }
+
+    public function renderVendorApp(): void
+    {
+        echo '<div id="mercato-vendor-root" class="mercato-shell"></div>';
     }
 }

@@ -1,0 +1,149 @@
+.mercato-shell {
+  margin: 20px 20px 0 0;
+  color: #1f2933;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.mercato-shell * {
+  box-sizing: border-box;
+}
+
+.mercato-layout {
+  display: grid;
+  gap: 16px;
+  max-width: 1280px;
+}
+
+.mercato-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.mercato-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.mercato-subtitle {
+  margin: 6px 0 0;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.mercato-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.mercato-panel {
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.mercato-panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.mercato-metric {
+  min-height: 88px;
+}
+
+.mercato-metric span {
+  display: block;
+  color: #52606d;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.mercato-metric strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.mercato-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+}
+
+.mercato-table th,
+.mercato-table td {
+  padding: 10px;
+  border-bottom: 1px solid #edf2f7;
+  text-align: left;
+  font-size: 13px;
+}
+
+.mercato-table th {
+  background: #f5f7fa;
+  color: #3e4c59;
+  font-weight: 600;
+}
+
+.mercato-form {
+  display: grid;
+  gap: 10px;
+}
+
+.mercato-form label {
+  display: grid;
+  gap: 5px;
+  color: #3e4c59;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mercato-form input,
+.mercato-form textarea,
+.mercato-form select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #bcccdc;
+  border-radius: 6px;
+  padding: 7px 9px;
+}
+
+.mercato-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mercato-button {
+  min-height: 34px;
+  border: 1px solid #0b5cab;
+  border-radius: 6px;
+  background: #0b5cab;
+  color: #ffffff;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+
+.mercato-button.secondary {
+  background: #ffffff;
+  color: #0b5cab;
+}
+
+.mercato-status {
+  min-height: 20px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+@media (max-width: 782px) {
+  .mercato-header {
+    display: block;
+  }
+}
