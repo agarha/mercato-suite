@@ -61,6 +61,15 @@ Invoke-MercatoApi -Path "/stripe/webhook" -Method "POST" -Body @{
 } | Out-Null
 
 $kyc = Invoke-MercatoApi -Path "/kyc/$($vendor.vendor_id)/start" -Method "POST" -Body @{}
+Invoke-MercatoApi -Path "/kyc/stripe/webhook" -Method "POST" -Body @{
+    id = "evt_kyc_smoke_$rand"
+    type = "identity.verification_session.verified"
+    data = @{
+        object = @{
+            id = $kyc.provider_reference
+        }
+    }
+} | Out-Null
 
 $thread = Invoke-MercatoApi -Path "/messages/threads" -Method "POST" -Body @{
     vendor_id = [int]$vendor.vendor_id
@@ -121,7 +130,7 @@ $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POS
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 
-$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id);"
+$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id);"
 
 $result = [pscustomobject]@{
     vendor_id = $vendor.vendor_id
@@ -146,5 +155,6 @@ if ($mediaDone.scan_status -ne "clean") { throw "Media scan did not complete cle
 if ([int]$stripeExecute.created -lt 1) { throw "Stripe transfer was not created." }
 if ($reconciliation.status -ne "passed") { throw "Reconciliation did not pass." }
 if (!$delivery.delivery_id) { throw "SendGrid delivery was not created." }
+if (($summary -join "`n") -notmatch "approved") { throw "KYC did not approve the vendor." }
 
 $result | ConvertTo-Json -Depth 10
