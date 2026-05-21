@@ -34,13 +34,16 @@ final class Repository
             throw new RuntimeException('vendor_id, title, and non-negative price_minor are required.');
         }
 
+        $status = (string) ($data['status'] ?? 'draft');
+        $this->assertVendorCanPublish($vendorId, $status);
+
         $wcProductId = $this->createWooProduct($data);
         $table = $wpdb->prefix . 'mercato_products';
         $inserted = $wpdb->insert($table, [
             'tenant_id' => $tenantId,
             'vendor_id' => $vendorId,
             'wc_product_id' => $wcProductId,
-            'status' => (string) ($data['status'] ?? 'draft'),
+            'status' => $status,
             'title' => $title,
             'description' => isset($data['description']) ? (string) $data['description'] : null,
             'sku' => isset($data['sku']) ? $this->cleanText((string) $data['sku']) : null,
@@ -159,6 +162,26 @@ final class Repository
         }
 
         return $productId;
+    }
+
+    private function assertVendorCanPublish(int $vendorId, string $productStatus): void
+    {
+        if ($productStatus !== 'active') {
+            return;
+        }
+
+        global $wpdb;
+
+        $vendors = $wpdb->prefix . 'mercato_vendors';
+        $status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM `{$vendors}` WHERE tenant_id = %d AND vendor_id = %d",
+            $this->tenantResolver->currentTenantId(),
+            $vendorId
+        ));
+
+        if ($status !== 'approved') {
+            throw new RuntimeException('Vendor must be approved before publishing active products.');
+        }
     }
 
     private function cleanText(string $value): string
