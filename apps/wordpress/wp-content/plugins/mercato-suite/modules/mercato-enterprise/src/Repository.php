@@ -107,6 +107,39 @@ final class Repository
     }
 
     /**
+     * @param array<string,mixed> $config
+     * @return array<string,mixed>
+     */
+    public function setStorefront(array $config): array
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $table = $wpdb->prefix . 'mercato_tenant_settings';
+        $current = $wpdb->get_row($wpdb->prepare("SELECT `settings`, `version` FROM `{$table}` WHERE `tenant_id` = %d", $tenantId), ARRAY_A);
+        $settings = [];
+        if (\is_array($current) && !empty($current['settings'])) {
+            $decoded = \json_decode((string) $current['settings'], true);
+            $settings = \is_array($decoded) ? $decoded : [];
+        }
+
+        $settings['storefront'] = $this->sanitizeStorefrontConfig($config);
+        $version = \is_array($current) ? ((int) $current['version'] + 1) : 1;
+
+        $wpdb->replace($table, [
+            'tenant_id' => $tenantId,
+            'version' => $version,
+            'settings' => \wp_json_encode($settings, JSON_THROW_ON_ERROR),
+            'updated_by' => \function_exists('get_current_user_id') ? \get_current_user_id() : null,
+        ]);
+
+        $payload = ['tenant_id' => $tenantId, 'version' => $version, 'storefront' => $settings['storefront']];
+        $this->outbox->publish('mercato.tenant.storefront.updated.v1', $payload, (string) $tenantId, $tenantId);
+
+        return $payload;
+    }
+
+    /**
      * @return array<string,mixed>
      */
     private function getTenant(int $tenantId): array
@@ -174,5 +207,68 @@ final class Repository
             'feature_key' => $featureKey,
             'enabled' => $enabled ? 1 : 0,
         ]);
+    }
+
+    /**
+     * @param array<string,mixed> $config
+     * @return array<string,mixed>
+     */
+    private function sanitizeStorefrontConfig(array $config): array
+    {
+        $sanitize = static fn (mixed $value): string => \sanitize_text_field((string) $value);
+        $clean = [];
+
+        foreach ([
+            'brand',
+            'mark',
+            'title',
+            'hero_headline',
+            'hero_copy',
+            'primary_cta',
+            'secondary_cta',
+            'positioning_headline',
+            'positioning_copy',
+            'catalog_headline',
+            'catalog_copy',
+            'catalog_badge',
+            'vendor_headline',
+            'vendor_copy',
+            'vendor_badge',
+            'buyer_headline',
+            'buyer_copy',
+            'seller_headline',
+            'seller_copy',
+            'workflow_headline',
+            'workflow_copy',
+            'footer',
+            'item_empty_title',
+            'item_empty_copy',
+            'item_fallback_copy',
+            'item_quantity_label',
+            'vendor_status_label',
+        ] as $key) {
+            if (\array_key_exists($key, $config)) {
+                $clean[$key] = $sanitize($config[$key]);
+            }
+        }
+
+        foreach (['nav', 'metric_labels', 'positioning_cards', 'seller_steps', 'workflow_steps'] as $key) {
+            if (!isset($config[$key]) || !\is_array($config[$key])) {
+                continue;
+            }
+            $clean[$key] = \array_map(static function (mixed $item) use ($sanitize): mixed {
+                if (!\is_array($item)) {
+                    return $sanitize($item);
+                }
+
+                $row = [];
+                foreach ($item as $itemKey => $itemValue) {
+                    $row[$sanitize($itemKey)] = $sanitize($itemValue);
+                }
+                return $row;
+            }, $config[$key]);
+        }
+
+        return $clean;
     }
 }

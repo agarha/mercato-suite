@@ -271,25 +271,26 @@ final class Provider extends ServiceProvider
         $vendorsTable = $wpdb->prefix . 'mercato_vendors';
         $subordersTable = $wpdb->prefix . 'mercato_suborders';
         $commissionsTable = $wpdb->prefix . 'mercato_commissions';
+        $tenantId = $this->container->get(Tenant\Resolver::class)->currentTenantId();
 
         $products = $wpdb->get_results(
-            "SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, p.status, v.business_name, v.store_slug
+            $wpdb->prepare("SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, p.status, v.business_name, v.store_slug
              FROM `{$productsTable}` p
              INNER JOIN `{$vendorsTable}` v ON v.vendor_id = p.vendor_id AND v.tenant_id = p.tenant_id
-             WHERE p.status = 'active'
+             WHERE p.tenant_id = %d AND p.status = 'active'
              ORDER BY p.created_at DESC
-             LIMIT 8",
+             LIMIT 8", $tenantId),
             ARRAY_A
         ) ?: [];
 
-        $vendorCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$vendorsTable}` WHERE status = 'approved'");
-        $productCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$productsTable}` WHERE status = 'active'");
-        $suborderCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$subordersTable}`");
-        $takeRateMinor = (int) $wpdb->get_var("SELECT COALESCE(SUM(platform_fee_minor), 0) FROM `{$commissionsTable}`");
+        $vendorCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$vendorsTable}` WHERE tenant_id = %d AND status = 'approved'", $tenantId));
+        $productCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$productsTable}` WHERE tenant_id = %d AND status = 'active'", $tenantId));
+        $suborderCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$subordersTable}` WHERE tenant_id = %d", $tenantId));
+        $takeRateMinor = (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(SUM(platform_fee_minor), 0) FROM `{$commissionsTable}` WHERE tenant_id = %d", $tenantId));
 
         \status_header(200);
         \nocache_headers();
-        echo $this->storefrontHtml($products, $vendorCount, $productCount, $suborderCount, $takeRateMinor);
+        echo $this->storefrontHtml($products, $vendorCount, $productCount, $suborderCount, $takeRateMinor, $this->storefrontConfig($tenantId));
         exit;
     }
 
@@ -306,12 +307,143 @@ final class Provider extends ServiceProvider
     }
 
     /**
-     * @param list<array<string,mixed>> $products
+     * @return array<string,mixed>
      */
-    private function storefrontHtml(array $products, int $vendorCount, int $productCount, int $suborderCount, int $takeRateMinor): string
+    private function storefrontConfig(int $tenantId): array
+    {
+        global $wpdb;
+
+        $config = $this->defaultStorefrontConfig();
+        $config['tenant_id'] = $tenantId;
+        $table = $wpdb->prefix . 'mercato_tenant_settings';
+        $settingsJson = $wpdb->get_var($wpdb->prepare("SELECT `settings` FROM `{$table}` WHERE `tenant_id` = %d", $tenantId));
+        if (\is_string($settingsJson) && $settingsJson !== '') {
+            $settings = \json_decode($settingsJson, true);
+            if (\is_array($settings) && isset($settings['storefront']) && \is_array($settings['storefront'])) {
+                $config = $this->mergeStorefrontConfig($config, $settings['storefront']);
+                $config['tenant_id'] = $tenantId;
+            }
+        }
+
+        return $config;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function defaultStorefrontConfig(): array
+    {
+        return [
+            'tenant_id' => 1,
+            'brand' => 'Mercato',
+            'mark' => 'M',
+            'title' => 'Mercato Marketplace Demo',
+            'hero_headline' => 'Multi-vendor marketplace operations, packaged for tenants.',
+            'hero_copy' => 'Mercato gives each tenant a managed marketplace with vendor onboarding, catalog publishing, multi-vendor order splitting, commissions, payouts, reconciliation, notifications, and media storage.',
+            'primary_cta' => 'Open admin console',
+            'secondary_cta' => 'Open vendor console',
+            'positioning_headline' => 'Why this stands out',
+            'positioning_copy' => 'Mercato is positioned as a hosted marketplace operating system, not only a single-site vendor plugin.',
+            'catalog_headline' => 'Buyer marketplace',
+            'catalog_copy' => 'A real storefront-style catalog loaded from vendor-owned Mercato product records.',
+            'catalog_badge' => 'Multi-vendor catalog',
+            'vendor_headline' => 'Vendor directory',
+            'vendor_copy' => 'Approved sellers with payout onboarding and tenant-scoped store identity.',
+            'vendor_badge' => 'KYC + Stripe Connect',
+            'buyer_headline' => 'Buyer checkout and account',
+            'buyer_copy' => 'Demo of what a buyer sees: cart economics, multi-vendor fulfillment, refund state, and tracking.',
+            'seller_headline' => 'Seller portal experience',
+            'seller_copy' => 'Public preview of the vendor workflow backed by the same admin/vendor APIs.',
+            'workflow_headline' => 'Marketplace workflow',
+            'workflow_copy' => 'The local E2E path validates the operational flow behind this storefront.',
+            'footer' => 'Local Mercato Docker demo',
+            'item_empty_title' => 'No active demo products yet',
+            'item_empty_copy' => 'Run tools\\seed-demo-data.ps1 to populate realistic vendors and products.',
+            'item_fallback_copy' => 'Curated marketplace product ready for vendor fulfillment.',
+            'item_quantity_label' => 'in stock',
+            'vendor_status_label' => 'Stripe connected',
+            'nav' => [
+                ['href' => '#shop', 'label' => 'Shop'],
+                ['href' => '#vendors', 'label' => 'Vendors'],
+                ['href' => '#buyer', 'label' => 'Buyer Account'],
+                ['href' => '#seller', 'label' => 'Seller Portal'],
+                ['href' => '/wp-admin/admin.php?page=mercato-admin', 'label' => 'Admin'],
+            ],
+            'metric_labels' => [
+                'vendors' => 'Approved vendors',
+                'products' => 'Active products',
+                'orders' => 'Suborders processed',
+                'take' => 'Platform fees tracked',
+            ],
+            'positioning_cards' => [
+                ['eyebrow' => '01', 'title' => 'Multi-tenant by design', 'copy' => 'One platform can host many tenant marketplaces with tenant-aware data, audit, metrics, and controls.'],
+                ['eyebrow' => '02', 'title' => 'Finance-grade operations', 'copy' => 'Stripe Connect, commissions, payout batches, refund reversals, reconciliation, and trial balance evidence.'],
+                ['eyebrow' => '03', 'title' => 'Vendor + buyer workflows', 'copy' => 'Vendor onboarding, catalog, media, suborders, tracking, notifications, and buyer account visibility.'],
+                ['eyebrow' => '04', 'title' => 'Portable hosting path', 'copy' => 'Start on Hetzner with Docker, then move to AWS/Kubernetes when sales justify enterprise scale.'],
+            ],
+            'seller_steps' => [
+                ['eyebrow' => 'Apply', 'title' => 'Storefront onboarding', 'copy' => 'Business profile, return policy, KYC, payout account, and tenant approval.'],
+                ['eyebrow' => 'Sell', 'title' => 'Catalog workspace', 'copy' => 'Create products, SKU, price, stock, media upload, and WooCommerce projection.'],
+                ['eyebrow' => 'Fulfill', 'title' => 'Suborders and tracking', 'copy' => 'Vendors see only their own suborders, update shipment status, and track refunds.'],
+                ['eyebrow' => 'Get paid', 'title' => '__PAYOUT_SUMMARY__', 'copy' => 'Commission, ledger, payout batch, and Stripe transfer evidence are linked.'],
+                ['eyebrow' => 'Message', 'title' => '__NOTIFICATION_SUMMARY__', 'copy' => 'Notifications are delivered through the local mail/event pipeline.'],
+                ['eyebrow' => 'Operate', 'title' => 'Reports and audit', 'copy' => 'Tenant dashboards, reconciliation, audit log, and outbox health are visible in admin.'],
+            ],
+            'workflow_steps' => [
+                ['eyebrow' => '01', 'title' => 'Onboard vendors', 'copy' => 'Register, review, approve, reject, suspend, and track KYC/payout readiness.'],
+                ['eyebrow' => '02', 'title' => 'Publish catalog', 'copy' => 'Products are owned by vendors and projected into WooCommerce for checkout.'],
+                ['eyebrow' => '03', 'title' => 'Split orders', 'copy' => 'Parent Woo orders become vendor suborders with tax, shipping, discount, and tracking allocation.'],
+                ['eyebrow' => '04', 'title' => 'Pay and reconcile', 'copy' => 'Stripe Connect payouts, commission reversals, reports, and trial balance evidence stay linked.'],
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $base
+     * @param array<string,mixed> $override
+     * @return array<string,mixed>
+     */
+    private function mergeStorefrontConfig(array $base, array $override): array
+    {
+        foreach ($override as $key => $value) {
+            if (\is_array($value) && isset($base[$key]) && \is_array($base[$key])) {
+                $base[$key] = $this->mergeStorefrontConfig($base[$key], $value);
+                continue;
+            }
+
+            $base[$key] = $value;
+        }
+
+        return $base;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $products
+     * @param array<string,mixed> $config
+     */
+    private function storefrontHtml(array $products, int $vendorCount, int $productCount, int $suborderCount, int $takeRateMinor, array $config): string
     {
         $esc = static fn (mixed $value): string => \esc_html((string) $value);
         $money = static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2);
+        $tenantId = (int) ($config['tenant_id'] ?? 1);
+        $nav = $config['nav'];
+        $metricLabels = $config['metric_labels'];
+        $navHtml = '';
+        foreach (\is_array($nav) ? $nav : [] as $item) {
+            if (!\is_array($item)) {
+                continue;
+            }
+            $navHtml .= '<a href="' . \esc_attr((string) ($item['href'] ?? '#')) . '">' . $esc($item['label'] ?? '') . '</a>';
+        }
+
+        $positioningHtml = '';
+        foreach (\is_array($config['positioning_cards'] ?? null) ? $config['positioning_cards'] : [] as $card) {
+            if (!\is_array($card)) {
+                continue;
+            }
+            $positioningHtml .= '<div class="positioning-card"><b>' . $esc($card['eyebrow'] ?? '') . '</b><strong>' . $esc($card['title'] ?? '') . '</strong><p>' . $esc($card['copy'] ?? '') . '</p></div>';
+        }
+
         $cards = '';
         foreach ($products as $index => $product) {
             $tone = ['market-blue', 'market-green', 'market-red', 'market-gold'][$index % 4];
@@ -320,14 +452,14 @@ final class Provider extends ServiceProvider
                 <div class="product-body">
                     <p class="vendor-name">' . $esc($product['business_name']) . '</p>
                     <h3>' . $esc($product['title']) . '</h3>
-                    <p>' . $esc($product['description'] ?: 'Curated marketplace product ready for vendor fulfillment.') . '</p>
-                    <div class="product-meta"><strong>' . $money($product['price_minor']) . '</strong><span>' . $esc($product['stock_quantity']) . ' in stock</span></div>
+                    <p>' . $esc($product['description'] ?: $config['item_fallback_copy']) . '</p>
+                    <div class="product-meta"><strong>' . $money($product['price_minor']) . '</strong><span>' . $esc($product['stock_quantity']) . ' ' . $esc($config['item_quantity_label']) . '</span></div>
                 </div>
             </article>';
         }
 
         if ($cards === '') {
-            $cards = '<article class="empty-state"><h3>No active demo products yet</h3><p>Run <code>tools\\seed-demo-data.ps1</code> to populate realistic vendors and products.</p></article>';
+            $cards = '<article class="empty-state"><h3>' . $esc($config['item_empty_title']) . '</h3><p>' . $esc($config['item_empty_copy']) . '</p></article>';
         }
 
         global $wpdb;
@@ -335,14 +467,14 @@ final class Provider extends ServiceProvider
         $subordersTable = $wpdb->prefix . 'mercato_suborders';
         $payoutsTable = $wpdb->prefix . 'mercato_payout_batches';
         $notificationsTable = $wpdb->prefix . 'mercato_notification_deliveries';
-        $vendors = $wpdb->get_results("SELECT vendor_id, business_name, store_slug, status, stripe_account_id FROM `{$vendorsTable}` WHERE status = 'approved' ORDER BY vendor_id DESC LIMIT 6", ARRAY_A) ?: [];
-        $orders = $wpdb->get_results("SELECT suborder_id, vendor_id, wc_order_id, status, payment_status, total_minor, refunded_minor, tracking_carrier, tracking_number FROM `{$subordersTable}` ORDER BY suborder_id DESC LIMIT 5", ARRAY_A) ?: [];
-        $latestPayout = $wpdb->get_row("SELECT batch_id, status, total_minor, created_at FROM `{$payoutsTable}` ORDER BY batch_id DESC LIMIT 1", ARRAY_A) ?: [];
-        $latestNotification = $wpdb->get_row("SELECT delivery_id, recipient, subject, status FROM `{$notificationsTable}` ORDER BY delivery_id DESC LIMIT 1", ARRAY_A) ?: [];
+        $vendors = $wpdb->get_results($wpdb->prepare("SELECT vendor_id, business_name, store_slug, status, stripe_account_id FROM `{$vendorsTable}` WHERE tenant_id = %d AND status = 'approved' ORDER BY vendor_id DESC LIMIT 6", $tenantId), ARRAY_A) ?: [];
+        $orders = $wpdb->get_results($wpdb->prepare("SELECT suborder_id, vendor_id, wc_order_id, status, payment_status, total_minor, refunded_minor, tracking_carrier, tracking_number FROM `{$subordersTable}` WHERE tenant_id = %d ORDER BY suborder_id DESC LIMIT 5", $tenantId), ARRAY_A) ?: [];
+        $latestPayout = $wpdb->get_row($wpdb->prepare("SELECT batch_id, status, total_minor, created_at FROM `{$payoutsTable}` WHERE tenant_id = %d ORDER BY batch_id DESC LIMIT 1", $tenantId), ARRAY_A) ?: [];
+        $latestNotification = $wpdb->get_row($wpdb->prepare("SELECT delivery_id, recipient, subject, status FROM `{$notificationsTable}` WHERE tenant_id = %d ORDER BY delivery_id DESC LIMIT 1", $tenantId), ARRAY_A) ?: [];
 
         $vendorCards = '';
         foreach ($vendors as $vendor) {
-            $vendorCards .= '<article class="vendor-card"><div class="vendor-avatar">' . $esc(\mb_substr((string) $vendor['business_name'], 0, 1)) . '</div><div><h3>' . $esc($vendor['business_name']) . '</h3><p>@' . $esc($vendor['store_slug']) . '</p><span>' . $esc($vendor['status']) . ' / Stripe connected</span></div></article>';
+            $vendorCards .= '<article class="vendor-card"><div class="vendor-avatar">' . $esc(\mb_substr((string) $vendor['business_name'], 0, 1)) . '</div><div><h3>' . $esc($vendor['business_name']) . '</h3><p>@' . $esc($vendor['store_slug']) . '</p><span>' . $esc($vendor['status']) . ' / ' . $esc($config['vendor_status_label']) . '</span></div></article>';
         }
 
         $orderRows = '';
@@ -360,12 +492,34 @@ final class Provider extends ServiceProvider
             ? 'No notification yet'
             : 'Delivery #' . $esc($latestNotification['delivery_id']) . ' sent to ' . $esc($latestNotification['recipient']);
 
+        $sellerSteps = '';
+        foreach (\is_array($config['seller_steps'] ?? null) ? $config['seller_steps'] : [] as $step) {
+            if (!\is_array($step)) {
+                continue;
+            }
+            $title = (string) ($step['title'] ?? '');
+            if ($title === '__PAYOUT_SUMMARY__') {
+                $title = $payoutSummary;
+            } elseif ($title === '__NOTIFICATION_SUMMARY__') {
+                $title = $notificationSummary;
+            }
+            $sellerSteps .= '<div class="step"><b>' . $esc($step['eyebrow'] ?? '') . '</b><strong>' . $esc($title) . '</strong><p>' . $esc($step['copy'] ?? '') . '</p></div>';
+        }
+
+        $workflowSteps = '';
+        foreach (\is_array($config['workflow_steps'] ?? null) ? $config['workflow_steps'] : [] as $step) {
+            if (!\is_array($step)) {
+                continue;
+            }
+            $workflowSteps .= '<div class="step"><b>' . $esc($step['eyebrow'] ?? '') . '</b><strong>' . $esc($step['title'] ?? '') . '</strong><p>' . $esc($step['copy'] ?? '') . '</p></div>';
+        }
+
         return '<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mercato Marketplace Demo</title>
+  <title>' . $esc($config['title']) . '</title>
   <style>
     :root{--ink:#17202a;--muted:#5f6f7f;--line:#d9e2ec;--panel:#fff;--wash:#f6f8fb;--blue:#155e75;--green:#286140;--red:#8f3d3d;--gold:#8a5a18}
     *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--wash)}a{color:inherit}
@@ -386,20 +540,20 @@ final class Provider extends ServiceProvider
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="brand"><div class="mark">M</div>Mercato</div><nav class="nav"><a href="#shop">Shop</a><a href="#vendors">Vendors</a><a href="#buyer">Buyer Account</a><a href="#seller">Seller Portal</a><a href="/wp-admin/admin.php?page=mercato-admin">Admin</a></nav></header>
+  <header class="topbar"><div class="brand"><div class="mark">' . $esc($config['mark']) . '</div>' . $esc($config['brand']) . '</div><nav class="nav">' . $navHtml . '</nav></header>
   <main>
     <section class="hero">
-      <div><h1>Multi-vendor marketplace operations, packaged for tenants.</h1><p>Mercato gives each tenant a managed marketplace with vendor onboarding, catalog publishing, multi-vendor order splitting, commissions, payouts, reconciliation, notifications, and media storage.</p><div class="hero-actions"><a class="button" href="/wp-admin/admin.php?page=mercato-admin">Open admin console</a><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">Open vendor console</a></div></div>
-      <aside class="demo-board"><div class="board-row"><span>Approved vendors</span><strong>' . $vendorCount . '</strong></div><div class="board-row"><span>Active products</span><strong>' . $productCount . '</strong></div><div class="board-row"><span>Suborders processed</span><strong>' . $suborderCount . '</strong></div><div class="board-row"><span>Platform fees tracked</span><strong>' . $money($takeRateMinor) . '</strong></div></aside>
+      <div><h1>' . $esc($config['hero_headline']) . '</h1><p>' . $esc($config['hero_copy']) . '</p><div class="hero-actions"><a class="button" href="/wp-admin/admin.php?page=mercato-admin">' . $esc($config['primary_cta']) . '</a><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">' . $esc($config['secondary_cta']) . '</a></div></div>
+      <aside class="demo-board"><div class="board-row"><span>' . $esc($metricLabels['vendors'] ?? '') . '</span><strong>' . $vendorCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['products'] ?? '') . '</span><strong>' . $productCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['orders'] ?? '') . '</span><strong>' . $suborderCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['take'] ?? '') . '</span><strong>' . $money($takeRateMinor) . '</strong></div></aside>
     </section>
-    <section class="section"><div class="section-head"><div><h2>Why this stands out</h2><p>Mercato is positioned as a hosted marketplace operating system, not only a single-site vendor plugin.</p></div></div><div class="positioning"><div class="positioning-card"><b>01</b><strong>Multi-tenant by design</strong><p>One platform can host many tenant marketplaces with tenant-aware data, audit, metrics, and controls.</p></div><div class="positioning-card"><b>02</b><strong>Finance-grade operations</strong><p>Stripe Connect, commissions, payout batches, refund reversals, reconciliation, and trial balance evidence.</p></div><div class="positioning-card"><b>03</b><strong>Vendor + buyer workflows</strong><p>Vendor onboarding, catalog, media, suborders, tracking, notifications, and buyer account visibility.</p></div><div class="positioning-card"><b>04</b><strong>Portable hosting path</strong><p>Start on Hetzner with Docker, then move to AWS/Kubernetes when sales justify enterprise scale.</p></div></div></section>
-    <section class="section" id="shop"><div class="section-head"><div><h2>Buyer marketplace</h2><p>A real storefront-style catalog loaded from vendor-owned Mercato product records.</p></div><span class="pill">Multi-vendor catalog</span></div><div class="product-grid">' . $cards . '</div></section>
-    <section class="section" id="vendors"><div class="section-head"><div><h2>Vendor directory</h2><p>Approved sellers with payout onboarding and tenant-scoped store identity.</p></div><span class="pill">KYC + Stripe Connect</span></div><div class="vendor-grid">' . $vendorCards . '</div></section>
-    <section class="section" id="buyer"><div class="section-head"><div><h2>Buyer checkout and account</h2><p>Demo of what a buyer sees: cart economics, multi-vendor fulfillment, refund state, and tracking.</p></div></div><div class="user-grid"><div class="cart-panel"><h3>Checkout preview</h3><div class="cart-line"><span>Cart contains products from multiple vendors</span><strong>Split after payment</strong></div><div class="cart-line"><span>Tax, shipping, discounts</span><strong>Allocated by suborder</strong></div><div class="cart-line"><span>Payment</span><strong>Stripe test intent</strong></div><div class="cart-line"><span>Refund support</span><strong>Commission reversal</strong></div></div><div class="account-panel"><h3>Buyer order history</h3><table class="table"><thead><tr><th>Order</th><th>Status</th><th>Payment</th><th>Total</th><th>Refunded</th><th>Tracking</th></tr></thead><tbody>' . $orderRows . '</tbody></table></div></div></section>
-    <section class="section" id="seller"><div class="section-head"><div><h2>Seller portal experience</h2><p>Public preview of the vendor workflow backed by the same admin/vendor APIs.</p></div><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">Open live vendor console</a></div><div class="seller-grid"><div class="step"><b>Apply</b><strong>Storefront onboarding</strong><p>Business profile, return policy, KYC, payout account, and tenant approval.</p></div><div class="step"><b>Sell</b><strong>Catalog workspace</strong><p>Create products, SKU, price, stock, media upload, and WooCommerce projection.</p></div><div class="step"><b>Fulfill</b><strong>Suborders and tracking</strong><p>Vendors see only their own suborders, update shipment status, and track refunds.</p></div><div class="step"><b>Get paid</b><strong>' . $payoutSummary . '</strong><p>Commission, ledger, payout batch, and Stripe transfer evidence are linked.</p></div><div class="step"><b>Message</b><strong>' . $notificationSummary . '</strong><p>Notifications are delivered through the local mail/event pipeline.</p></div><div class="step"><b>Operate</b><strong>Reports and audit</strong><p>Tenant dashboards, reconciliation, audit log, and outbox health are visible in admin.</p></div></div></section>
-    <section class="section"><div class="section-head"><div><h2>Marketplace workflow</h2><p>The local E2E path validates the operational flow behind this storefront.</p></div></div><div class="workflow"><div class="step"><b>01</b><strong>Onboard vendors</strong><p>Register, review, approve, reject, suspend, and track KYC/payout readiness.</p></div><div class="step"><b>02</b><strong>Publish catalog</strong><p>Products are owned by vendors and projected into WooCommerce for checkout.</p></div><div class="step"><b>03</b><strong>Split orders</strong><p>Parent Woo orders become vendor suborders with tax, shipping, discount, and tracking allocation.</p></div><div class="step"><b>04</b><strong>Pay and reconcile</strong><p>Stripe Connect payouts, commission reversals, reports, and trial balance evidence stay linked.</p></div></div></section>
+    <section class="section"><div class="section-head"><div><h2>' . $esc($config['positioning_headline']) . '</h2><p>' . $esc($config['positioning_copy']) . '</p></div></div><div class="positioning">' . $positioningHtml . '</div></section>
+    <section class="section" id="shop"><div class="section-head"><div><h2>' . $esc($config['catalog_headline']) . '</h2><p>' . $esc($config['catalog_copy']) . '</p></div><span class="pill">' . $esc($config['catalog_badge']) . '</span></div><div class="product-grid">' . $cards . '</div></section>
+    <section class="section" id="vendors"><div class="section-head"><div><h2>' . $esc($config['vendor_headline']) . '</h2><p>' . $esc($config['vendor_copy']) . '</p></div><span class="pill">' . $esc($config['vendor_badge']) . '</span></div><div class="vendor-grid">' . $vendorCards . '</div></section>
+    <section class="section" id="buyer"><div class="section-head"><div><h2>' . $esc($config['buyer_headline']) . '</h2><p>' . $esc($config['buyer_copy']) . '</p></div></div><div class="user-grid"><div class="cart-panel"><h3>Checkout preview</h3><div class="cart-line"><span>Cart contains products from multiple vendors</span><strong>Split after payment</strong></div><div class="cart-line"><span>Tax, shipping, discounts</span><strong>Allocated by suborder</strong></div><div class="cart-line"><span>Payment</span><strong>Stripe test intent</strong></div><div class="cart-line"><span>Refund support</span><strong>Commission reversal</strong></div></div><div class="account-panel"><h3>Buyer order history</h3><table class="table"><thead><tr><th>Order</th><th>Status</th><th>Payment</th><th>Total</th><th>Refunded</th><th>Tracking</th></tr></thead><tbody>' . $orderRows . '</tbody></table></div></div></section>
+    <section class="section" id="seller"><div class="section-head"><div><h2>' . $esc($config['seller_headline']) . '</h2><p>' . $esc($config['seller_copy']) . '</p></div><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">' . $esc($config['secondary_cta']) . '</a></div><div class="seller-grid">' . $sellerSteps . '</div></section>
+    <section class="section"><div class="section-head"><div><h2>' . $esc($config['workflow_headline']) . '</h2><p>' . $esc($config['workflow_copy']) . '</p></div></div><div class="workflow">' . $workflowSteps . '</div></section>
   </main>
-  <footer class="footer">Local Mercato Docker demo at http://localhost:8092</footer>
+  <footer class="footer">' . $esc($config['footer']) . '</footer>
 </body>
 </html>';
     }

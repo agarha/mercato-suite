@@ -49,7 +49,7 @@ The products API supports geo filtering with `latitude`, `longitude`, and `radiu
 
 Gigsii should be a tenant/product layer on top of Mercato:
 
-- Brand and public website through tenant configuration or a theme layer.
+- Brand and public website through tenant storefront configuration or a theme layer.
 - Gigsii categories as tenant data.
 - Gigsii providers as Mercato vendors with provider profile extensions.
 - Gigsii services as Mercato products/service templates.
@@ -57,3 +57,13 @@ Gigsii should be a tenant/product layer on top of Mercato:
 - Gigsii service areas through provider locations and service areas.
 
 Changes to shared marketplace primitives should be made in Mercato, then pulled or released into Gigsii.
+
+## Tenant Storefront Configuration
+
+Tenant storefront copy is stored in `mercato_tenant_settings.settings.storefront` and can be updated through:
+
+```text
+POST /wp-json/mercato/v1/enterprise/storefront
+```
+
+This prevents tenant products such as Gigsii from requiring source edits for brand, homepage copy, navigation, metric labels, positioning cards, seller/provider workflow cards, or workflow steps. The Mercato source ships with default copy, and tenant-specific products override it through settings.
