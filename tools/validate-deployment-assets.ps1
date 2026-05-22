@@ -9,7 +9,20 @@ $required = @(
     "$chart\templates\migration-job.yaml",
     "$chart\templates\cronjobs.yaml",
     "$chart\templates\servicemonitor.yaml",
-    "infrastructure\k8s\README.md"
+    "infrastructure\k8s\README.md",
+    "infrastructure\terraform\envs\staging-us-east-1\main.tf",
+    "infrastructure\terraform\envs\prod-us-east-1\main.tf",
+    "infrastructure\terraform\modules\network\main.tf",
+    "infrastructure\terraform\modules\eks\main.tf",
+    "infrastructure\terraform\modules\data\main.tf",
+    "infrastructure\terraform\modules\edge\main.tf",
+    "infrastructure\terraform\modules\secrets\main.tf",
+    "infrastructure\terraform\modules\observability\main.tf",
+    "infrastructure\terraform\modules\ci\main.tf",
+    "infrastructure\observability\grafana\mercato-mvp-dashboard.json",
+    "infrastructure\observability\prometheus\alerts.yaml",
+    "infrastructure\runbooks\backup-restore.md",
+    "tools\backup-restore-drill.ps1"
 )
 
 foreach ($path in $required) {
@@ -21,6 +34,7 @@ foreach ($path in $required) {
 $chartText = Get-Content "$chart\Chart.yaml" -Raw
 $valuesText = Get-Content "$chart\values.yaml" -Raw
 $templatesText = (Get-Content "$chart\templates\*.yaml" -Raw) -join "`n"
+$terraformText = (Get-ChildItem -Path "infrastructure\terraform" -Recurse -Filter "*.tf" | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
 
 if ($chartText -notmatch "apiVersion:\s+v2") { throw "Helm chart is missing apiVersion v2." }
 if ($valuesText -notmatch "outboxRelay:" -or $valuesText -notmatch "migrations:" -or $valuesText -notmatch "metrics:") {
@@ -37,6 +51,9 @@ if ($templatesText -notmatch "kind:\s+CronJob") {
 }
 if ($templatesText -notmatch "kind:\s+ServiceMonitor" -or $valuesText -notmatch "path:\s+/metrics") {
     throw "Helm templates must include Prometheus metrics scraping."
+}
+if ($terraformText -notmatch "aws_eks_cluster" -or $terraformText -notmatch "aws_rds_cluster" -or $terraformText -notmatch "aws_s3_bucket" -or $terraformText -notmatch "aws_secretsmanager_secret") {
+    throw "Terraform assets must include EKS, Aurora, S3, and Secrets Manager resources."
 }
 
 if (Get-Command helm -ErrorAction SilentlyContinue) {

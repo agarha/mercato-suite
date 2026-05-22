@@ -18,7 +18,7 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | API/events | 7 | 6 | Partial | `docs_v2/07_openapi`, `packages/contracts/mercato-mvp-contract.json`, `tools/validate-contracts.py`, REST providers, outbox relay, `config/rate-limits.json` | Update docs contracts for all MVP routes/events; add RFC 7807 errors and outbound webhooks. |
 | Security/RBAC/tenant isolation | 8 | 5 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, `Rest/RateLimiter.php`, audit log | Add security tests, CSP, DSAR workflow, MFA/API key hashing where applicable. |
 | QA/E2E/performance | 7 | 3 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation | Add Playwright top workflows, k6, axe, contract tests, SAST/SCA/IaC scans. |
-| DevOps/deployment/monitoring | 3 | 2 | Partial | Docker Compose, Helm chart, `/metrics`, preflight, release build | Add Terraform, backup/restore, DR drill, dashboards, alerts. |
+| DevOps/deployment/monitoring | 3 | 3 | Partial | Docker Compose, Helm chart, Terraform MVP scaffold, `/metrics`, Grafana dashboard, Prometheus alerts, local restore drill, preflight, release build | Execute real AWS deployment, DR drill, and alert integration once credentials/environment exist. |
 | **Total** | **100** | **68** | **Not MVP-launch ready** | Full local verification passed after latest milestones | Close P1 gaps or formally block/defer with issue ownership. |
 
 ## Checklist Area Summary
@@ -38,7 +38,7 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | K. UX / Frontend | Partial | WordPress admin/vendor UI shell and asset validation. | Real SPA workspaces, accessibility tests, i18n/microcopy, buyer storefront missing. |
 | L. Security & Compliance | Partial | RBAC foundation, tenant-scoped queries, audit log, upload controls, rate-limit policy. | MFA, DSAR, CSP, SIEM, pentest, SOC 2, API key hashing evidence missing. |
 | M. QA / Testing | Partial | PHPUnit, manifest validation, JS asset validation, full E2E smoke. | Playwright, k6, axe, SAST/SCA/IaC, UAT scripts missing. |
-| N. DevOps / Infrastructure | Partial | Docker, CI, Helm, metrics, release artifact. | Terraform, real cloud deploy, backups, DR, alerts, cost tagging missing. |
+| N. DevOps / Infrastructure | Partial | Docker, CI, Helm, Terraform scaffold, metrics, dashboard/alerts, release artifact, local backup/restore drill. | Real cloud deploy, AWS backup proof, DR/failover execution, PagerDuty, cost reporting missing. |
 | O. AI Copilot | Deferred | AI module/migration exists; MVP Cut defers AI. | Create post-MVP issues for AI service, provider gateway, guardrails, vector store, evals, zero-retention contracts. |
 
 ## Verification Evidence
@@ -51,6 +51,7 @@ Latest completed verification before this audit:
 - `npm test`
 - `tools/validate-deployment-assets.ps1`
 - `tools/validate-contracts.py`
+- `tools/backup-restore-drill.ps1`
 - Branch pushed to `origin/codex/e2e-developed`
 
 ## Governance Blocker
