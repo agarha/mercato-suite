@@ -19,7 +19,7 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | Security/RBAC/tenant isolation | 8 | 5 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, `Rest/RateLimiter.php`, audit log | Add security tests, CSP, DSAR workflow, MFA/API key hashing where applicable. |
 | QA/E2E/performance | 7 | 3 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation | Add Playwright top workflows, k6, axe, contract tests, SAST/SCA/IaC scans. |
 | DevOps/deployment/monitoring | 3 | 3 | Partial | Docker Compose, Helm chart, Terraform MVP scaffold, `/metrics`, Grafana dashboard, Prometheus alerts, local restore drill, preflight, release build | Execute real AWS deployment, DR drill, and alert integration once credentials/environment exist. |
-| **Total** | **100** | **68** | **Not MVP-launch ready** | Full local verification passed after latest milestones | Close P1 gaps or formally block/defer with issue ownership. |
+| **Total** | **100** | **74** | **Not MVP-launch ready** | Full local verification passed after latest milestones | Close P1 gaps or formally block/defer with issue ownership. |
 
 ## Checklist Area Summary
 
