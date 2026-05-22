@@ -56,6 +56,12 @@ final class Provider extends ServiceProvider
             'callback' => [$this, 'metrics'],
             'permission_callback' => [Rest\Permissions::class, 'canManage'],
         ]);
+
+        \register_rest_route('mercato/v1', '/demo/features', [
+            'methods' => 'GET',
+            'callback' => [$this, 'demoFeatures'],
+            'permission_callback' => [Rest\Permissions::class, 'canRead'],
+        ]);
     }
 
     public function readiness(): \WP_REST_Response
@@ -69,6 +75,89 @@ final class Provider extends ServiceProvider
         $response = new \WP_REST_Response($this->container->get(Observability\Health::class)->prometheus(), 200);
         $response->header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
         return $response;
+    }
+
+    public function demoFeatures(): \WP_REST_Response
+    {
+        global $wpdb;
+
+        $prefix = $wpdb->prefix;
+        $query = static function (string $sql) use ($wpdb): array {
+            return $wpdb->get_results($sql, ARRAY_A) ?: [];
+        };
+        $scalar = static function (string $sql) use ($wpdb): int {
+            return (int) $wpdb->get_var($sql);
+        };
+
+        $features = [
+            [
+                'name' => 'Tenant platform',
+                'status' => 'live',
+                'evidence' => $this->container->get(Observability\Health::class)->readiness(),
+            ],
+            [
+                'name' => 'Vendors and KYC',
+                'status' => 'live',
+                'evidence' => [
+                    'approved_vendors' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_vendors` WHERE status = 'approved'"),
+                    'verified_kyc_cases' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_kyc_cases` WHERE status = 'verified'"),
+                ],
+            ],
+            [
+                'name' => 'Catalog and media',
+                'status' => 'live',
+                'evidence' => [
+                    'active_products' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_products` WHERE status = 'active'"),
+                    'clean_media' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_media` WHERE scan_status = 'clean'"),
+                ],
+            ],
+            [
+                'name' => 'Orders and refunds',
+                'status' => 'live',
+                'evidence' => [
+                    'suborders' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_suborders`"),
+                    'refunds' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_refunds`"),
+                    'shipment_rows' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_order_shipments`"),
+                ],
+            ],
+            [
+                'name' => 'Payouts and ledger',
+                'status' => 'live',
+                'evidence' => [
+                    'payout_batches' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_payout_batches`"),
+                    'stripe_transfers' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_stripe_transfers`"),
+                    'ledger_entries' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_ledger_entries`"),
+                    'reconciliation_runs' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_reconciliation_runs`"),
+                ],
+            ],
+            [
+                'name' => 'Notifications and events',
+                'status' => 'live',
+                'evidence' => [
+                    'notification_deliveries' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_notification_deliveries`"),
+                    'outbox_published' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_event_outbox` WHERE status = 'published'"),
+                    'audit_events' => $scalar("SELECT COUNT(*) FROM `{$prefix}mercato_audit_log`"),
+                ],
+            ],
+        ];
+
+        return new \WP_REST_Response([
+            'features' => $features,
+            'recent_vendors' => $query("SELECT v.vendor_id, v.business_name, v.store_slug, v.status, COALESCE(k.status, 'not_started') AS kyc_status, v.stripe_account_id
+                FROM `{$prefix}mercato_vendors` v
+                LEFT JOIN `{$prefix}mercato_kyc_cases` k ON k.vendor_id = v.vendor_id AND k.tenant_id = v.tenant_id
+                ORDER BY v.vendor_id DESC LIMIT 8"),
+            'recent_products' => $query("SELECT product_id, vendor_id, title, sku, price_minor, stock_quantity, status FROM `{$prefix}mercato_products` ORDER BY product_id DESC LIMIT 8"),
+            'recent_suborders' => $query("SELECT suborder_id, vendor_id, wc_order_id, status, payment_status, total_minor, refunded_minor, tracking_carrier, tracking_number FROM `{$prefix}mercato_suborders` ORDER BY suborder_id DESC LIMIT 8"),
+            'recent_payouts' => $query("SELECT b.batch_id, b.status, b.total_minor, COUNT(i.payout_item_id) AS item_count, b.created_at
+                FROM `{$prefix}mercato_payout_batches` b
+                LEFT JOIN `{$prefix}mercato_payout_items` i ON i.batch_id = b.batch_id AND i.tenant_id = b.tenant_id
+                GROUP BY b.batch_id, b.status, b.total_minor, b.created_at
+                ORDER BY b.batch_id DESC LIMIT 8"),
+            'recent_reconciliation' => $query("SELECT run_id, status, ledger_minor, provider_minor, drift_minor, created_at FROM `{$prefix}mercato_reconciliation_runs` ORDER BY run_id DESC LIMIT 5"),
+            'recent_notifications' => $query("SELECT delivery_id, recipient, subject, status, created_at FROM `{$prefix}mercato_notification_deliveries` ORDER BY delivery_id DESC LIMIT 8"),
+            'recent_audit' => $query("SELECT audit_id, action, entity_type, entity_id, occurred_at AS created_at FROM `{$prefix}mercato_audit_log` ORDER BY audit_id DESC LIMIT 10"),
+        ], 200);
     }
 
     public function serveMetricsEndpoint(): void

@@ -1,6 +1,6 @@
 .mercato-shell {
   margin: 20px 20px 0 0;
-  color: #1f2933;
+  color: #17202a;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -11,37 +11,130 @@
 .mercato-layout {
   display: grid;
   gap: 16px;
-  max-width: 1280px;
+  max-width: 1320px;
 }
 
-.mercato-header {
+.mercato-hero {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 0;
-  border-bottom: 1px solid #d9e2ec;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.mercato-eyebrow {
+  margin: 0 0 6px;
+  color: #155e75;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .mercato-title {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .mercato-subtitle {
-  margin: 6px 0 0;
+  max-width: 780px;
+  margin: 8px 0 0;
+  color: #52606d;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.mercato-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mercato-actions.inline {
+  margin-bottom: 12px;
+}
+
+.mercato-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid #17202a;
+  border-radius: 8px;
+  background: #17202a;
+  color: #ffffff;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mercato-button.secondary {
+  background: #ffffff;
+  color: #17202a;
+}
+
+.mercato-status {
+  min-height: 22px;
   color: #52606d;
   font-size: 13px;
 }
 
+.mercato-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.mercato-tabs button {
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: #f5f7fa;
+  color: #334e68;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.mercato-tabs button.active {
+  border-color: #155e75;
+  background: #e6f6fb;
+  color: #155e75;
+}
+
 .mercato-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mercato-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mercato-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mercato-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .mercato-panel {
+  min-width: 0;
   background: #ffffff;
   border: 1px solid #d9e2ec;
   border-radius: 8px;
@@ -53,22 +146,77 @@
   font-size: 15px;
 }
 
+.mercato-panel p {
+  color: #52606d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .mercato-metric {
-  min-height: 88px;
+  min-height: 112px;
 }
 
 .mercato-metric span {
   display: block;
   color: #52606d;
   font-size: 12px;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
 .mercato-metric strong {
   display: block;
-  margin-top: 8px;
-  font-size: 26px;
+  margin-top: 9px;
+  font-size: 27px;
   line-height: 1;
+}
+
+.mercato-metric small {
+  display: block;
+  margin-top: 10px;
+  color: #6b7c8f;
+}
+
+.feature-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mercato-kv {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.mercato-kv div {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  align-items: baseline;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.mercato-kv dt {
+  color: #52606d;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.mercato-kv dd {
+  min-width: 0;
+  margin: 0;
+  color: #17202a;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.mercato-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .mercato-table {
@@ -84,12 +232,49 @@
   border-bottom: 1px solid #edf2f7;
   text-align: left;
   font-size: 13px;
+  vertical-align: top;
 }
 
 .mercato-table th {
   background: #f5f7fa;
   color: #3e4c59;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.mercato-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid #c8d7e5;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #f5f7fa;
+  color: #334e68;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mercato-checklist {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mercato-checklist li {
+  padding-left: 24px;
+  color: #334e68;
+  font-size: 13px;
+  position: relative;
+}
+
+.mercato-checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #286140;
+  font-weight: 900;
 }
 
 .mercato-form {
@@ -102,7 +287,7 @@
   gap: 5px;
   color: #3e4c59;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .mercato-form input,
@@ -115,91 +300,24 @@
   padding: 7px 9px;
 }
 
-.mercato-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.mercato-button {
-  min-height: 34px;
-  border: 1px solid #0b5cab;
-  border-radius: 6px;
-  background: #0b5cab;
-  color: #ffffff;
-  padding: 7px 11px;
-  cursor: pointer;
-}
-
-.mercato-button.secondary {
-  background: #ffffff;
-  color: #0b5cab;
-}
-
-.mercato-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.mercato-icon-button,
-.mercato-status-button {
-  min-height: 30px;
-  border: 1px solid #bcccdc;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #243b53;
-  cursor: pointer;
-}
-
-.mercato-icon-button {
-  width: 30px;
-  padding: 0;
-  font-weight: 700;
-}
-
-.mercato-status-button {
-  padding: 4px 8px;
-}
-
-.mercato-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  border: 1px solid #d9e2ec;
-  border-radius: 999px;
-  padding: 2px 8px;
-  background: #f5f7fa;
-  color: #334e68;
-  font-size: 12px;
-}
-
-.mercato-health {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.mercato-health span {
-  display: block;
+.mercato-empty {
   color: #52606d;
-  font-size: 12px;
 }
 
-.mercato-health strong {
-  display: block;
-  margin-top: 3px;
-  font-size: 18px;
-}
-
-.mercato-status {
-  min-height: 20px;
-  color: #52606d;
-  font-size: 13px;
+@media (max-width: 1100px) {
+  .mercato-grid.two,
+  .mercato-grid.three,
+  .mercato-feature-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 782px) {
-  .mercato-header {
+  .mercato-hero {
     display: block;
+  }
+
+  .mercato-actions {
+    margin-top: 14px;
   }
 }
