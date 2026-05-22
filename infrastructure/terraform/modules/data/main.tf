@@ -10,14 +10,30 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_rds_cluster" "mysql" {
-  cluster_identifier      = "mercato-${var.environment}-aurora"
-  engine                  = "aurora-mysql"
-  engine_mode             = "provisioned"
-  database_name           = "mercato"
-  db_subnet_group_name    = aws_db_subnet_group.this.name
-  backup_retention_period = 35
-  storage_encrypted       = true
-  tags                    = var.tags
+  cluster_identifier          = "mercato-${var.environment}-aurora"
+  engine                      = "aurora-mysql"
+  engine_mode                 = "provisioned"
+  database_name               = "mercato"
+  master_username             = "mercato_admin"
+  manage_master_user_password = true
+  db_subnet_group_name        = aws_db_subnet_group.this.name
+  backup_retention_period     = 35
+  storage_encrypted           = true
+  tags                        = var.tags
+
+  serverlessv2_scaling_configuration {
+    min_capacity = 1
+    max_capacity = 8
+  }
+}
+
+resource "aws_rds_cluster_instance" "mysql" {
+  count              = 1
+  identifier         = "mercato-${var.environment}-aurora-${count.index + 1}"
+  cluster_identifier = aws_rds_cluster.mysql.id
+  instance_class     = "db.serverless"
+  engine             = aws_rds_cluster.mysql.engine
+  tags               = var.tags
 }
 
 resource "aws_elasticache_subnet_group" "this" {

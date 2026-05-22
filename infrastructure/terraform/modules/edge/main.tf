@@ -4,7 +4,9 @@ variable "tags" { type = map(string) }
 resource "aws_wafv2_web_acl" "this" {
   name  = "mercato-${var.environment}"
   scope = "REGIONAL"
-  default_action { allow {} }
+  default_action {
+    allow {}
+  }
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "mercato-${var.environment}"

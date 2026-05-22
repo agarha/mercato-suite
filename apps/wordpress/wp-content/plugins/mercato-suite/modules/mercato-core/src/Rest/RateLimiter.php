@@ -13,6 +13,10 @@ final class RateLimiter
 
     public static function allow(string $bucket): bool
     {
+        if (!\function_exists('get_transient') || !\function_exists('set_transient')) {
+            return true;
+        }
+
         $policy = self::policy($bucket);
         $identity = self::identity();
         $route = self::routeKey();
@@ -81,6 +85,13 @@ final class RateLimiter
 
     private static function routeKey(): string
     {
-        return (string) \parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        $restRoute = (string) ($_GET['rest_route'] ?? '');
+        if ($restRoute !== '') {
+            return $restRoute;
+        }
+
+        $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+        $path = (string) \parse_url($requestUri, PHP_URL_PATH);
+        return $path !== '' ? $path : 'unknown';
     }
 }
