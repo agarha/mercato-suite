@@ -19,7 +19,7 @@ Last updated: 2026-05-22
 | Basic reports work | Done | E2E smoke verifies dashboard/export/reconciliation/trial balance | Add contract tests. |
 | RBAC tested | Partial | REST negative security smoke exists | Add route-level capability tests. |
 | Tenant isolation tested | Partial | Tenant-scoped code exists | Add automated cross-tenant tests. |
-| API contract tests pass | Missing | OpenAPI exists | Add OpenAPI validator/Schemathesis-style checks. |
+| API contract tests pass | Partial | `tools/validate-contracts.py` validates implemented MVP route/event overlay | Sync all MVP routes/events into docs OpenAPI/AsyncAPI and add schema-level tests. |
 | Top MVP E2E tests pass | Partial | One broad E2E smoke passes, including payment/refund/payout/outbox/allocation/tracking | Add Playwright top workflow suite. |
 | k6 baseline test executed | Missing | No k6 scripts yet | Add k6 baseline and run locally/staging. |
 | Security scans pass with no critical/high unresolved | Missing | CI lacks SAST/SCA/IaC scan gates | Add workflow steps and baseline report. |

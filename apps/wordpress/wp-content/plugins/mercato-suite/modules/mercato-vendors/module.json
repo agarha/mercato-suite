@@ -8,6 +8,7 @@
   ],
   "provides_events": [
     "mercato.vendor.registered.v1",
+    "mercato.vendor.approved.v1",
     "mercato.vendor.kyc.required.v1",
     "mercato.vendor.kyc.completed.v1",
     "mercato.vendor.activated.v1",

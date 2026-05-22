@@ -9,6 +9,7 @@
   ],
   "provides_events": [
     "mercato.product.upserted.v1",
+    "mercato.product.created.v1",
     "mercato.product.archived.v1"
   ],
   "consumes_events": [

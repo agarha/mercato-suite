@@ -15,7 +15,7 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | Database/migrations | 10 | 8 | Partial | `modules/*/migrations`, `mercato-core/src/DB/Migrator.php`, `mercato-payouts/migrations/0003_accounting_ledger.sql` | Add rollback plan, partition job, DB grants. |
 | Vendor/product/order flows | 15 | 10 | Partial | `tools/run-e2e-smoke.ps1`, admin assets, MVP REST modules | Complete rejection notification, onboarding checklist, moderation, category/attributes. |
 | Commissions/payouts/ledger | 15 | 11 | Partial | `mercato-commissions`, `mercato-payouts`, `mercato-stripe-connect`, E2E reconciliation and trial balance | Add richer commission rule tests and payout failure workflow. |
-| API/events | 7 | 5 | Partial | `docs_v2/07_openapi`, `docs_v2/07_openapi/AsyncAPI.yaml`, REST providers, outbox relay | Add contract tests, rate limits, RFC 7807 errors, outbound webhooks. |
+| API/events | 7 | 6 | Partial | `docs_v2/07_openapi`, `packages/contracts/mercato-mvp-contract.json`, `tools/validate-contracts.py`, REST providers, outbox relay | Update docs contracts for all MVP routes/events; add rate limits, RFC 7807 errors, outbound webhooks. |
 | Security/RBAC/tenant isolation | 8 | 4 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, audit log | Add security tests, CSP, DSAR workflow, MFA/API key hashing where applicable. |
 | QA/E2E/performance | 7 | 3 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation | Add Playwright top workflows, k6, axe, contract tests, SAST/SCA/IaC scans. |
 | DevOps/deployment/monitoring | 3 | 2 | Partial | Docker Compose, Helm chart, `/metrics`, preflight, release build | Add Terraform, backup/restore, DR drill, dashboards, alerts. |
@@ -34,7 +34,7 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | G. Product & Catalog | Partial | Product create/list/archive, Woo projection, media upload. | Category/attributes, variable products, importer, moderation queue, search indexing incomplete. |
 | H. Order / Checkout / Refund | Partial | E2E creates Woo parent order, allocated suborders, PaymentIntent, tracking, refund reversal. | Buyer account page, refund request/approval UI, chargeback/dispute workflow missing. |
 | I. Commission & Payout | Partial | Commission calculation, reversal, payout batch, Stripe sandbox transfers, reconciliation, balanced trial balance. | Tier/category/product rule coverage and payout failure workflow incomplete. |
-| J. API & Webhook | Partial | REST routes, permissions, idempotency, Stripe/KYC/SendGrid webhook paths. | Contract tests, pagination, rate limits, RFC 7807, outbound webhook HMAC implementation missing. |
+| J. API & Webhook | Partial | REST routes, permissions, idempotency, Stripe/KYC/SendGrid webhook paths, MVP route/event contract validation. | Docs contract sync, pagination, rate limits, RFC 7807, outbound webhook HMAC implementation missing. |
 | K. UX / Frontend | Partial | WordPress admin/vendor UI shell and asset validation. | Real SPA workspaces, accessibility tests, i18n/microcopy, buyer storefront missing. |
 | L. Security & Compliance | Partial | RBAC foundation, tenant-scoped queries, audit log, upload controls. | MFA, DSAR, CSP, SIEM, pentest, SOC 2, API key hashing evidence missing. |
 | M. QA / Testing | Partial | PHPUnit, manifest validation, JS asset validation, full E2E smoke. | Playwright, k6, axe, SAST/SCA/IaC, UAT scripts missing. |
@@ -50,6 +50,7 @@ Latest completed verification before this audit:
 - `tools/build-release.ps1`
 - `npm test`
 - `tools/validate-deployment-assets.ps1`
+- `tools/validate-contracts.py`
 - Branch pushed to `origin/codex/e2e-developed`
 
 ## Governance Blocker
