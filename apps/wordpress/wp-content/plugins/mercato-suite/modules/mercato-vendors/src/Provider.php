@@ -48,7 +48,22 @@ final class Provider extends ServiceProvider
                 'callback' => [$this, 'setStatus'],
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
+
+            \register_rest_route('mercato/v1', '/vendors/(?P<id>\d+)/onboarding', [
+                'methods' => 'GET',
+                'callback' => [$this, 'onboarding'],
+                'permission_callback' => [Permissions::class, 'canRead'],
+            ]);
         });
+    }
+
+    public function onboarding(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->repo()->onboardingChecklist((int) $request->get_param('id')), 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_onboarding_failed', $e->getMessage(), ['status' => 400]);
+        }
     }
 
     public function list(WP_REST_Request $request): WP_REST_Response

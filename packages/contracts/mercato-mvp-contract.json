@@ -1,6 +1,7 @@
 {
   "rest_routes": [
     "/vendors",
+    "/vendors/{id}/onboarding",
     "/vendors/{id}/status",
     "/products",
     "/products/{id}/archive",
@@ -30,6 +31,7 @@
   "events": [
     "mercato.vendor.registered.v1",
     "mercato.vendor.approved.v1",
+    "mercato.vendor.rejected.v1",
     "mercato.product.created.v1",
     "mercato.order.suborder.created.v1",
     "mercato.order.suborder.updated.v1",

@@ -91,7 +91,8 @@ final class Repository
         $table = $wpdb->prefix . 'mercato_vendors';
         $updated = $wpdb->update($table, [
             'status' => $status,
-            'suspension_reason' => $status === 'suspended' ? $reason : null,
+            'status_reason' => \in_array($status, ['rejected', 'suspended'], true) ? $this->cleanText((string) $reason) : null,
+            'suspension_reason' => $status === 'suspended' ? $this->cleanText((string) $reason) : null,
         ], [
             'tenant_id' => $this->tenantResolver->currentTenantId(),
             'vendor_id' => $vendorId,
@@ -108,6 +109,55 @@ final class Repository
         ], (string) $vendorId);
 
         return $after;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function onboardingChecklist(int $vendorId): array
+    {
+        global $wpdb;
+
+        $vendor = $this->find($vendorId);
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $kyc = $wpdb->prefix . 'mercato_kyc_cases';
+        $stripe = $wpdb->prefix . 'mercato_stripe_accounts';
+        $products = $wpdb->prefix . 'mercato_products';
+
+        $kycStatus = (string) ($wpdb->get_var($wpdb->prepare(
+            "SELECT `status` FROM `{$kyc}` WHERE `tenant_id` = %d AND `vendor_id` = %d ORDER BY `case_id` DESC LIMIT 1",
+            $tenantId,
+            $vendorId
+        )) ?: '');
+        $stripeCount = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM `{$stripe}` WHERE `tenant_id` = %d AND `vendor_id` = %d",
+            $tenantId,
+            $vendorId
+        ));
+        $productCount = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM `{$products}` WHERE `tenant_id` = %d AND `vendor_id` = %d",
+            $tenantId,
+            $vendorId
+        ));
+
+        $steps = [
+            ['key' => 'profile', 'label' => 'Profile submitted', 'complete' => (string) $vendor['business_name'] !== '' && (string) $vendor['store_slug'] !== ''],
+            ['key' => 'stripe', 'label' => 'Stripe account connected', 'complete' => $stripeCount > 0],
+            ['key' => 'kyc', 'label' => 'KYC verified', 'complete' => $kycStatus === 'verified'],
+            ['key' => 'approval', 'label' => 'Tenant approved', 'complete' => (string) $vendor['status'] === 'approved'],
+            ['key' => 'first_product', 'label' => 'First product created', 'complete' => $productCount > 0],
+        ];
+
+        $completed = \count(\array_filter($steps, static fn (array $step): bool => (bool) $step['complete']));
+
+        return [
+            'vendor_id' => $vendorId,
+            'status' => (string) $vendor['status'],
+            'completed' => $completed,
+            'total' => \count($steps),
+            'percent' => (int) \round($completed * 100 / \count($steps)),
+            'steps' => $steps,
+        ];
     }
 
     /**
