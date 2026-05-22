@@ -25,6 +25,10 @@
     "wp_mercato_product_variations",
     "wp_mercato_product_media",
     "wp_mercato_categories",
+    "wp_mercato_product_categories",
+    "wp_mercato_vendor_service_offerings",
+    "wp_mercato_vendor_locations",
+    "wp_mercato_service_areas",
     "wp_mercato_shipping_zones"
   ],
   "tier": "domain",
