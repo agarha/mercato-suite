@@ -44,6 +44,11 @@ final class Repository
 
         $tenantId = (int) $wpdb->insert_id;
         $this->seedStarterFlags($tenantId);
+        foreach ((array) ($data['domains'] ?? []) as $domain) {
+            if (\is_array($domain)) {
+                $this->upsertDomain($tenantId, $domain);
+            }
+        }
         $tenant = $this->getTenant($tenantId);
         $this->outbox->publish('mercato.tenant.provisioned.v1', $tenant, (string) $tenantId, $tenantId);
 
@@ -140,6 +145,16 @@ final class Repository
     }
 
     /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function addDomain(array $data): array
+    {
+        $tenantId = $this->tenantResolver->currentTenantId();
+        return $this->upsertDomain($tenantId, $data);
+    }
+
+    /**
      * @return array<string,mixed>
      */
     private function getTenant(int $tenantId): array
@@ -207,6 +222,89 @@ final class Repository
             'feature_key' => $featureKey,
             'enabled' => $enabled ? 1 : 0,
         ]);
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    private function upsertDomain(int $tenantId, array $data): array
+    {
+        global $wpdb;
+
+        $domain = $this->normalizeDomain((string) ($data['domain'] ?? ''));
+        if ($domain === '') {
+            throw new RuntimeException('domain is required.');
+        }
+
+        $pathPrefix = isset($data['path_prefix']) ? $this->normalizePathPrefix((string) $data['path_prefix']) : null;
+        $table = $wpdb->prefix . 'mercato_tenant_domains';
+        $row = [
+            'tenant_id' => $tenantId,
+            'domain' => $domain,
+            'path_prefix' => $pathPrefix,
+            'is_primary' => !empty($data['is_primary']) ? 1 : 0,
+            'status' => (string) ($data['status'] ?? 'active'),
+            'verified_at' => !empty($data['verified']) ? \gmdate('Y-m-d H:i:s.v') : null,
+        ];
+
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT `domain_id` FROM `{$table}` WHERE `domain` = %s AND (`path_prefix` <=> %s)",
+            $domain,
+            $pathPrefix
+        ));
+
+        if ($existing) {
+            $updated = $wpdb->update($table, $row, ['domain_id' => (int) $existing]);
+            if ($updated === false) {
+                throw new RuntimeException('Unable to update tenant domain: ' . (string) $wpdb->last_error);
+            }
+            $domainRow = $this->domain((int) $existing);
+        } else {
+            $inserted = $wpdb->insert($table, $row);
+            if ($inserted === false) {
+                throw new RuntimeException('Unable to create tenant domain: ' . (string) $wpdb->last_error);
+            }
+            $domainRow = $this->domain((int) $wpdb->insert_id);
+        }
+
+        $this->outbox->publish('mercato.tenant.domain.upserted.v1', $domainRow, (string) $domainRow['domain_id'], $tenantId);
+
+        return $domainRow;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function domain(int $domainId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_tenant_domains';
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM `{$table}` WHERE `domain_id` = %d", $domainId), ARRAY_A);
+        if (!\is_array($row)) {
+            throw new RuntimeException('Tenant domain not found.');
+        }
+
+        return $row;
+    }
+
+    private function normalizeDomain(string $domain): string
+    {
+        $domain = \strtolower(\trim($domain));
+        $domain = \preg_replace('/^https?:\/\//', '', $domain) ?? $domain;
+        $domain = \preg_replace('/\/.*$/', '', $domain) ?? $domain;
+        return \preg_replace('/:\d+$/', '', $domain) ?? $domain;
+    }
+
+    private function normalizePathPrefix(string $pathPrefix): ?string
+    {
+        $pathPrefix = \trim($pathPrefix);
+        if ($pathPrefix === '' || $pathPrefix === '/') {
+            return null;
+        }
+
+        return '/' . \trim($pathPrefix, '/');
     }
 
     /**

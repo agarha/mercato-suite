@@ -9,6 +9,8 @@
   "provides_events": [
     "mercato.tenant.provisioned.v1",
     "mercato.tenant.feature.toggled.v1",
+    "mercato.tenant.domain.upserted.v1",
+    "mercato.tenant.storefront.updated.v1",
     "mercato.license.refreshed.v1",
     "mercato.license.limit.exceeded.v1"
   ],
@@ -18,6 +20,9 @@
   ],
   "tables": [
     "wp_mercato_tenants",
+    "wp_mercato_tenant_domains",
+    "wp_mercato_tenant_settings",
+    "wp_mercato_tenant_feature_flags",
     "wp_mercato_feature_flags",
     "wp_mercato_branding_tokens"
   ],

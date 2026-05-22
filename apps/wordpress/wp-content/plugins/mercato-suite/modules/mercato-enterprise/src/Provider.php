@@ -54,6 +54,11 @@ final class Provider extends ServiceProvider
                 'callback' => [$this, 'storefront'],
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
+            \register_rest_route('mercato/v1', '/enterprise/domains', [
+                'methods' => 'POST',
+                'callback' => [$this, 'domain'],
+                'permission_callback' => [Permissions::class, 'canManage'],
+            ]);
         });
     }
 
@@ -99,6 +104,15 @@ final class Provider extends ServiceProvider
             return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->setStorefront((array) $request->get_json_params()), 200));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_storefront_config_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function domain(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->addDomain((array) $request->get_json_params()), 200));
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_tenant_domain_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 
