@@ -47,9 +47,11 @@ final class Provider extends ServiceProvider
     public function presign(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $media = $this->repo()->createUpload((array) $request->get_json_params());
-            $this->audit('media.upload.presigned', 'media', (int) $media['media_id'], null, $media);
-            return new WP_REST_Response($media, 201);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $media = $this->repo()->createUpload((array) $request->get_json_params());
+                $this->audit('media.upload.presigned', 'media', (int) $media['media_id'], null, $media);
+                return new WP_REST_Response($media, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_media_presign_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -58,9 +60,11 @@ final class Provider extends ServiceProvider
     public function complete(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $media = $this->repo()->complete((int) $request->get_param('id'), (string) $request->get_param('scan_status'));
-            $this->audit('media.upload.completed', 'media', (int) $media['media_id'], null, $media);
-            return new WP_REST_Response($media, 200);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $media = $this->repo()->complete((int) $request->get_param('id'), (string) $request->get_param('scan_status'));
+                $this->audit('media.upload.completed', 'media', (int) $media['media_id'], null, $media);
+                return new WP_REST_Response($media, 200);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_media_complete_failed', $e->getMessage(), ['status' => 400]);
         }

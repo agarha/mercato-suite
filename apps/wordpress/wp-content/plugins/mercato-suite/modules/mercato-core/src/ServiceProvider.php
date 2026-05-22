@@ -56,4 +56,48 @@ abstract class ServiceProvider
 
         return $files;
     }
+
+    /**
+     * @param callable():mixed $callback
+     */
+    protected function idempotent(\WP_REST_Request $request, callable $callback): mixed
+    {
+        $key = $this->idempotencyKey($request);
+        if ($key === '') {
+            return $callback();
+        }
+
+        $endpoint = $request->get_method() . ' ' . $request->get_route();
+        $store = $this->container->get(Idempotency\Store::class);
+        $cached = $store->find($endpoint, $key);
+        if ($cached !== null) {
+            $body = \json_decode($cached['response_body'], true);
+            $response = new \WP_REST_Response($body, $cached['status_code']);
+            $response->header('X-Mercato-Idempotent-Replay', '1');
+            return $response;
+        }
+
+        $response = $callback();
+        if ($response instanceof \WP_REST_Response) {
+            $store->remember(
+                $endpoint,
+                $key,
+                \wp_json_encode($response->get_data(), JSON_THROW_ON_ERROR),
+                $response->get_status()
+            );
+        }
+
+        return $response;
+    }
+
+    private function idempotencyKey(\WP_REST_Request $request): string
+    {
+        $key = (string) ($request->get_header('idempotency-key') ?: $request->get_header('x-idempotency-key'));
+        $key = \function_exists('sanitize_text_field') ? \sanitize_text_field($key) : \trim($key);
+        if ($key === '') {
+            return '';
+        }
+
+        return \substr($key, 0, 96);
+    }
 }

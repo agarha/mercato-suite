@@ -44,13 +44,15 @@ final class Provider extends ServiceProvider
     public function send(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $delivery = $this->sendEmail(
-                (string) $request->get_param('recipient'),
-                (string) $request->get_param('subject'),
-                (string) $request->get_param('body')
-            );
-            $this->container->get(Writer::class)->log('notification.email.sent', 'notification_delivery', (int) $delivery['delivery_id'], null, $delivery);
-            return new WP_REST_Response($delivery, 201);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $delivery = $this->sendEmail(
+                    (string) $request->get_param('recipient'),
+                    (string) $request->get_param('subject'),
+                    (string) $request->get_param('body')
+                );
+                $this->container->get(Writer::class)->log('notification.email.sent', 'notification_delivery', (int) $delivery['delivery_id'], null, $delivery);
+                return new WP_REST_Response($delivery, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_sendgrid_send_failed', $e->getMessage(), ['status' => 400]);
         }

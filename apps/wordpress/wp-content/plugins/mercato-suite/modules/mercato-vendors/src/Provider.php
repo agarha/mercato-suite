@@ -59,10 +59,12 @@ final class Provider extends ServiceProvider
     public function registerVendor(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $ownerUserId = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
-            $vendor = $this->repo()->register((array) $request->get_json_params(), $ownerUserId);
-            $this->audit('vendor.registered', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
-            return new WP_REST_Response($vendor, 201);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $ownerUserId = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
+                $vendor = $this->repo()->register((array) $request->get_json_params(), $ownerUserId);
+                $this->audit('vendor.registered', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
+                return new WP_REST_Response($vendor, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_registration_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -71,13 +73,15 @@ final class Provider extends ServiceProvider
     public function setStatus(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $vendor = $this->repo()->setStatus(
-                (int) $request->get_param('id'),
-                (string) $request->get_param('status'),
-                $request->get_param('reason') === null ? null : (string) $request->get_param('reason')
-            );
-            $this->audit('vendor.status.updated', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
-            return new WP_REST_Response($vendor, 200);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $vendor = $this->repo()->setStatus(
+                    (int) $request->get_param('id'),
+                    (string) $request->get_param('status'),
+                    $request->get_param('reason') === null ? null : (string) $request->get_param('reason')
+                );
+                $this->audit('vendor.status.updated', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
+                return new WP_REST_Response($vendor, 200);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_status_failed', $e->getMessage(), ['status' => 400]);
         }

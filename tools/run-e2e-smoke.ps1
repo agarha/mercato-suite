@@ -9,12 +9,16 @@ function Invoke-MercatoApi {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
         [string]$Method = "GET",
-        [object]$Body = $null
+        [object]$Body = $null,
+        [hashtable]$ExtraHeaders = @{}
     )
 
     $uri = "$baseUrl/?rest_route=/mercato/v1$Path"
     $headers = @{
         "X-Mercato-Test-Secret" = $(if ($env:MERCATO_TEST_API_SECRET) { $env:MERCATO_TEST_API_SECRET } else { "mercato-local-test-secret" })
+    }
+    foreach ($key in $ExtraHeaders.Keys) {
+        $headers[$key] = $ExtraHeaders[$key]
     }
     if ($Body -eq $null) {
         return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers
@@ -162,12 +166,23 @@ $delivery = Invoke-MercatoApi -Path "/sendgrid/send" -Method "POST" -Body @{
     subject = "Mercato smoke"
     body = "Smoke notification."
 }
+$idemHeaders = @{ "Idempotency-Key" = "smoke-sendgrid-$rand" }
+$idemFirst = Invoke-MercatoApi -Path "/sendgrid/send" -Method "POST" -Body @{
+    recipient = "idempotent@example.com"
+    subject = "Mercato idempotency"
+    body = "Idempotency notification."
+} -ExtraHeaders $idemHeaders
+$idemSecond = Invoke-MercatoApi -Path "/sendgrid/send" -Method "POST" -Body @{
+    recipient = "idempotent@example.com"
+    subject = "Mercato idempotency"
+    body = "Idempotency notification."
+} -ExtraHeaders $idemHeaders
 $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POST" -Body @{}
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 $readiness = Invoke-MercatoApi -Path "/health/readiness"
 
-$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled');"
+$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) idempotency_rows FROM wp_mercato_idempotency WHERE idempotency_key='smoke-sendgrid-$rand'; SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled');"
 
 $result = [pscustomobject]@{
     vendor_id = $vendor.vendor_id
@@ -186,6 +201,7 @@ $result = [pscustomobject]@{
     payout_batch = $batch
     stripe_execute = $stripeExecute
     delivery_id = $delivery.delivery_id
+    idempotent_delivery_id = $idemSecond.delivery_id
     reconciliation = $reconciliation
     report_gmv_minor = $report.gmv_minor
     report_refunded_minor = $report.refunded_minor
@@ -200,6 +216,7 @@ if ($mediaDone.scan_status -ne "clean") { throw "Media scan did not complete cle
 if ([int]$stripeExecute.created -lt 1) { throw "Stripe transfer was not created." }
 if ($reconciliation.status -ne "passed") { throw "Reconciliation did not pass." }
 if (!$delivery.delivery_id) { throw "SendGrid delivery was not created." }
+if ($idemFirst.delivery_id -ne $idemSecond.delivery_id) { throw "Idempotency replay did not return the original SendGrid delivery." }
 $joinedSummary = $summary -join "`n"
 if ($joinedSummary -notmatch "approved") { throw "KYC did not approve the vendor." }
 if ($joinedSummary -notmatch "stripe_payment_intents\s+1") { throw "Stripe PaymentIntent was not recorded." }
@@ -207,6 +224,7 @@ if ($joinedSummary -notmatch "stripe_refunds\s+1") { throw "Stripe refund was no
 if ($joinedSummary -notmatch "order_refunds\s+1") { throw "Order refund was not recorded." }
 if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission reversal was not recorded." }
 if ($joinedSummary -notmatch "partially_refunded\s+1600") { throw "Partial refund did not update suborder payment status." }
+if ($joinedSummary -notmatch "idempotency_rows\s+1") { throw "Idempotency response was not stored." }
 if ($joinedSummary -notmatch "audit_rows\s+[1-9][0-9]") { throw "Audit log did not capture expected production mutations." }
 if ([int]$report.refunded_minor -lt 1600) { throw "Dashboard did not include refund totals." }
 if ([int]$report.net_take_minor -lt 1) { throw "Dashboard did not include net take." }

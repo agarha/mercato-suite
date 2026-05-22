@@ -9,6 +9,7 @@ use Mercato\Core\Audit\Writer;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
 use Mercato\Core\Tenant\Resolver;
+use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
 
@@ -45,23 +46,27 @@ final class Provider extends ServiceProvider
         });
     }
 
-    public function reconcile(): WP_REST_Response|WP_Error
+    public function reconcile(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $run = $this->container->get(Ledger::class)->reconcile();
-            $this->container->get(Writer::class)->log('payout.reconciled', 'reconciliation_run', (int) $run['run_id'], null, $run);
-            return new WP_REST_Response($run, 201);
+            return $this->idempotent($request, function (): WP_REST_Response {
+                $run = $this->container->get(Ledger::class)->reconcile();
+                $this->container->get(Writer::class)->log('payout.reconciled', 'reconciliation_run', (int) $run['run_id'], null, $run);
+                return new WP_REST_Response($run, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_payout_reconciliation_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 
-    public function triggerBatch(): WP_REST_Response|WP_Error
+    public function triggerBatch(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $batch = $this->container->get(Ledger::class)->triggerBatch();
-            $this->container->get(Writer::class)->log('payout.batch.scheduled', 'payout_batch', (int) $batch['batch_id'], null, $batch);
-            return new WP_REST_Response($batch, 201);
+            return $this->idempotent($request, function (): WP_REST_Response {
+                $batch = $this->container->get(Ledger::class)->triggerBatch();
+                $this->container->get(Writer::class)->log('payout.batch.scheduled', 'payout_batch', (int) $batch['batch_id'], null, $batch);
+                return new WP_REST_Response($batch, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_payout_batch_failed', $e->getMessage(), ['status' => 400]);
         }

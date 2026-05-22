@@ -42,7 +42,7 @@ final class Provider extends ServiceProvider
     public function createThread(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Repository::class)->createThread((array) $request->get_json_params()), 201);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Repository::class)->createThread((array) $request->get_json_params()), 201));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_message_thread_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -51,7 +51,7 @@ final class Provider extends ServiceProvider
     public function reply(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Repository::class)->reply((int) $request->get_param('id'), (array) $request->get_json_params()), 201);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Repository::class)->reply((int) $request->get_param('id'), (array) $request->get_json_params()), 201));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_message_reply_failed', $e->getMessage(), ['status' => 400]);
         }

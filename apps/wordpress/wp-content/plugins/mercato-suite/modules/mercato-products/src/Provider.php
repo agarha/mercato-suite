@@ -60,9 +60,11 @@ final class Provider extends ServiceProvider
     public function create(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $product = $this->repo()->create((array) $request->get_json_params());
-            $this->audit('product.created', 'product', (int) $product['product_id'], null, $product);
-            return new WP_REST_Response($product, 201);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $product = $this->repo()->create((array) $request->get_json_params());
+                $this->audit('product.created', 'product', (int) $product['product_id'], null, $product);
+                return new WP_REST_Response($product, 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_product_create_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -71,9 +73,11 @@ final class Provider extends ServiceProvider
     public function archive(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $product = $this->repo()->archive((int) $request->get_param('id'));
-            $this->audit('product.archived', 'product', (int) $product['product_id'], null, $product);
-            return new WP_REST_Response($product, 200);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $product = $this->repo()->archive((int) $request->get_param('id'));
+                $this->audit('product.archived', 'product', (int) $product['product_id'], null, $product);
+                return new WP_REST_Response($product, 200);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_product_archive_failed', $e->getMessage(), ['status' => 400]);
         }
