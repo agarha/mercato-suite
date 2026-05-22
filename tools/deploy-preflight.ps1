@@ -24,10 +24,17 @@ if ($ready.status -ne "ok") {
 }
 
 $compose = docker compose ps --format json | ConvertFrom-Json
+$requiredServices = @("wordpress", "mysql", "redis", "zookeeper", "kafka", "minio", "mailpit", "outbox-relay")
 $stopped = @($compose | Where-Object { $_.State -ne "running" })
 if ($stopped.Count -gt 0) {
     $stopped | ConvertTo-Json -Depth 5
     throw "One or more Docker services are not running."
+}
+$runningServices = @($compose | ForEach-Object { $_.Service })
+$missing = @($requiredServices | Where-Object { $_ -notin $runningServices })
+if ($missing.Count -gt 0) {
+    $missing | ConvertTo-Json
+    throw "One or more required Docker services are missing from compose ps."
 }
 
 [pscustomobject]@{
