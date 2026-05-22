@@ -200,6 +200,7 @@ $idemSecond = Invoke-MercatoApi -Path "/sendgrid/send" -Method "POST" -Body @{
     body = "Idempotency notification."
 } -ExtraHeaders $idemHeaders
 $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POST" -Body @{}
+$trialBalance = Invoke-MercatoApi -Path "/payouts/trial-balance"
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 $readiness = Invoke-MercatoApi -Path "/health/readiness"
@@ -237,6 +238,7 @@ $result = [pscustomobject]@{
     delivery_id = $delivery.delivery_id
     idempotent_delivery_id = $idemSecond.delivery_id
     reconciliation = $reconciliation
+    trial_balance = $trialBalance
     report_gmv_minor = $report.gmv_minor
     report_refunded_minor = $report.refunded_minor
     report_net_gmv_minor = $report.net_gmv_minor
@@ -250,6 +252,7 @@ $result = [pscustomobject]@{
 if ($mediaDone.scan_status -ne "clean") { throw "Media scan did not complete cleanly." }
 if ([int]$stripeExecute.created -lt 1) { throw "Stripe transfer was not created." }
 if ($reconciliation.status -ne "passed") { throw "Reconciliation did not pass." }
+if ($trialBalance.status -ne "balanced" -or [int]$trialBalance.drift_minor -ne 0) { throw "Trial balance is not balanced." }
 if (!$delivery.delivery_id) { throw "SendGrid delivery was not created." }
 if ($idemFirst.delivery_id -ne $idemSecond.delivery_id) { throw "Idempotency replay did not return the original SendGrid delivery." }
 $joinedSummary = $summary -join "`n"

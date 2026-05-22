@@ -12,9 +12,9 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | MVP scope locked | 10 | 8 | Partial | `C:\Nex Repository\Mercato\docs_v2\00_mvp_cut\MVP_Cut.md`, `C:\Nex Repository\Mercato\docs_v2\deliverables\Implementation_Backlog.md` | Record formal approval/signoff. |
 | Architecture implemented | 10 | 8 | Partial | `apps/wordpress/wp-content/plugins/mercato-suite/modules`, `tools/validate-manifests.py`, `services/outbox-relay` | Publish SDK docs/package and complete search/licensing/caching. |
 | WooCommerce/HPOS integration | 15 | 11 | Partial | `mercato-core/src/WooCommerce/HookAdapter.php`, `mercato-orders/src/Splitter.php`, E2E smoke validates discount, shipping, tax, tracking | Complete coupon edge cases, buyer order views, and conflict tests. |
-| Database/migrations | 10 | 7 | Partial | `modules/*/migrations`, `mercato-core/src/DB/Migrator.php` | Add rollback plan, partition job, DB grants, full double-entry ledger. |
+| Database/migrations | 10 | 8 | Partial | `modules/*/migrations`, `mercato-core/src/DB/Migrator.php`, `mercato-payouts/migrations/0003_accounting_ledger.sql` | Add rollback plan, partition job, DB grants. |
 | Vendor/product/order flows | 15 | 10 | Partial | `tools/run-e2e-smoke.ps1`, admin assets, MVP REST modules | Complete rejection notification, onboarding checklist, moderation, category/attributes. |
-| Commissions/payouts/ledger | 15 | 9 | Partial | `mercato-commissions`, `mercato-payouts`, `mercato-stripe-connect`, E2E reconciliation | Add trial balance and richer commission rule tests. |
+| Commissions/payouts/ledger | 15 | 11 | Partial | `mercato-commissions`, `mercato-payouts`, `mercato-stripe-connect`, E2E reconciliation and trial balance | Add richer commission rule tests and payout failure workflow. |
 | API/events | 7 | 5 | Partial | `docs_v2/07_openapi`, `docs_v2/07_openapi/AsyncAPI.yaml`, REST providers, outbox relay | Add contract tests, rate limits, RFC 7807 errors, outbound webhooks. |
 | Security/RBAC/tenant isolation | 8 | 4 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, audit log | Add security tests, CSP, DSAR workflow, MFA/API key hashing where applicable. |
 | QA/E2E/performance | 7 | 3 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation | Add Playwright top workflows, k6, axe, contract tests, SAST/SCA/IaC scans. |
@@ -29,11 +29,11 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | B. MVP Scope Validation | Partial | MVP Cut, backlog, readiness scorecard, E2E demo script exist. | Formal MVP approval, owner/due-date assignments, and exit-gate signoff missing. |
 | C. Architecture | Partial | 29 modules, manifests, DI, service provider contract, outbox, relay, RBAC, tenant resolver, audit, idempotency. | SDK publication, search adapter, generic inbox, Redis caching, licensing enforcement incomplete. |
 | D. WooCommerce / HPOS | Partial | HPOS guard, hook adapter, suborders, split logic, refund reversal, discount allocation, tax allocation, shipping allocation, shipment tracking. | Coupon edge cases, buyer order page, and conflict tests incomplete. |
-| E. Database & Migrations | Partial | Migration runner and MVP tables exist. | Rollbacks, partition maintenance, DB role grants, online schema change process missing. |
+| E. Database & Migrations | Partial | Migration runner, MVP tables, and accounting ledger table exist. | Rollbacks, partition maintenance, DB role grants, online schema change process missing. |
 | F. Product / Vendor Lifecycle | Partial | Vendor signup, approval/suspension, KYC, dashboard shell. | Rejection notifications, staff roles, onboarding checklist, profile settings depth missing. |
 | G. Product & Catalog | Partial | Product create/list/archive, Woo projection, media upload. | Category/attributes, variable products, importer, moderation queue, search indexing incomplete. |
 | H. Order / Checkout / Refund | Partial | E2E creates Woo parent order, allocated suborders, PaymentIntent, tracking, refund reversal. | Buyer account page, refund request/approval UI, chargeback/dispute workflow missing. |
-| I. Commission & Payout | Partial | Commission calculation, reversal, payout batch, Stripe sandbox transfers, reconciliation. | True double-entry trial balance, tier/category/product rule coverage, payout failure workflow incomplete. |
+| I. Commission & Payout | Partial | Commission calculation, reversal, payout batch, Stripe sandbox transfers, reconciliation, balanced trial balance. | Tier/category/product rule coverage and payout failure workflow incomplete. |
 | J. API & Webhook | Partial | REST routes, permissions, idempotency, Stripe/KYC/SendGrid webhook paths. | Contract tests, pagination, rate limits, RFC 7807, outbound webhook HMAC implementation missing. |
 | K. UX / Frontend | Partial | WordPress admin/vendor UI shell and asset validation. | Real SPA workspaces, accessibility tests, i18n/microcopy, buyer storefront missing. |
 | L. Security & Compliance | Partial | RBAC foundation, tenant-scoped queries, audit log, upload controls. | MFA, DSAR, CSP, SIEM, pentest, SOC 2, API key hashing evidence missing. |

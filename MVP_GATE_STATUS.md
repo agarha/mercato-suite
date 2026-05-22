@@ -11,12 +11,12 @@ Last updated: 2026-05-22
 | Product listing works end-to-end | Done | `tools/run-e2e-smoke.ps1`, admin/vendor JS | Add moderation/category coverage. |
 | Multi-vendor checkout works end-to-end | Partial | E2E smoke covers order split path with discount, shipping, tax, and tracking allocations | Add true multi-vendor cart/browser checkout and Woo conflict matrix. |
 | Suborders created correctly | Done | `mercato-orders/src/Splitter.php`, E2E DB summary | Add integration tests around edge cases. |
-| Commissions calculated correctly | Partial | `mercato-commissions/src/Calculator.php`, E2E | Add category/product/tier rule tests. |
+| Commissions calculated correctly | Partial | `mercato-commissions/src/Calculator.php`, E2E, balanced ledger entries | Add category/product/tier rule tests. |
 | Refund reversals work | Done | E2E smoke verifies refunds and commission reversals | Add Woo native refund integration test. |
 | Stripe payout sandbox works | Done | E2E smoke executes test-mode transfers | Add failure/retry scenario. |
 | Vendor dashboard works | Partial | WP admin vendor shell | Build richer SPA/browser tests. |
 | Tenant admin dashboard works | Partial | WP admin operations shell | Add browser/accessibility tests. |
-| Basic reports work | Done | E2E smoke verifies dashboard/export/reconciliation | Add contract tests. |
+| Basic reports work | Done | E2E smoke verifies dashboard/export/reconciliation/trial balance | Add contract tests. |
 | RBAC tested | Partial | REST negative security smoke exists | Add route-level capability tests. |
 | Tenant isolation tested | Partial | Tenant-scoped code exists | Add automated cross-tenant tests. |
 | API contract tests pass | Missing | OpenAPI exists | Add OpenAPI validator/Schemathesis-style checks. |

@@ -42,6 +42,14 @@ final class Ledger
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to update vendor balance: ' . (string) $wpdb->last_error);
         }
+
+        $gross = (int) ($commission['gross_minor'] ?? ($amount + (int) ($commission['commission_minor'] ?? 0)));
+        $platformCommission = (int) ($commission['commission_minor'] ?? \max(0, $gross - $amount));
+        $this->postBalanced('commission:' . (int) $commission['commission_id'], 'commission', (int) $commission['commission_id'], [
+            ['account' => 'buyer_receivable', 'debit_minor' => $gross, 'credit_minor' => 0, 'vendor_id' => $vendorId, 'currency' => $currency],
+            ['account' => 'vendor_payable', 'debit_minor' => 0, 'credit_minor' => $amount, 'vendor_id' => $vendorId, 'currency' => $currency],
+            ['account' => 'platform_revenue', 'debit_minor' => 0, 'credit_minor' => $platformCommission, 'vendor_id' => null, 'currency' => $currency],
+        ], $tenantId);
     }
 
     public function releasePending(?int $tenantId = null): int
@@ -138,12 +146,54 @@ final class Ledger
                 'vendor_id' => (int) $vendor['vendor_id'],
                 'currency' => (string) $vendor['currency'],
             ]);
+
+            $this->postBalanced('payout:' . (int) $wpdb->insert_id, 'payout_item', (int) $wpdb->insert_id, [
+                ['account' => 'vendor_payable', 'debit_minor' => $amount, 'credit_minor' => 0, 'vendor_id' => (int) $vendor['vendor_id'], 'currency' => (string) $vendor['currency']],
+                ['account' => 'cash', 'debit_minor' => 0, 'credit_minor' => $amount, 'vendor_id' => (int) $vendor['vendor_id'], 'currency' => (string) $vendor['currency']],
+            ], $tenantId);
         }
 
         $event = ['batch_id' => $batchId, 'tenant_id' => $tenantId, 'total_minor' => $total, 'item_count' => \count($vendors)];
         $this->outbox->publish('mercato.payout.scheduled.v1', $event, (string) $batchId, $tenantId);
 
         return $event;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function trialBalance(?int $tenantId = null): array
+    {
+        global $wpdb;
+
+        $tenantId ??= $this->tenantResolver->currentTenantId();
+        $entries = $wpdb->prefix . 'mercato_ledger_entries';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT `account`, `currency`, SUM(`debit_minor`) AS debit_minor, SUM(`credit_minor`) AS credit_minor
+             FROM `{$entries}`
+             WHERE `tenant_id` = %d
+             GROUP BY `account`, `currency`
+             ORDER BY `account`, `currency`",
+            $tenantId
+        ), ARRAY_A) ?: [];
+
+        $debit = 0;
+        $credit = 0;
+        foreach ($rows as &$row) {
+            $row['debit_minor'] = (int) $row['debit_minor'];
+            $row['credit_minor'] = (int) $row['credit_minor'];
+            $debit += $row['debit_minor'];
+            $credit += $row['credit_minor'];
+        }
+
+        return [
+            'tenant_id' => $tenantId,
+            'status' => $debit === $credit ? 'balanced' : 'imbalanced',
+            'debit_minor' => $debit,
+            'credit_minor' => $credit,
+            'drift_minor' => $debit - $credit,
+            'accounts' => $rows,
+        ];
     }
 
     /**
@@ -199,5 +249,49 @@ final class Ledger
     {
         return "tenant_id,status,ledger_minor,provider_minor,drift_minor,generated_at\n"
             . $tenantId . ',' . $status . ',' . $ledgerMinor . ',' . $providerMinor . ',' . $driftMinor . ',' . \gmdate('c') . "\n";
+    }
+
+    /**
+     * @param list<array{account:string,debit_minor:int,credit_minor:int,vendor_id:int|null,currency:string}> $entries
+     */
+    private function postBalanced(string $transactionId, string $sourceType, int $sourceId, array $entries, int $tenantId): void
+    {
+        $debit = \array_sum(\array_column($entries, 'debit_minor'));
+        $credit = \array_sum(\array_column($entries, 'credit_minor'));
+        if ($debit !== $credit) {
+            throw new RuntimeException('Ledger transaction is not balanced.');
+        }
+
+        foreach ($entries as $entry) {
+            $this->insertLedgerEntry($tenantId, $transactionId, $sourceType, $sourceId, $entry);
+        }
+    }
+
+    /**
+     * @param array{account:string,debit_minor:int,credit_minor:int,vendor_id:int|null,currency:string} $entry
+     */
+    private function insertLedgerEntry(int $tenantId, string $transactionId, string $sourceType, int $sourceId, array $entry): void
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_ledger_entries';
+        $sql = $wpdb->prepare(
+            "INSERT INTO `{$table}` (`tenant_id`, `transaction_id`, `source_type`, `source_id`, `account`, `vendor_id`, `currency`, `debit_minor`, `credit_minor`)
+             VALUES (%d, %s, %s, %d, %s, %d, %s, %d, %d)
+             ON DUPLICATE KEY UPDATE `debit_minor` = VALUES(`debit_minor`), `credit_minor` = VALUES(`credit_minor`)",
+            $tenantId,
+            $transactionId,
+            $sourceType,
+            $sourceId,
+            $entry['account'],
+            $entry['vendor_id'],
+            $entry['currency'],
+            $entry['debit_minor'],
+            $entry['credit_minor']
+        );
+
+        if ($wpdb->query($sql) === false) {
+            throw new RuntimeException('Unable to write ledger entry: ' . (string) $wpdb->last_error);
+        }
     }
 }

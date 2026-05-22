@@ -43,6 +43,12 @@ final class Provider extends ServiceProvider
                 'callback' => [$this, 'reconcile'],
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
+
+            \register_rest_route('mercato/v1', '/payouts/trial-balance', [
+                'methods' => 'GET',
+                'callback' => [$this, 'trialBalance'],
+                'permission_callback' => [Permissions::class, 'canManage'],
+            ]);
         });
     }
 
@@ -56,6 +62,15 @@ final class Provider extends ServiceProvider
             });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_payout_reconciliation_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function trialBalance(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->container->get(Ledger::class)->trialBalance(), 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_trial_balance_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 

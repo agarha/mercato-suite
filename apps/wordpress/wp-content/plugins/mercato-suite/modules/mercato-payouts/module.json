@@ -25,7 +25,8 @@
     "wp_mercato_payouts",
     "wp_mercato_payout_batches",
     "wp_mercato_payout_items",
-    "wp_mercato_reconciliation_runs"
+    "wp_mercato_reconciliation_runs",
+    "wp_mercato_ledger_entries"
   ],
   "tier": "domain",
   "feature_flag": "mercato.payouts"
