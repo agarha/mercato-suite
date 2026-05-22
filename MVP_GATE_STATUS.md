@@ -22,7 +22,7 @@ Last updated: 2026-05-22
 | API contract tests pass | Partial | `tools/validate-contracts.py` validates implemented MVP route/event overlay | Sync all MVP routes/events into docs OpenAPI/AsyncAPI and add schema-level tests. |
 | Top MVP E2E tests pass | Partial | One broad E2E smoke passes, including payment/refund/payout/outbox/allocation/tracking | Add Playwright top workflow suite. |
 | k6 baseline test executed | Missing | No k6 scripts yet | Add k6 baseline and run locally/staging. |
-| Security scans pass with no critical/high unresolved | Missing | CI lacks SAST/SCA/IaC scan gates | Add workflow steps and baseline report. |
+| Security scans pass with no critical/high unresolved | Missing | Runtime rate limits exist, but CI lacks SAST/SCA/IaC scan gates | Add workflow steps and baseline report. |
 | Backup/restore tested | Missing | No restore drill proof | Add local DB backup/restore drill and cloud runbook. |
 | DR partial drill completed | Blocked | Requires staging/cloud environment | Create GitHub issue after permissions fixed; document runbook. |
 | UAT sign-off completed | Blocked | Requires beta tenant/user signoff | Create issue and UAT scripts. |

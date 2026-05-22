@@ -10,6 +10,7 @@ OPENAPI = DOCS / "OpenAPI.yaml"
 ASYNCAPI = DOCS / "AsyncAPI.yaml"
 MODULES = ROOT / "apps/wordpress/wp-content/plugins/mercato-suite/modules"
 CONTRACT = ROOT / "packages/contracts/mercato-mvp-contract.json"
+RATE_LIMITS = ROOT / "apps/wordpress/wp-content/plugins/mercato-suite/config/rate-limits.json"
 
 
 def normalize_route(route: str) -> str:
@@ -35,18 +36,23 @@ def collect_manifest_events() -> set[str]:
 
 
 def main() -> int:
-    if not OPENAPI.exists() or not ASYNCAPI.exists() or not CONTRACT.exists():
+    if not OPENAPI.exists() or not ASYNCAPI.exists() or not CONTRACT.exists() or not RATE_LIMITS.exists():
         print("OpenAPI/AsyncAPI documents or MVP contract overlay are missing.", file=sys.stderr)
         return 1
 
     openapi_text = OPENAPI.read_text(encoding="utf-8")
     asyncapi_text = ASYNCAPI.read_text(encoding="utf-8")
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    rate_limits = json.loads(RATE_LIMITS.read_text(encoding="utf-8"))
     rest_routes = contract["rest_routes"]
     events = contract["events"]
     implemented_routes = collect_implemented_routes()
     manifest_events = collect_manifest_events()
     errors: list[str] = []
+    for bucket in ["default", "read", "manage", "webhook", "public_register", "health"]:
+        policy = rate_limits.get(bucket)
+        if not isinstance(policy, dict) or int(policy.get("limit", 0)) < 1 or int(policy.get("window_seconds", 0)) < 1:
+            errors.append(f"Invalid rate-limit policy: {bucket}")
 
     for route in rest_routes:
         if route not in implemented_routes:
@@ -71,6 +77,7 @@ def main() -> int:
         "manifest_events": len(manifest_events),
         "docs_route_hits": docs_route_hits,
         "docs_event_hits": docs_event_hits,
+        "rate_limit_buckets": len(rate_limits),
     }))
     return 0
 

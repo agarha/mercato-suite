@@ -8,27 +8,27 @@ final class Permissions
 {
     public static function canRead(): bool
     {
-        return self::hasTestSecret() || self::isAuthenticated();
+        return self::hasTestSecret() || (RateLimiter::allow('read') && self::isAuthenticated());
     }
 
     public static function canManage(): bool
     {
-        return self::hasTestSecret() || self::isAdmin();
+        return self::hasTestSecret() || (RateLimiter::allow('manage') && self::isAdmin());
     }
 
     public static function canWebhook(): bool
     {
-        return self::hasTestSecret() || self::hasProviderSignature();
+        return self::hasTestSecret() || (RateLimiter::allow('webhook') && self::hasProviderSignature());
     }
 
     public static function canPublicRegister(): bool
     {
-        return true;
+        return RateLimiter::allow('public_register');
     }
 
     public static function canPublicHealth(): bool
     {
-        return true;
+        return RateLimiter::allow('health');
     }
 
     private static function isAuthenticated(): bool

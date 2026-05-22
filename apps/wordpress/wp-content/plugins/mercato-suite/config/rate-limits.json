@@ -1,0 +1,8 @@
+{
+  "default": { "limit": 120, "window_seconds": 60 },
+  "read": { "limit": 300, "window_seconds": 60 },
+  "manage": { "limit": 120, "window_seconds": 60 },
+  "webhook": { "limit": 600, "window_seconds": 60 },
+  "public_register": { "limit": 30, "window_seconds": 60 },
+  "health": { "limit": 600, "window_seconds": 60 }
+}
