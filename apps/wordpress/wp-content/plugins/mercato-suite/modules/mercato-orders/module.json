@@ -11,6 +11,8 @@
   "provides_events": [
     "mercato.order.parent.created.v1",
     "mercato.order.suborder.created.v1",
+    "mercato.order.suborder.updated.v1",
+    "mercato.order.suborder.shipped.v1",
     "mercato.order.status.changed.v1",
     "mercato.order.shipped.v1",
     "mercato.refund.created.v1",

@@ -9,7 +9,7 @@ Last updated: 2026-05-22
 | Core plugin/module structure implemented | Done | `apps/wordpress/wp-content/plugins/mercato-suite/modules` | Maintain manifest validation in CI. |
 | Vendor onboarding works end-to-end | Done | `tools/run-e2e-smoke.ps1` | Add Playwright browser scenario. |
 | Product listing works end-to-end | Done | `tools/run-e2e-smoke.ps1`, admin/vendor JS | Add moderation/category coverage. |
-| Multi-vendor checkout works end-to-end | Partial | E2E smoke covers order split path | Add true multi-vendor cart/browser checkout and Woo conflict matrix. |
+| Multi-vendor checkout works end-to-end | Partial | E2E smoke covers order split path with discount, shipping, tax, and tracking allocations | Add true multi-vendor cart/browser checkout and Woo conflict matrix. |
 | Suborders created correctly | Done | `mercato-orders/src/Splitter.php`, E2E DB summary | Add integration tests around edge cases. |
 | Commissions calculated correctly | Partial | `mercato-commissions/src/Calculator.php`, E2E | Add category/product/tier rule tests. |
 | Refund reversals work | Done | E2E smoke verifies refunds and commission reversals | Add Woo native refund integration test. |
@@ -20,7 +20,7 @@ Last updated: 2026-05-22
 | RBAC tested | Partial | REST negative security smoke exists | Add route-level capability tests. |
 | Tenant isolation tested | Partial | Tenant-scoped code exists | Add automated cross-tenant tests. |
 | API contract tests pass | Missing | OpenAPI exists | Add OpenAPI validator/Schemathesis-style checks. |
-| Top MVP E2E tests pass | Partial | One broad E2E smoke passes | Add Playwright top workflow suite. |
+| Top MVP E2E tests pass | Partial | One broad E2E smoke passes, including payment/refund/payout/outbox/allocation/tracking | Add Playwright top workflow suite. |
 | k6 baseline test executed | Missing | No k6 scripts yet | Add k6 baseline and run locally/staging. |
 | Security scans pass with no critical/high unresolved | Missing | CI lacks SAST/SCA/IaC scan gates | Add workflow steps and baseline report. |
 | Backup/restore tested | Missing | No restore drill proof | Add local DB backup/restore drill and cloud runbook. |

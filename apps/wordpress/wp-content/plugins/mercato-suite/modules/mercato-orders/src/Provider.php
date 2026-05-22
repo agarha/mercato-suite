@@ -46,7 +46,30 @@ final class Provider extends ServiceProvider
                     'callback' => [$this, 'refundSuborder'],
                     'permission_callback' => [Permissions::class, 'canManage'],
                 ]);
+
+                \register_rest_route('mercato/v1', '/orders/suborders/(?P<suborder_id>\d+)', [
+                    'methods' => 'POST',
+                    'callback' => [$this, 'updateSuborder'],
+                    'permission_callback' => [Permissions::class, 'canManage'],
+                ]);
             });
+        }
+    }
+
+    public function updateSuborder(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $before = null;
+                $suborder = $this->container->get(Splitter::class)->updateSuborder(
+                    (int) $request->get_param('suborder_id'),
+                    (array) $request->get_json_params()
+                );
+                $this->audit('order.suborder.updated', 'suborder', (int) $suborder['suborder_id'], $before, $suborder);
+                return new WP_REST_Response($suborder, 200);
+            });
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_suborder_update_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 

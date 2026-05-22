@@ -164,7 +164,10 @@ final class Splitter
                 'wc_product_id' => $productId,
                 'title' => $item->get_name(),
                 'quantity' => (int) $item->get_quantity(),
+                'line_subtotal_minor' => $this->moneyToMinor((float) $item->get_subtotal()),
                 'line_total_minor' => $this->moneyToMinor((float) $item->get_total()),
+                'discount_minor' => \max(0, $this->moneyToMinor((float) $item->get_subtotal()) - $this->moneyToMinor((float) $item->get_total())),
+                'tax_minor' => $this->moneyToMinor((float) $item->get_total_tax()),
             ];
         }
 
@@ -179,15 +182,23 @@ final class Splitter
         global $wpdb;
 
         $tenantId = $this->tenantResolver->currentTenantId();
+        $lineSubtotal = \array_sum(\array_column($items, 'line_subtotal_minor'));
+        $discount = \array_sum(\array_column($items, 'discount_minor'));
         $subtotal = \array_sum(\array_column($items, 'line_total_minor'));
+        $tax = \array_sum(\array_column($items, 'tax_minor'));
+        $shipping = $this->shippingForVendor($order, $vendorId, $subtotal);
+        $total = $subtotal + $tax + $shipping;
         $suborders = $wpdb->prefix . 'mercato_suborders';
         $inserted = $wpdb->replace($suborders, [
             'tenant_id' => $tenantId,
             'wc_order_id' => $order->get_id(),
             'vendor_id' => $vendorId,
             'currency' => $order->get_currency(),
-            'subtotal_minor' => $subtotal,
-            'total_minor' => $subtotal,
+            'subtotal_minor' => $lineSubtotal,
+            'discount_minor' => $discount,
+            'shipping_minor' => $shipping,
+            'tax_minor' => $tax,
+            'total_minor' => $total,
         ]);
 
         if ($inserted === false) {
@@ -204,7 +215,10 @@ final class Splitter
                 'wc_product_id' => $item['wc_product_id'],
                 'title' => $item['title'],
                 'quantity' => $item['quantity'],
+                'line_subtotal_minor' => $item['line_subtotal_minor'],
+                'discount_minor' => $item['discount_minor'],
                 'line_total_minor' => $item['line_total_minor'],
+                'tax_minor' => $item['tax_minor'],
             ]);
         }
 
@@ -213,7 +227,11 @@ final class Splitter
             'wc_order_id' => $order->get_id(),
             'vendor_id' => $vendorId,
             'item_count' => \count($items),
-            'total_minor' => $subtotal,
+            'subtotal_minor' => $lineSubtotal,
+            'discount_minor' => $discount,
+            'shipping_minor' => $shipping,
+            'tax_minor' => $tax,
+            'total_minor' => $total,
         ], (string) $suborderId, $tenantId);
 
         if (\function_exists('do_action')) {
@@ -222,12 +240,74 @@ final class Splitter
                 'tenant_id' => $tenantId,
                 'wc_order_id' => $order->get_id(),
                 'vendor_id' => $vendorId,
-                'total_minor' => $subtotal,
+                'total_minor' => $total,
                 'currency' => $order->get_currency(),
             ]);
         }
 
         return $suborderId;
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function updateSuborder(int $suborderId, array $data): array
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $suborders = $wpdb->prefix . 'mercato_suborders';
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$suborders}` WHERE `tenant_id` = %d AND `suborder_id` = %d",
+            $tenantId,
+            $suborderId
+        ), ARRAY_A);
+
+        if (!\is_array($existing)) {
+            throw new RuntimeException('Suborder not found.');
+        }
+
+        $allowedStatuses = ['created', 'acknowledged', 'shipped', 'delivered', 'completed', 'cancelled', 'refunded'];
+        $update = [];
+        if (isset($data['status'])) {
+            $status = (string) $data['status'];
+            if (!\in_array($status, $allowedStatuses, true)) {
+                throw new RuntimeException('Unsupported suborder status.');
+            }
+            $update['status'] = $status;
+        }
+        if (isset($data['tracking_carrier'])) {
+            $update['tracking_carrier'] = \sanitize_text_field((string) $data['tracking_carrier']);
+        }
+        if (isset($data['tracking_number'])) {
+            $update['tracking_number'] = \sanitize_text_field((string) $data['tracking_number']);
+        }
+
+        if ($update === []) {
+            return $existing;
+        }
+
+        $wpdb->update($suborders, $update, [
+            'tenant_id' => $tenantId,
+            'suborder_id' => $suborderId,
+        ]);
+
+        if (($update['tracking_carrier'] ?? '') !== '' && ($update['tracking_number'] ?? '') !== '') {
+            $wpdb->insert($wpdb->prefix . 'mercato_order_shipments', [
+                'suborder_id' => $suborderId,
+                'carrier' => (string) $update['tracking_carrier'],
+                'tracking_number' => (string) $update['tracking_number'],
+            ]);
+        }
+
+        $updated = $this->findSuborder($tenantId, $suborderId);
+        $this->outbox->publish('mercato.order.suborder.updated.v1', $updated, (string) $suborderId, $tenantId);
+        if (($updated['status'] ?? '') === 'shipped') {
+            $this->outbox->publish('mercato.order.suborder.shipped.v1', $updated, (string) $suborderId, $tenantId);
+        }
+
+        return $updated;
     }
 
     /**
@@ -276,6 +356,43 @@ final class Splitter
         }
 
         return $row;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function findSuborder(int $tenantId, int $suborderId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_suborders';
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `suborder_id` = %d",
+            $tenantId,
+            $suborderId
+        ), ARRAY_A);
+
+        if (!\is_array($row)) {
+            throw new RuntimeException('Suborder not found.');
+        }
+
+        return $row;
+    }
+
+    private function shippingForVendor(WC_Order $order, int $vendorId, int $vendorSubtotal): int
+    {
+        $shippingTotal = $this->moneyToMinor((float) $order->get_shipping_total());
+        if ($shippingTotal < 1) {
+            return 0;
+        }
+
+        $orderSubtotal = $this->moneyToMinor((float) $order->get_total() - (float) $order->get_shipping_total() - (float) $order->get_total_tax());
+        if ($orderSubtotal < 1) {
+            return 0;
+        }
+
+        $allocated = (int) \round($shippingTotal * ($vendorSubtotal / $orderSubtotal));
+        return \max(0, $allocated);
     }
 
     private function moneyToMinor(float $amount): int
