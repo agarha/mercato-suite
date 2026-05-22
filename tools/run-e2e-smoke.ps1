@@ -186,6 +186,9 @@ $reconciliation = Invoke-MercatoApi -Path "/payouts/reconciliation" -Method "POS
 $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 $readiness = Invoke-MercatoApi -Path "/health/readiness"
+$metrics = Invoke-WebRequest -Uri "$baseUrl/metrics" -Method GET -Headers @{
+    "X-Mercato-Test-Secret" = $(if ($env:MERCATO_TEST_API_SECRET) { $env:MERCATO_TEST_API_SECRET } else { "mercato-local-test-secret" })
+} -UseBasicParsing
 
 for ($i = 0; $i -lt 30; $i++) {
     $pendingOutbox = (docker exec $mysql mysql -umercato -pmercato --batch --skip-column-names -D mercato -e "SELECT COUNT(*) FROM wp_mercato_event_outbox WHERE status IN ('pending','publishing') AND created_at >= '$outboxStartedAt';" | Select-Object -Last 1).Trim()
@@ -221,6 +224,7 @@ $result = [pscustomobject]@{
     report_net_gmv_minor = $report.net_gmv_minor
     report_net_take_minor = $report.net_take_minor
     readiness_status = $readiness.status
+    metrics_status = $metrics.StatusCode
     export_id = $export.export_id
     database_summary = $summary
 }
@@ -245,5 +249,6 @@ if ($joinedSummary -notmatch "outbox_dlq\s+0") { throw "Outbox relay dead-letter
 if ([int]$report.refunded_minor -lt 1600) { throw "Dashboard did not include refund totals." }
 if ([int]$report.net_take_minor -lt 1) { throw "Dashboard did not include net take." }
 if ($readiness.status -ne "ok") { throw "Readiness endpoint did not return ok." }
+if ($metrics.StatusCode -ne 200 -or $metrics.Content -notmatch "mercato_outbox_published_total\s+[1-9][0-9]*") { throw "Prometheus metrics endpoint did not expose Mercato counters." }
 
 $result | ConvertTo-Json -Depth 10

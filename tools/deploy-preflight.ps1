@@ -23,6 +23,11 @@ if ($ready.status -ne "ok") {
     throw "Readiness check is not ok."
 }
 
+$metrics = Invoke-WebRequest -Uri "$baseUrl/metrics" -Method GET -Headers $headers -UseBasicParsing
+if ($metrics.StatusCode -ne 200 -or $metrics.Content -notmatch "mercato_outbox_pending\s+[0-9]+") {
+    throw "Prometheus metrics endpoint did not return expected Mercato metrics."
+}
+
 $compose = docker compose ps --format json | ConvertFrom-Json
 $requiredServices = @("wordpress", "mysql", "redis", "zookeeper", "kafka", "minio", "mailpit", "outbox-relay")
 $stopped = @($compose | Where-Object { $_.State -ne "running" })
@@ -44,5 +49,6 @@ if ($missing.Count -gt 0) {
     modules = $ready.checks.modules.count
     outbox_pending = $ready.checks.outbox.pending_count
     outbox_dlq = $ready.checks.outbox.dlq_count
+    metrics = "ok"
     services = @($compose).Count
 } | ConvertTo-Json -Depth 5

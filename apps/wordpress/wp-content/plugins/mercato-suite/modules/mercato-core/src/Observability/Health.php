@@ -55,6 +55,53 @@ final class Health
         ];
     }
 
+    public function prometheus(): string
+    {
+        $lines = [
+            '# HELP mercato_database_up Whether the Mercato database connection is available.',
+            '# TYPE mercato_database_up gauge',
+            'mercato_database_up ' . ($this->database()['status'] === 'ok' ? '1' : '0'),
+        ];
+
+        $migrations = $this->migrations();
+        $modules = $this->modules();
+        $outbox = $this->outbox();
+
+        $lines[] = '# HELP mercato_migrations_applied_total Number of applied Mercato migrations.';
+        $lines[] = '# TYPE mercato_migrations_applied_total gauge';
+        $lines[] = 'mercato_migrations_applied_total ' . (int) $migrations['applied_count'];
+        $lines[] = '# HELP mercato_modules_loaded Number of Mercato modules loaded by the registry.';
+        $lines[] = '# TYPE mercato_modules_loaded gauge';
+        $lines[] = 'mercato_modules_loaded ' . (int) $modules['count'];
+        $lines[] = '# HELP mercato_outbox_pending Number of unpublished outbox events.';
+        $lines[] = '# TYPE mercato_outbox_pending gauge';
+        $lines[] = 'mercato_outbox_pending ' . (int) $outbox['pending_count'];
+        $lines[] = '# HELP mercato_outbox_dlq Number of dead-lettered outbox events.';
+        $lines[] = '# TYPE mercato_outbox_dlq gauge';
+        $lines[] = 'mercato_outbox_dlq ' . (int) $outbox['dlq_count'];
+        $lines[] = '# HELP mercato_outbox_published_total Number of published outbox events.';
+        $lines[] = '# TYPE mercato_outbox_published_total counter';
+        $lines[] = 'mercato_outbox_published_total ' . $this->countWhere($GLOBALS['wpdb']->prefix . 'mercato_event_outbox', "`status` = 'published'");
+
+        foreach ($this->statusCounts($GLOBALS['wpdb']->prefix . 'mercato_vendors', 'status') as $status => $count) {
+            $lines[] = 'mercato_vendors_total{status="' . $this->label($status) . '"} ' . $count;
+        }
+        foreach ($this->statusCounts($GLOBALS['wpdb']->prefix . 'mercato_products', 'status') as $status => $count) {
+            $lines[] = 'mercato_products_total{status="' . $this->label($status) . '"} ' . $count;
+        }
+        foreach ($this->statusCounts($GLOBALS['wpdb']->prefix . 'mercato_suborders', 'payment_status') as $status => $count) {
+            $lines[] = 'mercato_suborders_total{payment_status="' . $this->label($status) . '"} ' . $count;
+        }
+        foreach ($this->statusCounts($GLOBALS['wpdb']->prefix . 'mercato_payout_batches', 'status') as $status => $count) {
+            $lines[] = 'mercato_payout_batches_total{status="' . $this->label($status) . '"} ' . $count;
+        }
+        foreach ($this->statusCounts($GLOBALS['wpdb']->prefix . 'mercato_notification_deliveries', 'status') as $status => $count) {
+            $lines[] = 'mercato_notification_deliveries_total{status="' . $this->label($status) . '"} ' . $count;
+        }
+
+        return \implode("\n", $lines) . "\n";
+    }
+
     /**
      * @return array<string,mixed>
      */
@@ -155,5 +202,48 @@ final class Health
         }
 
         return \str_starts_with($value, $livePrefix) ? 'test-api' : 'configured';
+    }
+
+    private function countWhere(string $table, string $where): int
+    {
+        global $wpdb;
+
+        if (!$this->tableExists($table)) {
+            return 0;
+        }
+
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$table}` WHERE {$where}");
+    }
+
+    /**
+     * @return array<string,int>
+     */
+    private function statusCounts(string $table, string $column): array
+    {
+        global $wpdb;
+
+        if (!$this->tableExists($table)) {
+            return [];
+        }
+
+        $rows = $wpdb->get_results("SELECT `{$column}` AS status, COUNT(*) AS count FROM `{$table}` GROUP BY `{$column}`", ARRAY_A) ?: [];
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(string) $row['status']] = (int) $row['count'];
+        }
+
+        return $counts;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        global $wpdb;
+
+        return (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table;
+    }
+
+    private function label(string $value): string
+    {
+        return \str_replace(["\\", "\n", '"'], ["\\\\", "\\n", '\\"'], $value);
     }
 }

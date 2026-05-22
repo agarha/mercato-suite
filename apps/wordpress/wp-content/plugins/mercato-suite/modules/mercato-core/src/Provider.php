@@ -28,6 +28,7 @@ final class Provider extends ServiceProvider
         $this->container->get(WooCommerce\HookAdapter::class)->register();
 
         if (\function_exists('add_action')) {
+            \add_action('init', [$this, 'serveMetricsEndpoint']);
             \add_action('admin_menu', [$this, 'registerAdminPages']);
             \add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
             \add_action('rest_api_init', [$this, 'registerHealthRoutes']);
@@ -47,12 +48,67 @@ final class Provider extends ServiceProvider
             'callback' => [$this, 'readiness'],
             'permission_callback' => [Rest\Permissions::class, 'canManage'],
         ]);
+
+        \register_rest_route('mercato/v1', '/metrics', [
+            'methods' => 'GET',
+            'callback' => [$this, 'metrics'],
+            'permission_callback' => [Rest\Permissions::class, 'canManage'],
+        ]);
     }
 
     public function readiness(): \WP_REST_Response
     {
         $health = $this->container->get(Observability\Health::class)->readiness();
         return new \WP_REST_Response($health, $health['status'] === 'ok' ? 200 : 503);
+    }
+
+    public function metrics(): \WP_REST_Response
+    {
+        $response = new \WP_REST_Response($this->container->get(Observability\Health::class)->prometheus(), 200);
+        $response->header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+        return $response;
+    }
+
+    public function serveMetricsEndpoint(): void
+    {
+        $path = (string) \parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        if ($path !== '/metrics') {
+            return;
+        }
+
+        if (!$this->metricsAuthorized()) {
+            \status_header(403);
+            echo "forbidden\n";
+            exit;
+        }
+
+        \header('Content-Type: text/plain; version=0.0.4; charset=utf-8');
+        echo $this->container->get(Observability\Health::class)->prometheus();
+        exit;
+    }
+
+    private function metricsAuthorized(): bool
+    {
+        $token = (string) \getenv('MERCATO_METRICS_TOKEN');
+        $authorization = $this->requestHeader('authorization');
+        if ($token !== '' && \str_starts_with($authorization, 'Bearer ')) {
+            return \hash_equals($token, \substr($authorization, 7));
+        }
+
+        $testSecret = (string) \getenv('MERCATO_TEST_API_SECRET');
+        return $testSecret !== ''
+            && !\str_contains($testSecret, 'replace_me')
+            && \hash_equals($testSecret, $this->requestHeader('x-mercato-test-secret'));
+    }
+
+    private function requestHeader(string $name): string
+    {
+        $serverKey = 'HTTP_' . \strtoupper(\str_replace('-', '_', $name));
+        if (isset($_SERVER[$serverKey])) {
+            return (string) $_SERVER[$serverKey];
+        }
+
+        return '';
     }
 
     public function registerAdminPages(): void
