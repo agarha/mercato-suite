@@ -34,10 +34,47 @@ POST /wp-json/mercato/v1/enterprise/domains
 
 Tenant provisioning also accepts a `domains` array so a tenant can be created with host routing in one workflow.
 
+## Tenant Integration Settings
+
+Per-tenant integration settings are stored in `mercato_tenant_integrations`.
+
+Supported provider keys:
+
+- `stripe`
+- `sendgrid`
+- `s3`
+- `tax`
+- `search`
+- `sms`
+- `kyc`
+
+The table separates public configuration from secret references. Secret values should live in a secret manager, environment vault, or KMS-backed store; Mercato stores only references such as secret names, ARNs, or vault paths.
+
+APIs:
+
+```text
+GET  /wp-json/mercato/v1/enterprise/integrations
+POST /wp-json/mercato/v1/enterprise/integrations/{provider}
+```
+
+Example:
+
+```json
+{
+  "status": "test",
+  "public_config": {
+    "mode": "test",
+    "region": "ca-central-1"
+  },
+  "secret_refs": {
+    "api_key": "vault://tenants/gigsii/sendgrid/api_key"
+  }
+}
+```
+
 ## Still Required For Full Production SaaS
 
 - Tenant isolation integration tests across every REST endpoint.
-- Per-tenant payment, tax, notification, storage, and search credentials.
 - Tenant admin UI for domain, branding, plan, billing, and feature flags.
 - Tenant lifecycle automation for suspend, close, export, restore, and delete.
 - Edge/proxy configuration that enforces trusted tenant headers safely.

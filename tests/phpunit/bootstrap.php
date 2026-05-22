@@ -19,6 +19,7 @@ require_once $plugin . '/modules/mercato-core/src/ModuleRegistry.php';
 require_once $plugin . '/modules/mercato-core/src/ServiceProvider.php';
 require_once $plugin . '/modules/mercato-core/src/Bootstrap.php';
 require_once $plugin . '/modules/mercato-core/src/Tenant/Resolver.php';
+require_once $plugin . '/modules/mercato-core/src/Tenant/IntegrationSettings.php';
 
 if (!defined('MERCATO_SUITE_VERSION')) {
     define('MERCATO_SUITE_VERSION', 'test');

@@ -23,6 +23,7 @@
     "wp_mercato_tenant_domains",
     "wp_mercato_tenant_settings",
     "wp_mercato_tenant_feature_flags",
+    "wp_mercato_tenant_integrations",
     "wp_mercato_rbac_roles",
     "wp_mercato_rbac_capabilities",
     "wp_mercato_rbac_role_caps",

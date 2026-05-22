@@ -11,6 +11,7 @@ final class Provider extends ServiceProvider
         $this->container->instance(Container::class, $this->container);
 
         $this->container->bind(Tenant\Resolver::class, fn (): Tenant\Resolver => new Tenant\Resolver());
+        $this->container->bind(Tenant\IntegrationSettings::class, fn (): Tenant\IntegrationSettings => new Tenant\IntegrationSettings($this->container->get(Tenant\Resolver::class)));
         $this->container->bind(DB\Migrator::class, fn (): DB\Migrator => new DB\Migrator($this->container));
         $this->container->bind(Events\Outbox::class, fn (): Events\Outbox => new Events\Outbox($this->container->get(Tenant\Resolver::class)));
         $this->container->bind(Idempotency\Store::class, fn (): Idempotency\Store => new Idempotency\Store($this->container->get(Tenant\Resolver::class)));

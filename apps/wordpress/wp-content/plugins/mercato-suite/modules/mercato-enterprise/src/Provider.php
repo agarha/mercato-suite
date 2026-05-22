@@ -7,6 +7,7 @@ namespace Mercato\Enterprise;
 use Mercato\Core\Events\Outbox;
 use Mercato\Core\Rest\Permissions;
 use Mercato\Core\ServiceProvider;
+use Mercato\Core\Tenant\IntegrationSettings;
 use Mercato\Core\Tenant\Resolver;
 use WP_Error;
 use WP_REST_Request;
@@ -57,6 +58,16 @@ final class Provider extends ServiceProvider
             \register_rest_route('mercato/v1', '/enterprise/domains', [
                 'methods' => 'POST',
                 'callback' => [$this, 'domain'],
+                'permission_callback' => [Permissions::class, 'canManage'],
+            ]);
+            \register_rest_route('mercato/v1', '/enterprise/integrations', [
+                'methods' => 'GET',
+                'callback' => [$this, 'integrations'],
+                'permission_callback' => [Permissions::class, 'canManage'],
+            ]);
+            \register_rest_route('mercato/v1', '/enterprise/integrations/(?P<provider>[A-Za-z0-9_.-]+)', [
+                'methods' => 'POST',
+                'callback' => [$this, 'setIntegration'],
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
         });
@@ -113,6 +124,26 @@ final class Provider extends ServiceProvider
             return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->addDomain((array) $request->get_json_params()), 200));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_tenant_domain_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function integrations(): WP_REST_Response
+    {
+        return new WP_REST_Response($this->container->get(IntegrationSettings::class)->list(), 200);
+    }
+
+    public function setIntegration(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            $body = (array) $request->get_json_params();
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->container->get(IntegrationSettings::class)->set(
+                (string) $request->get_param('provider'),
+                (string) ($body['status'] ?? 'disabled'),
+                (array) ($body['public_config'] ?? []),
+                (array) ($body['secret_refs'] ?? []),
+            ), 200));
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_tenant_integration_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 
