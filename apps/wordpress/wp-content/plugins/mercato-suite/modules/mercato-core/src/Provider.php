@@ -33,6 +33,7 @@ final class Provider extends ServiceProvider
             \add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
             \add_action('rest_api_init', [$this, 'registerHealthRoutes']);
             \add_action('send_headers', [$this, 'sendSecurityHeaders']);
+            \add_action('template_redirect', [$this, 'renderDemoStorefront']);
         }
     }
 
@@ -165,6 +166,44 @@ final class Provider extends ServiceProvider
         echo '<div id="mercato-vendor-root" class="mercato-shell"></div>';
     }
 
+    public function renderDemoStorefront(): void
+    {
+        if (\is_admin() || \wp_doing_ajax()) {
+            return;
+        }
+
+        $path = (string) \parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        if ($path !== '/' && $path !== '') {
+            return;
+        }
+
+        global $wpdb;
+        $productsTable = $wpdb->prefix . 'mercato_products';
+        $vendorsTable = $wpdb->prefix . 'mercato_vendors';
+        $subordersTable = $wpdb->prefix . 'mercato_suborders';
+        $commissionsTable = $wpdb->prefix . 'mercato_commissions';
+
+        $products = $wpdb->get_results(
+            "SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, p.status, v.business_name, v.store_slug
+             FROM `{$productsTable}` p
+             INNER JOIN `{$vendorsTable}` v ON v.vendor_id = p.vendor_id AND v.tenant_id = p.tenant_id
+             WHERE p.status = 'active'
+             ORDER BY p.created_at DESC
+             LIMIT 8",
+            ARRAY_A
+        ) ?: [];
+
+        $vendorCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$vendorsTable}` WHERE status = 'approved'");
+        $productCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$productsTable}` WHERE status = 'active'");
+        $suborderCount = (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$subordersTable}`");
+        $takeRateMinor = (int) $wpdb->get_var("SELECT COALESCE(SUM(platform_fee_minor), 0) FROM `{$commissionsTable}`");
+
+        \status_header(200);
+        \nocache_headers();
+        echo $this->storefrontHtml($products, $vendorCount, $productCount, $suborderCount, $takeRateMinor);
+        exit;
+    }
+
     public function sendSecurityHeaders(): void
     {
         if (\headers_sent()) {
@@ -175,5 +214,68 @@ final class Provider extends ServiceProvider
         \header('X-Content-Type-Options: nosniff');
         \header('X-Frame-Options: SAMEORIGIN');
         \header('Referrer-Policy: strict-origin-when-cross-origin');
+    }
+
+    /**
+     * @param list<array<string,mixed>> $products
+     */
+    private function storefrontHtml(array $products, int $vendorCount, int $productCount, int $suborderCount, int $takeRateMinor): string
+    {
+        $esc = static fn (mixed $value): string => \esc_html((string) $value);
+        $money = static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2);
+        $cards = '';
+        foreach ($products as $index => $product) {
+            $tone = ['market-blue', 'market-green', 'market-red', 'market-gold'][$index % 4];
+            $cards .= '<article class="product-card">
+                <div class="product-media ' . $tone . '"><span>' . $esc(\mb_substr((string) $product['title'], 0, 1)) . '</span></div>
+                <div class="product-body">
+                    <p class="vendor-name">' . $esc($product['business_name']) . '</p>
+                    <h3>' . $esc($product['title']) . '</h3>
+                    <p>' . $esc($product['description'] ?: 'Curated marketplace product ready for vendor fulfillment.') . '</p>
+                    <div class="product-meta"><strong>' . $money($product['price_minor']) . '</strong><span>' . $esc($product['stock_quantity']) . ' in stock</span></div>
+                </div>
+            </article>';
+        }
+
+        if ($cards === '') {
+            $cards = '<article class="empty-state"><h3>No active demo products yet</h3><p>Run <code>tools\\seed-demo-data.ps1</code> to populate realistic vendors and products.</p></article>';
+        }
+
+        return '<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mercato Marketplace Demo</title>
+  <style>
+    :root{--ink:#17202a;--muted:#5f6f7f;--line:#d9e2ec;--panel:#fff;--wash:#f6f8fb;--blue:#155e75;--green:#286140;--red:#8f3d3d;--gold:#8a5a18}
+    *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--wash)}a{color:inherit}
+    .topbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}.mark{width:32px;height:32px;border-radius:8px;background:#17202a;color:#fff;display:grid;place-items:center}.nav{display:flex;gap:18px;color:var(--muted);font-size:13px}.nav a{text-decoration:none}
+    .hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:34px;align-items:center;padding:56px 40px 36px;max-width:1260px;margin:0 auto}
+    .hero h1{font-size:48px;line-height:1.03;margin:0 0 16px;letter-spacing:0}.hero p{font-size:17px;line-height:1.6;color:var(--muted);max-width:680px;margin:0}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border-radius:8px;padding:0 16px;text-decoration:none;font-weight:700;border:1px solid #17202a;background:#17202a;color:#fff}.button.secondary{background:#fff;color:#17202a}
+    .demo-board{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 20px 50px rgba(15,23,42,.08)}.board-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:12px;border-bottom:1px solid #eef2f6}.board-row:last-child{border-bottom:0}.board-row span{color:var(--muted);font-size:13px}.board-row strong{font-size:22px}
+    .section{max-width:1260px;margin:0 auto;padding:24px 40px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:16px}.section h2{font-size:24px;margin:0}.section p{color:var(--muted);margin:6px 0 0}
+    .product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.product-card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}.product-media{height:132px;display:grid;place-items:center;color:#fff}.product-media span{font-size:42px;font-weight:800}.market-blue{background:#155e75}.market-green{background:#286140}.market-red{background:#8f3d3d}.market-gold{background:#8a5a18}
+    .product-body{padding:14px}.vendor-name{text-transform:uppercase;font-size:11px;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}.product-body h3{font-size:16px;margin:0 0 7px}.product-body p{font-size:13px;line-height:1.45}.product-meta{display:flex;align-items:center;justify-content:space-between;margin-top:12px}.product-meta span{font-size:12px;color:var(--muted)}
+    .workflow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px}.step b{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}.step strong{display:block;font-size:17px;margin-bottom:6px}.step p{font-size:13px;line-height:1.45}
+    .empty-state{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px}.footer{padding:30px 40px;color:var(--muted);font-size:13px;text-align:center}
+    @media(max-width:960px){.hero{grid-template-columns:1fr}.product-grid,.workflow{grid-template-columns:repeat(2,minmax(0,1fr))}.nav{display:none}}@media(max-width:620px){.topbar,.hero,.section{padding-left:18px;padding-right:18px}.hero h1{font-size:34px}.product-grid,.workflow{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="brand"><div class="mark">M</div>Mercato</div><nav class="nav"><a href="/wp-admin/admin.php?page=mercato-admin">Admin</a><a href="/wp-admin/admin.php?page=mercato-vendor">Vendor Console</a><a href="/wp-admin/plugins.php">Plugin</a></nav></header>
+  <main>
+    <section class="hero">
+      <div><h1>Multi-vendor marketplace operations, packaged for tenants.</h1><p>Mercato gives each tenant a managed marketplace with vendor onboarding, catalog publishing, multi-vendor order splitting, commissions, payouts, reconciliation, notifications, and media storage.</p><div class="hero-actions"><a class="button" href="/wp-admin/admin.php?page=mercato-admin">Open admin console</a><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">Open vendor console</a></div></div>
+      <aside class="demo-board"><div class="board-row"><span>Approved vendors</span><strong>' . $vendorCount . '</strong></div><div class="board-row"><span>Active products</span><strong>' . $productCount . '</strong></div><div class="board-row"><span>Suborders processed</span><strong>' . $suborderCount . '</strong></div><div class="board-row"><span>Platform fees tracked</span><strong>' . $money($takeRateMinor) . '</strong></div></aside>
+    </section>
+    <section class="section"><div class="section-head"><div><h2>Live demo catalog</h2><p>Products below are loaded from the Mercato plugin tables inside this Docker container.</p></div></div><div class="product-grid">' . $cards . '</div></section>
+    <section class="section"><div class="section-head"><div><h2>Marketplace workflow</h2><p>The local E2E path validates the operational flow behind this storefront.</p></div></div><div class="workflow"><div class="step"><b>01</b><strong>Onboard vendors</strong><p>Register, review, approve, reject, suspend, and track KYC/payout readiness.</p></div><div class="step"><b>02</b><strong>Publish catalog</strong><p>Products are owned by vendors and projected into WooCommerce for checkout.</p></div><div class="step"><b>03</b><strong>Split orders</strong><p>Parent Woo orders become vendor suborders with tax, shipping, discount, and tracking allocation.</p></div><div class="step"><b>04</b><strong>Pay and reconcile</strong><p>Stripe Connect payouts, commission reversals, reports, and trial balance evidence stay linked.</p></div></div></section>
+  </main>
+  <footer class="footer">Local Mercato Docker demo at http://localhost:8092</footer>
+</body>
+</html>';
     }
 }
