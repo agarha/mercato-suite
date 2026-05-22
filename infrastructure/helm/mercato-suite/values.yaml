@@ -1,0 +1,64 @@
+global:
+  environment: staging
+  imagePullPolicy: IfNotPresent
+
+wordpress:
+  image:
+    repository: ghcr.io/agarha/mercato-wordpress
+    tag: 0.1.0
+  replicas: 2
+  service:
+    port: 80
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  env:
+    WORDPRESS_DB_HOST: mercato-mysql
+    WORDPRESS_DB_NAME: mercato
+    WORDPRESS_TABLE_PREFIX: wp_
+    MERCATO_PHP_PROFILE: prod
+    MERCATO_S3_BUCKET: mercato-media
+    MERCATO_S3_REGION: us-east-1
+    MERCATO_KAFKA_BROKERS: mercato-kafka:9092
+    MERCATO_MAIL_HOST: smtp.sendgrid.net
+    DISABLE_WP_CRON: "true"
+  secretRef: mercato-suite-secrets
+
+outboxRelay:
+  image:
+    repository: ghcr.io/agarha/mercato-outbox-relay
+    tag: 0.1.0
+  replicas: 2
+  topic: mercato.events
+  batchSize: 50
+  pollIntervalMs: 500
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+migrations:
+  enabled: true
+  backoffLimit: 1
+
+cron:
+  enabled: true
+  schedule: "*/5 * * * *"
+
+metrics:
+  enabled: true
+  path: /metrics
+  tokenSecretKey: MERCATO_METRICS_TOKEN
+
+ingress:
+  enabled: false
+  className: alb
+  host: mercado.example.com
+  tlsSecretName: mercado-suite-tls

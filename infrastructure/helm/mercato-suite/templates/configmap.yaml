@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mercato-suite-config
+  labels:
+{{ include "mercato.labels" . | indent 4 }}
+data:
+{{- range $key, $value := .Values.wordpress.env }}
+  {{ $key }}: {{ $value | quote }}
+{{- end }}
+  MERCATO_KAFKA_TOPIC: {{ .Values.outboxRelay.topic | quote }}
+  MERCATO_ENVIRONMENT: {{ .Values.global.environment | quote }}

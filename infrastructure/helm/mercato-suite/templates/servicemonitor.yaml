@@ -1,0 +1,21 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mercato-suite
+  labels:
+{{ include "mercato.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mercato.name" . }}
+      app.kubernetes.io/part-of: mercato
+  endpoints:
+    - port: http
+      path: {{ .Values.metrics.path | quote }}
+      interval: 15s
+      scheme: http
+      bearerTokenSecret:
+        name: {{ .Values.wordpress.secretRef }}
+        key: {{ .Values.metrics.tokenSecretKey }}
+{{- end }}
