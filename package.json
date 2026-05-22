@@ -8,7 +8,7 @@
     "packages/sdk-js"
   ],
   "scripts": {
-    "test": "echo \"No JS tests wired yet\"",
+    "test": "node tools/validate-js-assets.mjs",
     "lint": "echo \"No JS lint wired yet\""
   }
 }
