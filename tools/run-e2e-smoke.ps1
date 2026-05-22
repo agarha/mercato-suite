@@ -59,6 +59,12 @@ $envArgs = @(
 docker run --rm @envArgs --volumes-from $cid --network $network wordpress:cli wp plugin deactivate mercato-suite --path=/var/www/html 2>$null | Out-Null
 docker run --rm @envArgs --volumes-from $cid --network $network wordpress:cli wp plugin activate mercato-suite --path=/var/www/html | Out-Null
 
+$mysql = (docker ps --filter name=mercato-mysql --format "{{.ID}}" | Select-Object -First 1)
+if (!$mysql) {
+    throw "Mercato MySQL container is not running."
+}
+$outboxStartedAt = (docker exec $mysql mysql -umercato -pmercato --batch --skip-column-names -D mercato -e "SELECT UTC_TIMESTAMP(3);" | Select-Object -Last 1).Trim()
+
 $rand = Get-Random
 $vendor = Invoke-MercatoApi -Path "/vendors" -Method "POST" -Body @{
     business_name = "Smoke Vendor $rand"
@@ -150,7 +156,6 @@ $orderRefund = Invoke-MercatoApi -Path "/orders/suborders/$suborderId/refund" -M
     reason = "smoke_partial_refund"
 }
 
-$mysql = (docker ps --filter name=mercato-mysql --format "{{.ID}}" | Select-Object -First 1)
 docker exec $mysql mysql -umercato -pmercato -D mercato -e "UPDATE wp_mercato_commissions SET available_at=UTC_TIMESTAMP(3) WHERE status='pending';" | Out-Null
 
 $payoutCode = @'
@@ -182,7 +187,15 @@ $report = Invoke-MercatoApi -Path "/reports/dashboard"
 $export = Invoke-MercatoApi -Path "/reports/export" -Method "POST" -Body @{ report_type = "dashboard" }
 $readiness = Invoke-MercatoApi -Path "/health/readiness"
 
-$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) idempotency_rows FROM wp_mercato_idempotency WHERE idempotency_key='smoke-sendgrid-$rand'; SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled');"
+for ($i = 0; $i -lt 30; $i++) {
+    $pendingOutbox = (docker exec $mysql mysql -umercato -pmercato --batch --skip-column-names -D mercato -e "SELECT COUNT(*) FROM wp_mercato_event_outbox WHERE status IN ('pending','publishing') AND created_at >= '$outboxStartedAt';" | Select-Object -Last 1).Trim()
+    if ([int]$pendingOutbox -eq 0) {
+        break
+    }
+    Start-Sleep -Seconds 2
+}
+
+$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT payment_status,refunded_minor FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) idempotency_rows FROM wp_mercato_idempotency WHERE idempotency_key='smoke-sendgrid-$rand'; SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled'); SELECT COUNT(*) outbox_published FROM wp_mercato_event_outbox WHERE status='published' AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_pending FROM wp_mercato_event_outbox WHERE status IN ('pending','publishing') AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_dlq FROM wp_mercato_event_outbox WHERE status='dlq' AND created_at >= '$outboxStartedAt';"
 
 $result = [pscustomobject]@{
     vendor_id = $vendor.vendor_id
@@ -226,6 +239,9 @@ if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission rev
 if ($joinedSummary -notmatch "partially_refunded\s+1600") { throw "Partial refund did not update suborder payment status." }
 if ($joinedSummary -notmatch "idempotency_rows\s+1") { throw "Idempotency response was not stored." }
 if ($joinedSummary -notmatch "audit_rows\s+[1-9][0-9]") { throw "Audit log did not capture expected production mutations." }
+if ($joinedSummary -notmatch "outbox_published\s+[1-9][0-9]*") { throw "Outbox relay did not publish smoke events." }
+if ($joinedSummary -notmatch "outbox_pending\s+0") { throw "Outbox relay left smoke events pending." }
+if ($joinedSummary -notmatch "outbox_dlq\s+0") { throw "Outbox relay dead-lettered smoke events." }
 if ([int]$report.refunded_minor -lt 1600) { throw "Dashboard did not include refund totals." }
 if ([int]$report.net_take_minor -lt 1) { throw "Dashboard did not include net take." }
 if ($readiness.status -ne "ok") { throw "Readiness endpoint did not return ok." }

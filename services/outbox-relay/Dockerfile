@@ -1,5 +1,13 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.22 AS build
 WORKDIR /src
+ARG GOPROXY=direct
+ARG GOSUMDB=off
+ARG GOINSECURE=*
+ENV GOPROXY=${GOPROXY}
+ENV GOSUMDB=${GOSUMDB}
+ENV GOINSECURE=${GOINSECURE}
+ENV GIT_SSL_NO_VERIFY=true
+ENV CGO_ENABLED=0
 COPY services/outbox-relay/go.mod services/outbox-relay/go.sum* ./
 RUN go mod download
 COPY services/outbox-relay/ ./
