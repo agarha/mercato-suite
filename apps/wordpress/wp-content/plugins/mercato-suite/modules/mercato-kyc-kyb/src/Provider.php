@@ -46,7 +46,7 @@ final class Provider extends ServiceProvider
     public function start(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Repository::class)->start((int) $request->get_param('vendor_id')), 201);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Repository::class)->start((int) $request->get_param('vendor_id')), 201));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_kyc_start_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -55,7 +55,7 @@ final class Provider extends ServiceProvider
     public function status(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->container->get(Repository::class)->updateStatus((int) $request->get_param('vendor_id'), (string) $request->get_param('status')), 200);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->container->get(Repository::class)->updateStatus((int) $request->get_param('vendor_id'), (string) $request->get_param('status')), 200));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_kyc_status_failed', $e->getMessage(), ['status' => 400]);
         }

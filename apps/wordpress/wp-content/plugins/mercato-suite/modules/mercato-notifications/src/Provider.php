@@ -37,12 +37,14 @@ final class Provider extends ServiceProvider
     public function send(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            $id = $this->container->get(Mailer::class)->send(
-                (string) $request->get_param('recipient'),
-                (string) $request->get_param('subject'),
-                (string) $request->get_param('body')
-            );
-            return new WP_REST_Response(['delivery_id' => $id], 201);
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $id = $this->container->get(Mailer::class)->send(
+                    (string) $request->get_param('recipient'),
+                    (string) $request->get_param('subject'),
+                    (string) $request->get_param('body')
+                );
+                return new WP_REST_Response(['delivery_id' => $id], 201);
+            });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_notification_failed', $e->getMessage(), ['status' => 400]);
         }

@@ -55,7 +55,7 @@ final class Provider extends ServiceProvider
     public function provision(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->repo()->provision((array) $request->get_json_params()), 201);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->provision((array) $request->get_json_params()), 201));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_tenant_provision_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -69,11 +69,11 @@ final class Provider extends ServiceProvider
     public function setFlag(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->repo()->setFlag(
-                (string) $request->get_param('feature'),
-                (bool) $request->get_param('enabled'),
-                $request->get_param('limit_value') === null ? null : (int) $request->get_param('limit_value'),
-            ), 200);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->setFlag(
+                    (string) $request->get_param('feature'),
+                    (bool) $request->get_param('enabled'),
+                    $request->get_param('limit_value') === null ? null : (int) $request->get_param('limit_value'),
+                ), 200));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_feature_toggle_failed', $e->getMessage(), ['status' => 400]);
         }
@@ -82,7 +82,7 @@ final class Provider extends ServiceProvider
     public function branding(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         try {
-            return new WP_REST_Response($this->repo()->setBranding((array) $request->get_json_params()), 200);
+            return $this->idempotent($request, fn (): WP_REST_Response => new WP_REST_Response($this->repo()->setBranding((array) $request->get_json_params()), 200));
         } catch (\Throwable $e) {
             return new WP_Error('mercato_branding_failed', $e->getMessage(), ['status' => 400]);
         }
