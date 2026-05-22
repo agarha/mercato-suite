@@ -59,6 +59,28 @@ jobs:
       - name: Validate
         run: python3 tools/validate-manifests.py
 
+  security-and-contracts:
+    name: Security, contracts, and MVP scenario catalog
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.15.2'
+      - name: Validate API/event contracts
+        run: python tools\validate-contracts.py
+      - name: Validate Playwright top-30 catalog
+        run: npm run test:playwright:catalog
+      - name: Security gate
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File tools\run-security-scans.ps1
+
   docker-build:
     name: Docker — boot smoke
     runs-on: ubuntu-latest

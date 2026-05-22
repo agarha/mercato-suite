@@ -21,11 +21,11 @@ Last updated: 2026-05-22
 | Tenant isolation tested | Partial | Tenant-scoped code exists | Add automated cross-tenant tests. |
 | API contract tests pass | Partial | `tools/validate-contracts.py` validates implemented MVP route/event overlay | Sync all MVP routes/events into docs OpenAPI/AsyncAPI and add schema-level tests. |
 | Top MVP E2E tests pass | Partial | One broad E2E smoke passes, including payment/refund/payout/outbox/allocation/tracking | Add Playwright top workflow suite. |
-| k6 baseline test executed | Missing | No k6 scripts yet | Add k6 baseline and run locally/staging. |
-| Security scans pass with no critical/high unresolved | Missing | Runtime rate limits exist, but CI lacks SAST/SCA/IaC scan gates | Add workflow steps and baseline report. |
+| k6 baseline test executed | Partial | `tools/run-k6-baseline.ps1`, `tests/performance/k6/mercato-baseline.js`, latest local report under `reports/performance` passed | Run stricter thresholds in staging and attach report. |
+| Security scans pass with no critical/high unresolved | Partial | `tools/run-security-scans.ps1` passed locally and CI gate added | Add external SAST/SCA/IaC tools in CI and retain baseline reports. |
 | Backup/restore tested | Partial | `tools/backup-restore-drill.ps1` passed locally, restoring 5 core tables | Execute AWS Aurora/S3 restore drill in staging. |
 | DR partial drill completed | Blocked | Local restore drill exists; real DR requires staging/cloud environment | Create GitHub issue after permissions fixed and execute cloud drill. |
-| UAT sign-off completed | Blocked | Requires beta tenant/user signoff | Create issue and UAT scripts. |
+| UAT sign-off completed | Blocked | `docs/uat/mvp-uat-signoff.md`; requires beta tenant/user signoff | Execute UAT with named business testers. |
 | Release notes prepared | Partial | `CHANGELOG.md`, release artifact | Add tagged release process. |
 
 Gate result: **Not ready for MVP launch**. The local technical smoke path is healthy, but launch gates around tests, security, cloud operations, governance, and signoff remain open.

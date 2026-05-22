@@ -1,0 +1,50 @@
+[
+    {
+        "status":  "blocked",
+        "id":  "EXT-GH-001",
+        "item":  "GitHub issue sync",
+        "required":  "Issue write permission or PAT for agarha/mercato-suite"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-MVP-001",
+        "item":  "Formal MVP approval/signoff",
+        "required":  "Product/business owner approval record"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-UAT-001",
+        "item":  "Full UAT signoff",
+        "required":  "Named testers execute UAT script and sign off"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-AWS-001",
+        "item":  "Real AWS deployment proof",
+        "required":  "AWS credentials, staging account, terraform plan/apply logs"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-DR-001",
+        "item":  "Cloud DR/failover drill",
+        "required":  "Staging Aurora/S3 restore and failover execution"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-SEC-001",
+        "item":  "Pentest evidence",
+        "required":  "External pentest vendor report"
+    },
+    {
+        "status":  "blocked",
+        "id":  "EXT-SOC2-001",
+        "item":  "SOC 2 evidence",
+        "required":  "Auditor engagement and evidence repository"
+    },
+    {
+        "status":  "deferred",
+        "id":  "EXT-AI-001",
+        "item":  "AI Copilot production service",
+        "required":  "Post-MVP AI service, contracts, evals, and guardrails"
+    }
+]

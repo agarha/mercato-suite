@@ -9,6 +9,11 @@
   ],
   "scripts": {
     "test": "node tools/validate-js-assets.mjs",
+    "test:playwright:catalog": "node tools/validate-playwright-scenarios.mjs",
+    "test:locales": "node tools/validate-locales.mjs",
     "lint": "echo \"No JS lint wired yet\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
   }
 }

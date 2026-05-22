@@ -32,6 +32,7 @@ final class Provider extends ServiceProvider
             \add_action('admin_menu', [$this, 'registerAdminPages']);
             \add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
             \add_action('rest_api_init', [$this, 'registerHealthRoutes']);
+            \add_action('send_headers', [$this, 'sendSecurityHeaders']);
         }
     }
 
@@ -162,5 +163,17 @@ final class Provider extends ServiceProvider
     public function renderVendorApp(): void
     {
         echo '<div id="mercato-vendor-root" class="mercato-shell"></div>';
+    }
+
+    public function sendSecurityHeaders(): void
+    {
+        if (\headers_sent()) {
+            return;
+        }
+
+        \header("Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+        \header('X-Content-Type-Options: nosniff');
+        \header('X-Frame-Options: SAMEORIGIN');
+        \header('Referrer-Policy: strict-origin-when-cross-origin');
     }
 }

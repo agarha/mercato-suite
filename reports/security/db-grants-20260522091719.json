@@ -1,0 +1,12 @@
+{
+    "status":  "passed",
+    "user":  "mercato",
+    "forbidden_privileges":  [
+
+                             ],
+    "grants":  [
+                   "GRANT USAGE ON *.* TO `mercato`@`%`",
+                   "GRANT ALL PRIVILEGES ON `mercato`.* TO `mercato`@`%`"
+               ],
+    "generated_at":  "2026-05-22T13:17:19.9598819Z"
+}

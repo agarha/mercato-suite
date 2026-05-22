@@ -1,0 +1,10 @@
+{
+    "status":  "passed",
+    "generated_at":  "2026-05-22T13:15:29.2691123Z",
+    "files_scanned":  222,
+    "npm_audit":  "not_applicable",
+    "composer_audit":  "not_applicable",
+    "findings":  [
+
+                 ]
+}

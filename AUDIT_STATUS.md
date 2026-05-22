@@ -16,10 +16,10 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | Vendor/product/order flows | 15 | 11 | Partial | `tools/run-e2e-smoke.ps1`, admin assets, MVP REST modules, vendor onboarding checklist and rejection reason | Complete moderation, category/attributes, and richer vendor settings. |
 | Commissions/payouts/ledger | 15 | 11 | Partial | `mercato-commissions`, `mercato-payouts`, `mercato-stripe-connect`, E2E reconciliation and trial balance | Add richer commission rule tests and payout failure workflow. |
 | API/events | 7 | 6 | Partial | `docs_v2/07_openapi`, `packages/contracts/mercato-mvp-contract.json`, `tools/validate-contracts.py`, REST providers, outbox relay, `config/rate-limits.json` | Update docs contracts for all MVP routes/events; add RFC 7807 errors and outbound webhooks. |
-| Security/RBAC/tenant isolation | 8 | 5 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, `Rest/RateLimiter.php`, audit log | Add security tests, CSP, DSAR workflow, MFA/API key hashing where applicable. |
-| QA/E2E/performance | 7 | 3 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation | Add Playwright top workflows, k6, axe, contract tests, SAST/SCA/IaC scans. |
+| Security/RBAC/tenant isolation | 8 | 6 | Partial | `mercato-core/src/RBAC`, `Rest/Permissions.php`, `Rest/RateLimiter.php`, audit log, security headers, security scan gate | Add DSAR workflow, MFA/API key hashing where applicable, and production SIEM/pentest evidence. |
+| QA/E2E/performance | 7 | 5 | Partial | PHPUnit, JS validation, E2E smoke, deployment validation, Playwright top-30 catalog, k6 baseline, security gate | Add full browser execution for all 30 scenarios, axe assertions, and staging load report. |
 | DevOps/deployment/monitoring | 3 | 3 | Partial | Docker Compose, Helm chart, Terraform MVP scaffold, `/metrics`, Grafana dashboard, Prometheus alerts, local restore drill, preflight, release build | Execute real AWS deployment, DR drill, and alert integration once credentials/environment exist. |
-| **Total** | **100** | **74** | **Not MVP-launch ready** | Full local verification passed after latest milestones | Close P1 gaps or formally block/defer with issue ownership. |
+| **Total** | **100** | **77** | **Not MVP-launch ready** | Full local verification passed after latest milestones; k6/security/Playwright catalog gates added | Close remaining P1 gaps or formally block/defer with issue ownership. |
 
 ## Checklist Area Summary
 
@@ -36,8 +36,8 @@ This file tracks evidence against the Master Real-Work Audit Checklist. Status v
 | I. Commission & Payout | Partial | Commission calculation, reversal, payout batch, Stripe sandbox transfers, reconciliation, balanced trial balance. | Tier/category/product rule coverage and payout failure workflow incomplete. |
 | J. API & Webhook | Partial | REST routes, permissions, idempotency, Stripe/KYC/SendGrid webhook paths, MVP route/event contract validation, transient-backed rate limits. | Docs contract sync, pagination, RFC 7807, outbound webhook HMAC implementation missing. |
 | K. UX / Frontend | Partial | WordPress admin/vendor UI shell and asset validation. | Real SPA workspaces, accessibility tests, i18n/microcopy, buyer storefront missing. |
-| L. Security & Compliance | Partial | RBAC foundation, tenant-scoped queries, audit log, upload controls, rate-limit policy. | MFA, DSAR, CSP, SIEM, pentest, SOC 2, API key hashing evidence missing. |
-| M. QA / Testing | Partial | PHPUnit, manifest validation, JS asset validation, full E2E smoke. | Playwright, k6, axe, SAST/SCA/IaC, UAT scripts missing. |
+| L. Security & Compliance | Partial | RBAC foundation, tenant-scoped queries, audit log, upload controls, rate-limit policy, report-only CSP/security headers, security scan gate. | MFA, DSAR, SIEM, pentest, SOC 2, API key hashing evidence missing or externally blocked. |
+| M. QA / Testing | Partial | PHPUnit, manifest validation, JS asset validation, full E2E smoke, top-30 Playwright catalog validation, k6 baseline, local security gate. | Full browser execution for all 30 scenarios, axe assertions, and staging performance/security evidence remain. |
 | N. DevOps / Infrastructure | Partial | Docker, CI, Helm, Terraform scaffold, metrics, dashboard/alerts, release artifact, local backup/restore drill. | Real cloud deploy, AWS backup proof, DR/failover execution, PagerDuty, cost reporting missing. |
 | O. AI Copilot | Deferred | AI module/migration exists; MVP Cut defers AI. | Create post-MVP issues for AI service, provider gateway, guardrails, vector store, evals, zero-retention contracts. |
 
