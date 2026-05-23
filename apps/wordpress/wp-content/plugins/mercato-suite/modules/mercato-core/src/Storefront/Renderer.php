@@ -1,0 +1,178 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mercato\Core\Storefront;
+
+use Mercato\Core\Tenant\Resolver;
+
+/**
+ * Storefront orchestrator. Dispatches request path to the matching
+ * page renderer and loads tenant config + tenant-scoped data for it.
+ *
+ * Route table:
+ *   /                                          -> home (default tenant)
+ *   /t/<slug>/                                 -> home
+ *   /t/<slug>/services                         -> services index
+ *   /t/<slug>/providers                        -> provider directory
+ *   /t/<slug>/providers/<provider-slug>        -> provider detail
+ *   /t/<slug>/requests/new                     -> request-new form
+ *   /t/<slug>/account                          -> buyer account
+ *   anything else                              -> null (WP fallthrough)
+ */
+final class Renderer
+{
+    private const TENANT_PREFIX = '#^/t/[a-z0-9][a-z0-9-]{0,63}#i';
+
+    private string $templateDir;
+    private string $assetUrl;
+
+    public function __construct(
+        private readonly Resolver $tenants,
+        private readonly Config $config,
+        private readonly Repository $repository,
+    ) {
+        $this->templateDir = \dirname(__DIR__, 2) . '/templates/storefront';
+        $this->assetUrl = (\defined('MERCATO_SUITE_FILE') && \function_exists('plugin_dir_url'))
+            ? \plugin_dir_url(\MERCATO_SUITE_FILE) . 'modules/mercato-core/assets'
+            : '/wp-content/plugins/mercato-suite/modules/mercato-core/assets';
+    }
+
+    public function renderForPath(string $path): ?string
+    {
+        $path = (string) \parse_url($path, PHP_URL_PATH);
+        $local = $this->stripTenantPrefix($path);
+        if ($local === null) {
+            return null;
+        }
+
+        $local = \rtrim($local, '/');
+        if ($local === '' || $local === '/') {
+            return $this->renderHome();
+        }
+        if ($local === '/services') {
+            return $this->renderServices();
+        }
+        if ($local === '/providers') {
+            return $this->renderProviders();
+        }
+        if (\preg_match('#^/providers/([a-z0-9][a-z0-9-]{0,127})$#i', $local, $m) === 1) {
+            return $this->renderProviderDetail($m[1]);
+        }
+        if ($local === '/requests/new') {
+            return $this->renderRequestNew();
+        }
+        if ($local === '/account') {
+            return $this->renderAccount();
+        }
+        return null;
+    }
+
+    public function renderHome(): string
+    {
+        return $this->render('page.php', [
+            'data' => $this->repository->snapshot($this->tenants->currentTenantId()),
+            'current_page' => 'home',
+        ]);
+    }
+
+    public function renderServices(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        return $this->render('services-page.php', [
+            'data' => $this->repository->servicesPage($tid),
+            'current_page' => 'services',
+        ]);
+    }
+
+    public function renderProviders(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        return $this->render('providers-page.php', [
+            'data' => $this->repository->providersPage($tid),
+            'current_page' => 'providers',
+        ]);
+    }
+
+    public function renderProviderDetail(string $slug): ?string
+    {
+        $tid = $this->tenants->currentTenantId();
+        $detail = $this->repository->providerDetail($tid, $slug);
+        if ($detail === null) {
+            return null;
+        }
+        return $this->render('provider-detail.php', [
+            'data' => $detail,
+            'current_page' => 'providers',
+        ]);
+    }
+
+    public function renderRequestNew(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        return $this->render('request-new.php', [
+            'data' => $this->repository->requestNewPage($tid),
+            'current_page' => 'requests',
+        ]);
+    }
+
+    public function renderAccount(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        $uid = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
+        return $this->render('account-page.php', [
+            'data' => $this->repository->accountPage($tid, $uid),
+            'current_page' => 'account',
+        ]);
+    }
+
+    public function matchesStorefrontRoute(string $path): bool
+    {
+        if ($path === '' || $path === '/') {
+            return true;
+        }
+        return $this->stripTenantPrefix($path) !== null;
+    }
+
+    private function stripTenantPrefix(string $path): ?string
+    {
+        if ($path === '' || $path === '/') {
+            return '/';
+        }
+        if (\preg_match(self::TENANT_PREFIX, $path, $m) !== 1) {
+            return null;
+        }
+        $remainder = \substr($path, \strlen($m[0]));
+        return $remainder === '' ? '/' : $remainder;
+    }
+
+    /**
+     * @param array<string,mixed> $extra
+     */
+    private function render(string $templateFile, array $extra): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        $config = $this->config->forTenant($tid);
+
+        $context = \array_merge([
+            'config' => $config,
+            'asset_url' => $this->assetUrl,
+            'esc' => static fn (mixed $v): string => \esc_html((string) $v),
+            'attr' => static fn (mixed $v): string => \esc_attr((string) $v),
+            'money' => static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2),
+            'partials' => $this->templateDir . '/partials',
+        ], $extra);
+
+        $path = $this->templateDir . '/' . $templateFile;
+        if (!\is_readable($path)) {
+            return '';
+        }
+
+        \ob_start();
+        (static function (string $__file, array $__ctx): void {
+            \extract($__ctx, EXTR_OVERWRITE);
+            include $__file;
+        })($path, $context);
+        return (string) \ob_get_clean();
+    }
+}
