@@ -1,2 +1,2 @@
 <?php /** @var array $config */ /** @var \Closure $esc */ ?>
-<footer class="footer"><?= $esc($config['footer']) ?></footer>
+<footer class="footer" role="contentinfo"><?= $esc($config['footer']) ?></footer>

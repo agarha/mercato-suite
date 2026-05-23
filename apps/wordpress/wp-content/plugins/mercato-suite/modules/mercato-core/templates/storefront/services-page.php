@@ -14,11 +14,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Services — <?= $esc($config['brand']) ?></title>
   <meta name="description" content="Browse every service offered on <?= $attr($config['brand']) ?>.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <meta name="theme-color" content="#0a4f47">
   <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <?php include $partials . '/header.php'; ?>
-  <main>
+  <main id="main" tabindex="-1">
     <div class="hero-wrap">
       <section class="hero">
         <div>
