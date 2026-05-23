@@ -109,27 +109,22 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
     domains = @(
         @{ domain = "localhost"; path_prefix = "/t/gigsii"; is_primary = $true; status = "active"; verified = $true }
     )
+    # Flags listed here are tenant-visible on the storefront feature-cloud.
+    # Dead/scaffold modules (ai-copilot, collaboration, disputes, fraud-risk,
+    # avalara, paypal-marketplace, postmark, shippo, taxjar, twilio, migration,
+    # subscriptions-module) are intentionally NOT seeded for the gigsii demo
+    # tenant because their backends are 29-LOC scaffolds. Re-enable here once
+    # the corresponding modules have real implementations.
     feature_flags = @{
-        "mercato.ai" = $true
-        "mercato.collaboration" = $true
         "mercato.commissions" = $true
         "mercato.core" = $true
-        "mercato.disputes" = $true
         "mercato.enterprise" = $true
-        "mercato.fraud" = $true
-        "mercato.integration.avalara" = $true
         "mercato.integration.aws_s3" = $true
-        "mercato.integration.paypal" = $true
-        "mercato.integration.postmark" = $true
         "mercato.integration.sendgrid" = $true
-        "mercato.integration.shippo" = $true
         "mercato.integration.stripe" = $true
         "mercato.integration.stripe_connect" = $true
-        "mercato.integration.taxjar" = $true
-        "mercato.integration.twilio" = $true
         "mercato.kyc" = $true
         "mercato.messaging" = $true
-        "mercato.migration" = $true
         "mercato.notifications" = $true
         "mercato.orders" = $true
         "mercato.payouts" = $true
@@ -139,7 +134,6 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
         "mercato.reviews" = $true
         "mercato.search" = $true
         "mercato.service_ops" = $true
-        "mercato.subscriptions" = $true
         "mercato.tax" = $true
         "mercato.vendors" = $true
         "gigsii.otp" = $true
