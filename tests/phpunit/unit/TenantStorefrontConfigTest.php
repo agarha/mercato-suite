@@ -52,4 +52,20 @@ final class TenantStorefrontConfigTest extends TestCase
             self::assertStringContainsString($key, $this->enterpriseRepository);
         }
     }
+
+    public function testStorefrontRendersTenantTaxonomyAndServiceOpsEvidence(): void
+    {
+        foreach ([
+            'Browse every service category',
+            'mercato_categories',
+            'mercato_jobs',
+            'mercato_booking_requests',
+            'mercato_estimates',
+            'mercato_referrals',
+            'Service operations cockpit',
+            'Recent jobs',
+        ] as $needle) {
+            self::assertStringContainsString($needle, $this->coreProvider);
+        }
+    }
 }

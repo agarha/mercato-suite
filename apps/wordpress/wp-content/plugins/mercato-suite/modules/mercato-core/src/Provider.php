@@ -364,9 +364,11 @@ final class Provider extends ServiceProvider
             'item_quantity_label' => 'in stock',
             'vendor_status_label' => 'Stripe connected',
             'nav' => [
+                ['href' => '#categories', 'label' => 'Categories'],
                 ['href' => '#shop', 'label' => 'Shop'],
                 ['href' => '#vendors', 'label' => 'Vendors'],
                 ['href' => '#buyer', 'label' => 'Buyer Account'],
+                ['href' => '#operations', 'label' => 'Operations'],
                 ['href' => '#seller', 'label' => 'Seller Portal'],
                 ['href' => '/wp-admin/admin.php?page=mercato-admin', 'label' => 'Admin'],
             ],
@@ -469,14 +471,58 @@ final class Provider extends ServiceProvider
         $subordersTable = $wpdb->prefix . 'mercato_suborders';
         $payoutsTable = $wpdb->prefix . 'mercato_payout_batches';
         $notificationsTable = $wpdb->prefix . 'mercato_notification_deliveries';
+        $categoriesTable = $wpdb->prefix . 'mercato_categories';
+        $jobsTable = $wpdb->prefix . 'mercato_jobs';
+        $bookingTable = $wpdb->prefix . 'mercato_booking_requests';
+        $estimatesTable = $wpdb->prefix . 'mercato_estimates';
+        $referralsTable = $wpdb->prefix . 'mercato_referrals';
         $vendors = $wpdb->get_results($wpdb->prepare("SELECT vendor_id, business_name, store_slug, status, stripe_account_id FROM `{$vendorsTable}` WHERE tenant_id = %d AND status = 'approved' ORDER BY vendor_id DESC LIMIT 6", $tenantId), ARRAY_A) ?: [];
         $orders = $wpdb->get_results($wpdb->prepare("SELECT suborder_id, vendor_id, wc_order_id, status, payment_status, total_minor, refunded_minor, tracking_carrier, tracking_number FROM `{$subordersTable}` WHERE tenant_id = %d ORDER BY suborder_id DESC LIMIT 5", $tenantId), ARRAY_A) ?: [];
         $latestPayout = $wpdb->get_row($wpdb->prepare("SELECT batch_id, status, total_minor, created_at FROM `{$payoutsTable}` WHERE tenant_id = %d ORDER BY batch_id DESC LIMIT 1", $tenantId), ARRAY_A) ?: [];
         $latestNotification = $wpdb->get_row($wpdb->prepare("SELECT delivery_id, recipient, subject, status FROM `{$notificationsTable}` WHERE tenant_id = %d ORDER BY delivery_id DESC LIMIT 1", $tenantId), ARRAY_A) ?: [];
+        $categoryRows = $wpdb->get_results($wpdb->prepare("SELECT p.category_id, p.name, COUNT(c.category_id) AS child_count
+            FROM `{$categoriesTable}` p
+            LEFT JOIN `{$categoriesTable}` c ON c.tenant_id = p.tenant_id AND c.parent_id = p.category_id
+            WHERE p.tenant_id = %d AND p.parent_id IS NULL
+            GROUP BY p.category_id, p.name, p.sort_order
+            ORDER BY p.sort_order ASC, p.name ASC
+            LIMIT 16", $tenantId), ARRAY_A) ?: [];
+        $subcategoryRows = $wpdb->get_results($wpdb->prepare("SELECT c.name, p.name AS parent_name
+            FROM `{$categoriesTable}` c
+            INNER JOIN `{$categoriesTable}` p ON p.tenant_id = c.tenant_id AND p.category_id = c.parent_id
+            WHERE c.tenant_id = %d
+            ORDER BY p.sort_order ASC, c.sort_order ASC, c.name ASC
+            LIMIT 42", $tenantId), ARRAY_A) ?: [];
+        $jobRows = $wpdb->get_results($wpdb->prepare("SELECT j.job_id, j.status, j.assigned_user_id, j.updated_at, v.business_name
+            FROM `{$jobsTable}` j
+            LEFT JOIN `{$vendorsTable}` v ON v.tenant_id = j.tenant_id AND v.vendor_id = j.vendor_id
+            WHERE j.tenant_id = %d
+            ORDER BY j.job_id DESC
+            LIMIT 5", $tenantId), ARRAY_A) ?: [];
+        $bookingCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$bookingTable}` WHERE tenant_id = %d", $tenantId));
+        $jobCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$jobsTable}` WHERE tenant_id = %d", $tenantId));
+        $estimateCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$estimatesTable}` WHERE tenant_id = %d", $tenantId));
+        $referralCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$referralsTable}` WHERE tenant_id = %d", $tenantId));
 
         $vendorCards = '';
         foreach ($vendors as $vendor) {
             $vendorCards .= '<article class="vendor-card"><div class="vendor-avatar">' . $esc(\mb_substr((string) $vendor['business_name'], 0, 1)) . '</div><div><h3>' . $esc($vendor['business_name']) . '</h3><p>@' . $esc($vendor['store_slug']) . '</p><span>' . $esc($vendor['status']) . ' / ' . $esc($config['vendor_status_label']) . '</span></div></article>';
+        }
+
+        $categoryCards = '';
+        foreach ($categoryRows as $category) {
+            $categoryCards .= '<article class="category-card"><strong>' . $esc($category['name']) . '</strong><span>' . $esc($category['child_count']) . ' subcategories</span></article>';
+        }
+        if ($categoryCards === '') {
+            $categoryCards = '<article class="empty-state"><h3>No categories yet</h3><p>Seed tenant categories to show marketplace browse structure.</p></article>';
+        }
+
+        $subcategoryPills = '';
+        foreach ($subcategoryRows as $subcategory) {
+            $subcategoryPills .= '<span title="' . \esc_attr((string) $subcategory['parent_name']) . '">' . $esc($subcategory['name']) . '</span>';
+        }
+        if ($subcategoryPills === '') {
+            $subcategoryPills = '<span>No subcategories yet</span>';
         }
 
         $orderRows = '';
@@ -485,6 +531,15 @@ final class Provider extends ServiceProvider
         }
         if ($orderRows === '') {
             $orderRows = '<tr><td colspan="6">No order records yet.</td></tr>';
+        }
+
+        $jobRowsHtml = '';
+        foreach ($jobRows as $job) {
+            $assignee = (int) ($job['assigned_user_id'] ?? 0);
+            $jobRowsHtml .= '<tr><td>#' . $esc($job['job_id']) . '</td><td>' . $esc($job['business_name'] ?: 'Provider') . '</td><td>' . $esc($job['status']) . '</td><td>' . ($assignee > 0 ? $esc($assignee) : 'Unassigned') . '</td><td>' . $esc($job['updated_at']) . '</td></tr>';
+        }
+        if ($jobRowsHtml === '') {
+            $jobRowsHtml = '<tr><td colspan="5">No service jobs yet.</td></tr>';
         }
 
         $payoutSummary = $latestPayout === []
@@ -537,11 +592,12 @@ final class Provider extends ServiceProvider
     .demo-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:1280px;margin:0 auto;padding:0 44px 44px}.board-row{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:16px}.board-row span{color:var(--muted);font-size:13px}.board-row strong{display:block;font-size:28px;margin-top:4px}
     .section{max-width:1280px;margin:0 auto;padding:46px 44px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-bottom:22px}.section h2{font-size:34px;line-height:1.1;margin:0}.section p{color:var(--muted);margin:8px 0 0;line-height:1.55}
     .product-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.product-card{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;overflow:hidden;box-shadow:0 16px 36px rgba(16,35,47,.06)}.product-media{height:156px;display:flex;align-items:flex-end;justify-content:space-between;padding:16px;color:#fff}.product-media span{font-size:46px;font-weight:900}.product-media small{font-weight:750;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:5px 9px}.market-blue{background:linear-gradient(135deg,#0e7490,#164e63)}.market-green{background:linear-gradient(135deg,#15803d,#14532d)}.market-red{background:linear-gradient(135deg,#dc2626,#7f1d1d)}.market-gold{background:linear-gradient(135deg,#b45309,#78350f)}
+    .category-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.category-card{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:16px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}.category-card strong{font-size:17px}.category-card span{color:var(--muted);font-size:13px}.subcategory-cloud{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.subcategory-cloud span{border:1px solid #cfe2df;background:#fff;border-radius:999px;padding:7px 10px;font-size:12px;color:#315b54;font-weight:750}.ops-grid{display:grid;grid-template-columns:.7fr 1.3fr;gap:18px}.ops-score{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ops-score div{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:16px}.ops-score span{display:block;color:var(--muted);font-size:12px}.ops-score strong{display:block;font-size:28px;margin-top:4px}
     .product-body{padding:18px}.vendor-name{text-transform:uppercase;font-size:11px;letter-spacing:.04em;color:var(--teal);font-weight:850;margin:0 0 8px}.product-body h3{font-size:19px;margin:0 0 8px}.product-body p{font-size:14px;line-height:1.5}.service-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}.service-tags span{font-size:11px;border:1px solid #cfe2df;background:#f2faf8;border-radius:999px;padding:4px 8px;color:#315b54}.product-meta{display:flex;align-items:center;justify-content:space-between;margin-top:16px}.product-meta strong{font-size:19px}.product-meta span{font-size:12px;color:var(--muted)}
     .workflow,.positioning{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.step,.positioning-card{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:18px;min-height:150px}.step b,.positioning-card b{display:block;font-size:12px;color:var(--teal);margin-bottom:10px;text-transform:uppercase}.step strong,.positioning-card strong{display:block;font-size:18px;margin-bottom:8px}.step p,.positioning-card p{font-size:14px;line-height:1.5;margin:0}
     .user-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px}.seller-grid,.vendor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.vendor-card{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:16px;display:flex;gap:12px;align-items:center}.vendor-avatar{width:50px;height:50px;border-radius:8px;background:var(--forest);color:#fff;display:grid;place-items:center;font-weight:900}.vendor-card h3{margin:0 0 3px;font-size:16px}.vendor-card p,.vendor-card span{display:block;margin:0;color:var(--muted);font-size:12px}.cart-panel,.account-panel{background:#fff;border:1px solid rgba(16,35,47,.08);border-radius:8px;padding:18px}.cart-panel h3,.account-panel h3{margin-top:0}.cart-line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #edf4f2;padding:11px 0}.cart-line:last-child{border-bottom:0}.table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line)}.table th,.table td{padding:10px;border-bottom:1px solid #edf2f7;text-align:left;font-size:13px}.table th{background:#f5faf8}.pill{display:inline-flex;border:1px solid #b8d8d2;border-radius:999px;padding:6px 10px;background:#fff;font-size:12px;color:#315b54;font-weight:800}
     .empty-state{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px}.footer{padding:34px 44px;color:var(--muted);font-size:13px;text-align:center}
-    @media(max-width:980px){.hero,.user-grid{grid-template-columns:1fr}.product-grid,.workflow,.seller-grid,.vendor-grid,.positioning,.demo-board{grid-template-columns:repeat(2,minmax(0,1fr))}.search-row{grid-template-columns:1fr}.nav{display:none}}@media(max-width:640px){.topbar,.hero,.section{padding-left:20px;padding-right:20px}.hero h1{font-size:40px}.product-grid,.workflow,.seller-grid,.vendor-grid,.positioning,.demo-board,.photo-board{grid-template-columns:1fr}.demo-board{padding-left:20px;padding-right:20px}.search-btn{min-height:44px}}
+    @media(max-width:980px){.hero,.user-grid,.ops-grid{grid-template-columns:1fr}.product-grid,.workflow,.seller-grid,.vendor-grid,.positioning,.demo-board,.category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.search-row{grid-template-columns:1fr}.nav{display:none}}@media(max-width:640px){.topbar,.hero,.section{padding-left:20px;padding-right:20px}.hero h1{font-size:40px}.product-grid,.workflow,.seller-grid,.vendor-grid,.positioning,.demo-board,.photo-board,.category-grid,.ops-score{grid-template-columns:1fr}.demo-board{padding-left:20px;padding-right:20px}.search-btn{min-height:44px}}
   </style>
 </head>
 <body>
@@ -555,9 +611,11 @@ final class Provider extends ServiceProvider
     <aside class="demo-board"><div class="board-row"><span>' . $esc($metricLabels['vendors'] ?? '') . '</span><strong>' . $vendorCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['products'] ?? '') . '</span><strong>' . $productCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['orders'] ?? '') . '</span><strong>' . $suborderCount . '</strong></div><div class="board-row"><span>' . $esc($metricLabels['take'] ?? '') . '</span><strong>' . $money($takeRateMinor) . '</strong></div></aside>
   </div>
     <section class="section"><div class="section-head"><div><h2>' . $esc($config['positioning_headline']) . '</h2><p>' . $esc($config['positioning_copy']) . '</p></div></div><div class="positioning">' . $positioningHtml . '</div></section>
+    <section class="section" id="categories"><div class="section-head"><div><h2>Browse every service category</h2><p>Tenant-scoped categories and subcategories are loaded from the Gigsii marketplace taxonomy.</p></div><span class="pill">Task-style hierarchy</span></div><div class="category-grid">' . $categoryCards . '</div><div class="subcategory-cloud">' . $subcategoryPills . '</div></section>
     <section class="section" id="shop"><div class="section-head"><div><h2>' . $esc($config['catalog_headline']) . '</h2><p>' . $esc($config['catalog_copy']) . '</p></div><span class="pill">' . $esc($config['catalog_badge']) . '</span></div><div class="product-grid">' . $cards . '</div></section>
     <section class="section" id="vendors"><div class="section-head"><div><h2>' . $esc($config['vendor_headline']) . '</h2><p>' . $esc($config['vendor_copy']) . '</p></div><span class="pill">' . $esc($config['vendor_badge']) . '</span></div><div class="vendor-grid">' . $vendorCards . '</div></section>
     <section class="section" id="buyer"><div class="section-head"><div><h2>' . $esc($config['buyer_headline']) . '</h2><p>' . $esc($config['buyer_copy']) . '</p></div></div><div class="user-grid"><div class="cart-panel"><h3>Checkout preview</h3><div class="cart-line"><span>Cart contains products from multiple vendors</span><strong>Split after payment</strong></div><div class="cart-line"><span>Tax, shipping, discounts</span><strong>Allocated by suborder</strong></div><div class="cart-line"><span>Payment</span><strong>Stripe test intent</strong></div><div class="cart-line"><span>Refund support</span><strong>Commission reversal</strong></div></div><div class="account-panel"><h3>Buyer order history</h3><table class="table"><thead><tr><th>Order</th><th>Status</th><th>Payment</th><th>Total</th><th>Refunded</th><th>Tracking</th></tr></thead><tbody>' . $orderRows . '</tbody></table></div></div></section>
+    <section class="section" id="operations"><div class="section-head"><div><h2>Service operations cockpit</h2><p>Booking, dispatch, estimate, and referral records come from the shared Mercato service-ops module.</p></div><span class="pill">Soft-launch ops</span></div><div class="ops-grid"><div class="ops-score"><div><span>Bookings</span><strong>' . $bookingCount . '</strong></div><div><span>Jobs</span><strong>' . $jobCount . '</strong></div><div><span>Estimates</span><strong>' . $estimateCount . '</strong></div><div><span>Referrals</span><strong>' . $referralCount . '</strong></div></div><div class="account-panel"><h3>Recent jobs</h3><table class="table"><thead><tr><th>Job</th><th>Provider</th><th>Status</th><th>Assignee</th><th>Updated</th></tr></thead><tbody>' . $jobRowsHtml . '</tbody></table></div></div></section>
     <section class="section" id="seller"><div class="section-head"><div><h2>' . $esc($config['seller_headline']) . '</h2><p>' . $esc($config['seller_copy']) . '</p></div><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">' . $esc($config['secondary_cta']) . '</a></div><div class="seller-grid">' . $sellerSteps . '</div></section>
     <section class="section"><div class="section-head"><div><h2>' . $esc($config['workflow_headline']) . '</h2><p>' . $esc($config['workflow_copy']) . '</p></div></div><div class="workflow">' . $workflowSteps . '</div></section>
   </main>

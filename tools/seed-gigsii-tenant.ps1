@@ -62,9 +62,11 @@ $storefront = @{
     item_quantity_label = "booking slots"
     vendor_status_label = "verified provider"
     nav = @(
+        @{ href = "#categories"; label = "Categories" },
         @{ href = "#shop"; label = "Services" },
         @{ href = "#vendors"; label = "Providers" },
         @{ href = "#buyer"; label = "Client" },
+        @{ href = "#operations"; label = "Operations" },
         @{ href = "#seller"; label = "Provider" },
         @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
     )
