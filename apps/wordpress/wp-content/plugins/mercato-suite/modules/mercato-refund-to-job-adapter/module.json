@@ -1,0 +1,21 @@
+{
+  "slug": "mercato-refund-to-job-adapter",
+  "namespace": "Mercato\\Adapters\\RefundToJob",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.refund_to_job.reversed.v1",
+    "mercato.adapter.refund_to_job.post_refund.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_refund_to_job_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.refund_to_job"
+}

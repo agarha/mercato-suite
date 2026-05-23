@@ -1,0 +1,22 @@
+{
+  "slug": "mercato-order-to-job-adapter",
+  "namespace": "Mercato\\Adapters\\OrderToJob",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.order_to_job.linked.v1",
+    "mercato.adapter.order_to_job.paid.v1",
+    "mercato.adapter.order_to_job.status_synced.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_order_to_job_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.order_to_job"
+}

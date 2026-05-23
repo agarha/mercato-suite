@@ -1,0 +1,19 @@
+{
+  "slug": "mercato-coupon-context-adapter",
+  "namespace": "Mercato\\Adapters\\CouponContext",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.coupon_context.evaluated.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_coupon_context_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.coupon_context"
+}

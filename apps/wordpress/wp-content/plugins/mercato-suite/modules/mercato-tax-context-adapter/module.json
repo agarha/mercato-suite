@@ -1,0 +1,19 @@
+{
+  "slug": "mercato-tax-context-adapter",
+  "namespace": "Mercato\\Adapters\\TaxContext",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.tax_context.applied.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_tax_context_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.tax_context"
+}

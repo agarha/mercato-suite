@@ -1,0 +1,23 @@
+{
+  "slug": "mercato-job-to-order-adapter",
+  "namespace": "Mercato\\Adapters\\JobToOrder",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.job_to_order.created.v1",
+    "mercato.adapter.job_to_order.failed.v1"
+  ],
+  "consumes_events": [
+    "mercato.bid.awarded.v1"
+  ],
+  "capabilities": [
+    "mercato_job_to_order_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.job_to_order"
+}

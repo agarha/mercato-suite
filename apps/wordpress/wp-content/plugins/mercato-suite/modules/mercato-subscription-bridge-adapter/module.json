@@ -1,0 +1,22 @@
+{
+  "slug": "mercato-subscription-bridge-adapter",
+  "namespace": "Mercato\\Adapters\\SubscriptionBridge",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-orders@^0.1"
+  ],
+  "provides_events": [
+    "mercato.adapter.subscription_bridge.renewed.v1",
+    "mercato.adapter.subscription_bridge.cancelled.v1",
+    "mercato.adapter.subscription_bridge.status_changed.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_subscription_bridge_admin"
+  ],
+  "tables": [],
+  "tier": "adapter",
+  "feature_flag": "mercato.adapter.subscription_bridge"
+}
