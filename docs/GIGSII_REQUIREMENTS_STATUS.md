@@ -1,6 +1,14 @@
 # Gigsii Requirements Status
 
+Gigsii is a Mercato tenant and flagship reference implementation. It is not a fork.
+
 Source documents: `C:/GIGsii/Gigsii_Project_Artifacts_v1.1/*_v1.1.docx`.
+
+Related implementation docs:
+
+- `docs/tenants/gigsii.md`
+- `docs/implementation/CURRENT_IMPLEMENTATION_STATUS.md`
+- `docs/architecture/woocommerce-boundary.md`
 
 ## System Placement
 
