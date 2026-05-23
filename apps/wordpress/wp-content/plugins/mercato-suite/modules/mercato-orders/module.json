@@ -29,6 +29,8 @@
   "tables": [
     "wp_mercato_suborders",
     "wp_mercato_suborder_items",
+    "wp_mercato_order_shipments",
+    "wp_mercato_vendor_service_offerings",
     "wp_mercato_refunds",
     "wp_mercato_tax_records"
   ],

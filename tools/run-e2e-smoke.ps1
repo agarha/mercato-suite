@@ -125,6 +125,15 @@ $product = Invoke-MercatoApi -Path "/products" -Method "POST" -Body @{
     stock_quantity = 3
     status = "active"
 }
+$offering = @($product.offerings | Where-Object { $_.vendor_id -eq $vendor.vendor_id } | Select-Object -First 1)
+if (!$offering) {
+    $offering = Invoke-MercatoApi -Path "/products/$($product.product_id)/offerings" -Method "POST" -Body @{
+        vendor_id = [int]$vendor.vendor_id
+        status = "active"
+        price_minor = 6400
+        duration_minutes = 60
+    }
+}
 $onboarding = Invoke-MercatoApi -Path "/vendors/$($vendor.vendor_id)/onboarding"
 
 $media = Invoke-MercatoApi -Path "/media/presign" -Method "POST" -Body @{
@@ -143,6 +152,7 @@ $orderCode = @"
 `$order = wc_create_order();
 `$order->add_product(`$product, 1);
 foreach (`$order->get_items() as `$item) {
+    `$item->add_meta_data('_mercato_offering_id', '$($offering.offering_id)', true);
     `$item->set_subtotal(64);
     `$item->set_total(60);
     `$item->set_taxes(['total' => [1 => '3.00'], 'subtotal' => [1 => '3.00']]);
@@ -226,7 +236,7 @@ for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Seconds 2
 }
 
-$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status,status_reason rejected_status FROM wp_mercato_vendors WHERE vendor_id=$($rejectedVendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT status,payment_status,subtotal_minor,discount_minor,shipping_minor,tax_minor,total_minor,refunded_minor,tracking_carrier,tracking_number FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) shipment_rows FROM wp_mercato_order_shipments WHERE suborder_id=$suborderId AND tracking_number='1ZSMOKE$rand'; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) idempotency_rows FROM wp_mercato_idempotency WHERE idempotency_key='smoke-sendgrid-$rand'; SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','vendor.status.updated','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','order.suborder.updated','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled'); SELECT COUNT(*) outbox_published FROM wp_mercato_event_outbox WHERE status='published' AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_pending FROM wp_mercato_event_outbox WHERE status IN ('pending','publishing') AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_dlq FROM wp_mercato_event_outbox WHERE status='dlq' AND created_at >= '$outboxStartedAt';"
+$summary = docker exec $mysql mysql -umercato -pmercato -D mercato -e "SELECT status vendor_status FROM wp_mercato_vendors WHERE vendor_id=$($vendor.vendor_id); SELECT status,status_reason rejected_status FROM wp_mercato_vendors WHERE vendor_id=$($rejectedVendor.vendor_id); SELECT status kyc_status FROM wp_mercato_kyc_cases WHERE case_id=$($kyc.case_id); SELECT COUNT(*) clean_media FROM wp_mercato_media WHERE media_id=$($media.media_id) AND scan_status='clean'; SELECT COUNT(*) stripe_payment_intents FROM wp_mercato_stripe_payment_intents WHERE wc_order_id=$orderId; SELECT COUNT(*) stripe_refunds FROM wp_mercato_stripe_refunds WHERE wc_order_id=$orderId; SELECT COUNT(*) order_refunds FROM wp_mercato_refunds WHERE refund_id=$($orderRefund.refund_id); SELECT COUNT(*) commission_reversals FROM wp_mercato_commission_reversals WHERE refund_id=$($orderRefund.refund_id); SELECT status,payment_status,subtotal_minor,discount_minor,shipping_minor,tax_minor,total_minor,refunded_minor,tracking_carrier,tracking_number FROM wp_mercato_suborders WHERE suborder_id=$suborderId; SELECT COUNT(*) offering_item_rows FROM wp_mercato_suborder_items WHERE suborder_id=$suborderId AND offering_id=$($offering.offering_id); SELECT COUNT(*) shipment_rows FROM wp_mercato_order_shipments WHERE suborder_id=$suborderId AND tracking_number='1ZSMOKE$rand'; SELECT COUNT(*) stripe_transfers FROM wp_mercato_stripe_transfers WHERE batch_id=$($batch.batch_id); SELECT status FROM wp_mercato_payout_batches WHERE batch_id=$($batch.batch_id); SELECT status,drift_minor FROM wp_mercato_reconciliation_runs WHERE run_id=$($reconciliation.run_id); SELECT status FROM wp_mercato_notification_deliveries WHERE delivery_id=$($delivery.delivery_id); SELECT COUNT(*) idempotency_rows FROM wp_mercato_idempotency WHERE idempotency_key='smoke-sendgrid-$rand'; SELECT COUNT(*) audit_rows FROM wp_mercato_audit_log WHERE action IN ('vendor.registered','vendor.status.updated','stripe.account.created','media.upload.presigned','media.upload.completed','product.created','stripe.payment_intent.created','order.payment.completed','order.suborder.updated','stripe.refund.created','order.refund.created','stripe.payout_batch.executed','notification.email.sent','payout.reconciled'); SELECT COUNT(*) outbox_published FROM wp_mercato_event_outbox WHERE status='published' AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_pending FROM wp_mercato_event_outbox WHERE status IN ('pending','publishing') AND created_at >= '$outboxStartedAt'; SELECT COUNT(*) outbox_dlq FROM wp_mercato_event_outbox WHERE status='dlq' AND created_at >= '$outboxStartedAt';"
 
 $result = [pscustomobject]@{
     vendor_id = $vendor.vendor_id
@@ -276,6 +286,7 @@ if ($joinedSummary -notmatch "stripe_refunds\s+1") { throw "Stripe refund was no
 if ($joinedSummary -notmatch "order_refunds\s+1") { throw "Order refund was not recorded." }
 if ($joinedSummary -notmatch "commission_reversals\s+1") { throw "Commission reversal was not recorded." }
 if ($joinedSummary -notmatch "shipped\s+partially_refunded\s+6400\s+400\s+500\s+300\s+6800\s+1600\s+UPS\s+1ZSMOKE") { throw "Order allocation or tracking did not persist expected values." }
+if ($joinedSummary -notmatch "offering_item_rows\s+1") { throw "Suborder item did not persist the selected vendor offering." }
 if ($joinedSummary -notmatch "shipment_rows\s+1") { throw "Shipment tracking row was not recorded." }
 if ($joinedSummary -notmatch "idempotency_rows\s+1") { throw "Idempotency response was not stored." }
 if ($joinedSummary -notmatch "audit_rows\s+[1-9][0-9]") { throw "Audit log did not capture expected production mutations." }

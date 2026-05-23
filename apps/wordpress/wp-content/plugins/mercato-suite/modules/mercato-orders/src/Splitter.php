@@ -154,7 +154,11 @@ final class Splitter
 
         foreach ($order->get_items() as $itemId => $item) {
             $productId = (int) $item->get_product_id();
-            $vendorId = \function_exists('get_post_meta') ? (int) \get_post_meta($productId, '_mercato_vendor_id', true) : 0;
+            $offeringId = $this->offeringIdForItem($item);
+            $vendorId = $offeringId > 0 ? $this->vendorIdForOffering($offeringId, $productId) : 0;
+            if ($vendorId < 1) {
+                $vendorId = \function_exists('get_post_meta') ? (int) \get_post_meta($productId, '_mercato_vendor_id', true) : 0;
+            }
             if ($vendorId < 1) {
                 continue;
             }
@@ -162,6 +166,7 @@ final class Splitter
             $groups[$vendorId][] = [
                 'wc_order_item_id' => (int) $itemId,
                 'wc_product_id' => $productId,
+                'offering_id' => $offeringId > 0 ? $offeringId : null,
                 'title' => $item->get_name(),
                 'quantity' => (int) $item->get_quantity(),
                 'line_subtotal_minor' => $this->moneyToMinor((float) $item->get_subtotal()),
@@ -213,6 +218,7 @@ final class Splitter
                 'suborder_id' => $suborderId,
                 'wc_order_item_id' => $item['wc_order_item_id'],
                 'wc_product_id' => $item['wc_product_id'],
+                'offering_id' => $item['offering_id'],
                 'title' => $item['title'],
                 'quantity' => $item['quantity'],
                 'line_subtotal_minor' => $item['line_subtotal_minor'],
@@ -398,5 +404,40 @@ final class Splitter
     private function moneyToMinor(float $amount): int
     {
         return (int) \round($amount * 100);
+    }
+
+    private function offeringIdForItem(object $item): int
+    {
+        foreach (['_mercato_offering_id', 'mercato_offering_id', 'offering_id'] as $key) {
+            if (\method_exists($item, 'get_meta')) {
+                $value = $item->get_meta($key, true);
+                if ((int) $value > 0) {
+                    return (int) $value;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private function vendorIdForOffering(int $offeringId, int $wcProductId): int
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $offerings = $wpdb->prefix . 'mercato_vendor_service_offerings';
+        $products = $wpdb->prefix . 'mercato_products';
+        $vendorId = $wpdb->get_var($wpdb->prepare(
+            "SELECT o.`vendor_id`
+             FROM `{$offerings}` o
+             INNER JOIN `{$products}` p ON p.`tenant_id` = o.`tenant_id` AND p.`product_id` = o.`product_id`
+             WHERE o.`tenant_id` = %d AND o.`offering_id` = %d AND o.`status` = 'active' AND p.`wc_product_id` = %d
+             LIMIT 1",
+            $tenantId,
+            $offeringId,
+            $wcProductId
+        ));
+
+        return $vendorId === null ? 0 : (int) $vendorId;
     }
 }
