@@ -107,6 +107,11 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
     )
     feature_flags = @{
         "mercato.integration.stripe_connect" = $false
+        "mercato.service_ops" = $true
+        "gigsii.otp" = $false
+        "gigsii.monetization" = $false
+        "gigsii.task_posting" = $false
+        "gigsii.referral_redemption" = $false
         "mercato.ai" = $false
         "mercato.promotions" = $false
     }

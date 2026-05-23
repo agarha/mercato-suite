@@ -1,0 +1,39 @@
+{
+  "slug": "mercato-service-ops",
+  "namespace": "Mercato\\ServiceOps",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-products@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [
+    "mercato.booking.created.v1",
+    "mercato.job.created.v1",
+    "mercato.job.status_changed.v1",
+    "mercato.job.assigned.v1",
+    "mercato.lead.created.v1",
+    "mercato.estimate.sent.v1",
+    "mercato.estimate.accepted.v1",
+    "mercato.referral.accrued.v1"
+  ],
+  "consumes_events": [],
+  "capabilities": [
+    "mercato_bookings_manage",
+    "mercato_jobs_manage",
+    "mercato_estimates_manage",
+    "mercato_referrals_manage"
+  ],
+  "tables": [
+    "wp_mercato_booking_requests",
+    "wp_mercato_jobs",
+    "wp_mercato_job_status_history",
+    "wp_mercato_leads",
+    "wp_mercato_estimates",
+    "wp_mercato_estimate_line_items",
+    "wp_mercato_referrals"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.service_ops"
+}

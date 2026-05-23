@@ -235,6 +235,7 @@ final class Repository
             'mercato.commissions',
             'mercato.payouts',
             'mercato.messaging',
+            'mercato.service_ops',
             'mercato.notifications',
             'mercato.kyc',
             'mercato.enterprise',
