@@ -34,6 +34,8 @@ POST /wp-json/mercato/v1/enterprise/domains
 
 Tenant provisioning also accepts a `domains` array so a tenant can be created with host routing in one workflow.
 
+Provisioning can also seed tenant-level `storefront`, `feature_flags`, and `integrations` defaults. This is the expected integration point for Xusmo when a website enables Mercato as a service module.
+
 ## Tenant Integration Settings
 
 Per-tenant integration settings are stored in `mercato_tenant_integrations`.
@@ -79,3 +81,18 @@ Example:
 - Tenant lifecycle automation for suspend, close, export, restore, and delete.
 - Edge/proxy configuration that enforces trusted tenant headers safely.
 - Per-tenant observability dashboards, quotas, and alert routing.
+
+## Local Gigsii Tenant
+
+Create or refresh the local Gigsii tenant in the main Mercato deployment:
+
+```powershell
+$env:MERCATO_E2E_BASE_URL = "http://localhost:8092"
+powershell -ExecutionPolicy Bypass -File tools\seed-gigsii-tenant.ps1
+```
+
+Local tenant storefront:
+
+```text
+http://localhost:8092/t/gigsii
+```

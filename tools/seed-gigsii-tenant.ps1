@@ -1,0 +1,219 @@
+$ErrorActionPreference = "Stop"
+
+$baseUrl = $env:MERCATO_E2E_BASE_URL
+if (!$baseUrl) {
+    $baseUrl = "http://localhost:8092"
+}
+
+$secret = $env:MERCATO_TEST_API_SECRET
+if (!$secret) {
+    $secret = "mercato-local-test-secret"
+}
+
+function Invoke-MercatoApi {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [string]$Method = "GET",
+        [object]$Body = $null,
+        [string]$TenantSlug = ""
+    )
+
+    $headers = @{ "X-Mercato-Test-Secret" = $secret }
+    $prefix = ""
+    if ($TenantSlug -ne "") {
+        $prefix = "/t/$TenantSlug"
+    }
+    $uri = "$baseUrl$prefix/?rest_route=/mercato/v1$Path"
+    try {
+        if ($Body -eq $null) {
+            return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers
+        }
+
+        return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 20)
+    } catch {
+        throw "Mercato API request failed: $Method $uri :: $($_.Exception.Message)"
+    }
+}
+
+$storefront = @{
+    brand = "Gigsii"
+    mark = "G"
+    title = "Gigsii Service Marketplace"
+    hero_headline = "Book trusted local services and run provider operations from one site."
+    hero_copy = "Gigsii is a Xusmo-ready Mercato tenant for local services: verified providers, service discovery, booking-ready offers, dispatch, estimates, jobs, notifications, and trust operations."
+    primary_cta = "Open tenant admin"
+    secondary_cta = "Open provider console"
+    catalog_headline = "Bookable services"
+    catalog_copy = "Services are tenant-scoped Mercato records with category, location, and provider offering support."
+    catalog_badge = "Services marketplace"
+    vendor_headline = "Verified providers"
+    vendor_copy = "Approved Gigers and service companies available inside the Gigsii tenant."
+    vendor_badge = "Approval + service areas"
+    buyer_headline = "Client booking path"
+    buyer_copy = "Clients choose a service and a specific provider offering so checkout routes work to the right provider."
+    seller_headline = "Provider operations"
+    seller_copy = "Providers manage services, jobs, estimates, messages, and fulfillment from the shared Mercato engine."
+    workflow_headline = "Gigsii tenant workflow"
+    workflow_copy = "One Mercato codebase powers this tenant with tenant-scoped data, storefront copy, domains, integrations, and feature flags."
+    footer = "Gigsii tenant running inside the Mercato SaaS platform"
+    item_empty_title = "No Gigsii services yet"
+    item_empty_copy = "Run tools\seed-gigsii-tenant.ps1 to create providers and services."
+    item_fallback_copy = "Verified local service ready for booking."
+    item_quantity_label = "booking slots"
+    vendor_status_label = "verified provider"
+    nav = @(
+        @{ href = "#shop"; label = "Services" },
+        @{ href = "#vendors"; label = "Providers" },
+        @{ href = "#buyer"; label = "Client" },
+        @{ href = "#seller"; label = "Provider" },
+        @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
+    )
+    metric_labels = @{
+        vendors = "Approved providers"
+        products = "Live services"
+        orders = "Jobs tracked"
+        take = "Marketplace fees"
+    }
+    positioning_cards = @(
+        @{ eyebrow = "01"; title = "Xusmo-ready tenant"; copy = "Gigsii is tenant data and configuration inside one Mercato codebase." },
+        @{ eyebrow = "02"; title = "Many-provider services"; copy = "Multiple providers can offer the same service through provider offerings." },
+        @{ eyebrow = "03"; title = "Local-service discovery"; copy = "Categories, service areas, and provider locations are tenant scoped." },
+        @{ eyebrow = "04"; title = "Operations foundation"; copy = "Orders, suborders, messages, notifications, and audit stay isolated by tenant." }
+    )
+    seller_steps = @(
+        @{ eyebrow = "Apply"; title = "Provider onboarding"; copy = "Providers are reviewed and approved before publishing active services." },
+        @{ eyebrow = "Offer"; title = "Service offerings"; copy = "A provider can offer many services, and a service can be offered by many providers." },
+        @{ eyebrow = "Serve"; title = "Job-ready operations"; copy = "Checkout preserves the selected offering so work routes to the correct provider." },
+        @{ eyebrow = "Notify"; title = "__NOTIFICATION_SUMMARY__"; copy = "Tenant notifications flow through the configured mail pipeline." },
+        @{ eyebrow = "Audit"; title = "Tenant evidence"; copy = "Audit, outbox, and reports stay tenant-scoped." },
+        @{ eyebrow = "Scale"; title = "Xusmo service module"; copy = "Xusmo can enable Mercato per site without creating a code fork." }
+    )
+    workflow_steps = @(
+        @{ eyebrow = "01"; title = "Xusmo enables Mercato"; copy = "The Xusmo site maps to a Mercato tenant ID." },
+        @{ eyebrow = "02"; title = "Tenant config applies"; copy = "Storefront, domains, integrations, and flags are tenant settings." },
+        @{ eyebrow = "03"; title = "Providers publish offers"; copy = "Many providers can offer shared service templates." },
+        @{ eyebrow = "04"; title = "Clients book offerings"; copy = "Order splitting uses selected offering metadata for correct provider routing." }
+    )
+}
+
+$tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
+    tenant_slug = "gigsii"
+    display_name = "Gigsii"
+    plan_code = "xusmo-marketplace"
+    region_code = "ca-central-1"
+    control_plane_id = "xusmo-site-gigsii-local"
+    domains = @(
+        @{ domain = "localhost"; path_prefix = "/t/gigsii"; is_primary = $true; status = "active"; verified = $true }
+    )
+    feature_flags = @{
+        "mercato.integration.stripe_connect" = $false
+        "mercato.ai" = $false
+        "mercato.promotions" = $false
+    }
+    integrations = @{
+        sendgrid = @{
+            status = "test"
+            public_config = @{ from_email = "no-reply@gigsii.local"; mode = "mailpit" }
+            secret_refs = @{ api_key = "env:SENDGRID_API_KEY" }
+        }
+        s3 = @{
+            status = "test"
+            public_config = @{ bucket = "mercato-local"; endpoint = "http://localhost:9002" }
+            secret_refs = @{ access_key = "env:MERCATO_S3_ACCESS_KEY"; secret_key = "env:MERCATO_S3_SECRET_KEY" }
+        }
+        stripe = @{
+            status = "disabled"
+            public_config = @{ mode = "soft-launch-off" }
+            secret_refs = @{}
+        }
+    }
+    storefront = $storefront
+}
+
+$categories = @("Plumbing", "Cleaning", "Appliance Repair", "Electrical", "Handyman")
+$categoryByName = @{}
+foreach ($categoryName in $categories) {
+    $slug = ($categoryName.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
+    $existing = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/categories" | ForEach-Object { $_ } | Where-Object { $_.slug -eq $slug })
+    if ($existing.Count -gt 0) {
+        $categoryByName[$categoryName] = $existing[0]
+    } else {
+        $categoryByName[$categoryName] = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/categories" -Method "POST" -Body @{ name = $categoryName; slug = $slug }
+    }
+}
+
+$providers = @(
+    @{ business_name = "MapleFix Home Services"; store_slug = "maplefix"; category = "Plumbing"; latitude = 43.6532; longitude = -79.3832; service_radius_km = 30; services = @(
+        @{ title = "Emergency Leak Diagnosis"; sku = "GIGSII-LEAK"; price_minor = 12500; stock_quantity = 12; description = "Licensed plumbing assessment with arrival window, photos, and repair estimate." },
+        @{ title = "Faucet Replacement Visit"; sku = "GIGSII-FAUCET"; price_minor = 18500; stock_quantity = 8; description = "On-site faucet replacement with parts review and completion notes." }
+    ) },
+    @{ business_name = "BrightNest Cleaning Co"; store_slug = "brightnest"; category = "Cleaning"; latitude = 43.6605; longitude = -79.4320; service_radius_km = 25; services = @(
+        @{ title = "Move-Out Deep Clean"; sku = "GIGSII-MOVEOUT"; price_minor = 32000; stock_quantity = 10; description = "Turnover clean with checklist, supplies, and photo proof." },
+        @{ title = "Recurring Home Cleaning"; sku = "GIGSII-RECURRING"; price_minor = 14500; stock_quantity = 20; description = "Standard recurring home visit for kitchens, baths, floors, and reset tasks." }
+    ) },
+    @{ business_name = "UrbanSpark Electric"; store_slug = "urbanspark"; category = "Electrical"; latitude = 43.6440; longitude = -79.4000; service_radius_km = 35; services = @(
+        @{ title = "Smart Lighting Install"; sku = "GIGSII-LIGHTING"; price_minor = 17500; stock_quantity = 11; description = "Install connected dimmers, fixtures, and room scenes with safety verification." },
+        @{ title = "Panel Safety Inspection"; sku = "GIGSII-PANEL"; price_minor = 15500; stock_quantity = 7; description = "Breaker panel inspection with findings, photos, and follow-up estimate." }
+    ) }
+)
+
+$createdServices = 0
+foreach ($providerSpec in $providers) {
+    $existingVendors = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" | ForEach-Object { $_ } | Where-Object { $_.store_slug -eq $providerSpec.store_slug })
+    if ($existingVendors.Count -gt 0) {
+        $provider = $existingVendors[0]
+    } else {
+        $provider = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" -Method "POST" -Body @{
+            business_name = $providerSpec.business_name
+            store_slug = $providerSpec.store_slug
+            return_policy = "Service appointments can be rescheduled before dispatch."
+        }
+    }
+
+    Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/status" -Method "POST" -Body @{ status = "approved" } | Out-Null
+    Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/locations" -Method "POST" -Body @{
+        label = "$($providerSpec.business_name) service area"
+        city = "Toronto"
+        region = "ON"
+        country = "CA"
+        latitude = [double] $providerSpec.latitude
+        longitude = [double] $providerSpec.longitude
+        service_radius_km = [double] $providerSpec.service_radius_km
+        is_primary = $true
+    } | Out-Null
+
+    foreach ($serviceSpec in $providerSpec.services) {
+        $existingServices = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" | ForEach-Object { $_ } | Where-Object { $_.sku -eq $serviceSpec.sku })
+        if ($existingServices.Count -eq 0) {
+            Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" -Method "POST" -Body @{
+                vendor_id = [int] $provider.vendor_id
+                title = $serviceSpec.title
+                description = $serviceSpec.description
+                sku = $serviceSpec.sku
+                price_minor = [int] $serviceSpec.price_minor
+                stock_quantity = [int] $serviceSpec.stock_quantity
+                category_ids = @([int] $categoryByName[$providerSpec.category].category_id)
+                duration_minutes = 90
+                lead_time_minutes = 180
+                capacity = 1
+                status = "active"
+            } | Out-Null
+            $createdServices++
+        }
+    }
+}
+
+$services = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products"
+$vendors = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors"
+$serviceCount = @($services | ForEach-Object { $_ }).Count
+$vendorCount = @($vendors | ForEach-Object { $_ }).Count
+
+[pscustomobject]@{
+    status = "seeded"
+    tenant_id = $tenant.tenant_id
+    tenant_slug = $tenant.tenant_slug
+    storefront = "$baseUrl/t/gigsii"
+    vendors = $vendorCount
+    services = $serviceCount
+    new_services = $createdServices
+} | ConvertTo-Json -Depth 8

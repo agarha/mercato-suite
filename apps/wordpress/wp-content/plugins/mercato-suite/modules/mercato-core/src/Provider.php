@@ -263,7 +263,7 @@ final class Provider extends ServiceProvider
         }
 
         $path = (string) \parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-        if ($path !== '/' && $path !== '') {
+        if ($path !== '/' && $path !== '' && \preg_match('#^/t/[a-z0-9][a-z0-9-]{0,63}/?$#i', $path) !== 1) {
             return;
         }
 

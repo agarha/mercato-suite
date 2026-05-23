@@ -31,6 +31,7 @@ final class TenantStorefrontConfigTest extends TestCase
         self::assertStringContainsString('/enterprise/storefront', $this->enterpriseProvider);
         self::assertStringContainsString('setStorefront', $this->enterpriseProvider);
         self::assertStringContainsString('setStorefront', $this->enterpriseRepository);
+        self::assertStringContainsString('setStorefrontForTenant', $this->enterpriseRepository);
         self::assertStringContainsString('mercato.tenant.storefront.updated.v1', $this->enterpriseRepository);
     }
 

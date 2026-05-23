@@ -11,6 +11,7 @@
     "mercato.tenant.feature.toggled.v1",
     "mercato.tenant.domain.upserted.v1",
     "mercato.tenant.storefront.updated.v1",
+    "mercato.tenant.integration.updated.v1",
     "mercato.license.refreshed.v1",
     "mercato.license.limit.exceeded.v1"
   ],

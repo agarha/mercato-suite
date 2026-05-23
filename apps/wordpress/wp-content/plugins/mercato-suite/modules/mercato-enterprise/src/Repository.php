@@ -27,6 +27,17 @@ final class Repository
         $plan = \sanitize_key((string) ($data['plan_code'] ?? 'starter'));
         $region = \sanitize_text_field((string) ($data['region_code'] ?? 'us-east-1'));
         $table = $wpdb->prefix . 'mercato_tenants';
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM `{$table}` WHERE `tenant_slug` = %s", $slug), ARRAY_A);
+        if (\is_array($existing)) {
+            $tenantId = (int) $existing['tenant_id'];
+            $wpdb->update($table, [
+                'display_name' => $displayName,
+                'plan_code' => $plan,
+                'region_code' => $region,
+                'status' => 'active',
+                'control_plane_id' => (string) ($data['control_plane_id'] ?? $existing['control_plane_id'] ?? 'local-' . $slug),
+            ], ['tenant_id' => $tenantId]);
+        } else {
         $inserted = $wpdb->insert($table, [
             'tenant_slug' => $slug,
             'display_name' => $displayName,
@@ -43,10 +54,22 @@ final class Repository
         }
 
         $tenantId = (int) $wpdb->insert_id;
+        }
         $this->seedStarterFlags($tenantId);
+        foreach ((array) ($data['feature_flags'] ?? []) as $feature => $enabled) {
+            $this->setFlagForTenant($tenantId, (string) $feature, (bool) $enabled);
+        }
         foreach ((array) ($data['domains'] ?? []) as $domain) {
             if (\is_array($domain)) {
                 $this->upsertDomain($tenantId, $domain);
+            }
+        }
+        if (isset($data['storefront']) && \is_array($data['storefront'])) {
+            $this->setStorefrontForTenant($tenantId, $data['storefront']);
+        }
+        foreach ((array) ($data['integrations'] ?? []) as $provider => $integration) {
+            if (\is_array($integration)) {
+                $this->setIntegrationForTenant($tenantId, (string) $provider, $integration);
             }
         }
         $tenant = $this->getTenant($tenantId);
@@ -120,6 +143,17 @@ final class Repository
         global $wpdb;
 
         $tenantId = $this->tenantResolver->currentTenantId();
+        return $this->setStorefrontForTenant($tenantId, $config);
+    }
+
+    /**
+     * @param array<string,mixed> $config
+     * @return array<string,mixed>
+     */
+    private function setStorefrontForTenant(int $tenantId, array $config): array
+    {
+        global $wpdb;
+
         $table = $wpdb->prefix . 'mercato_tenant_settings';
         $current = $wpdb->get_row($wpdb->prepare("SELECT `settings`, `version` FROM `{$table}` WHERE `tenant_id` = %d", $tenantId), ARRAY_A);
         $settings = [];
@@ -222,6 +256,37 @@ final class Repository
             'feature_key' => $featureKey,
             'enabled' => $enabled ? 1 : 0,
         ]);
+    }
+
+    /**
+     * @param array<string,mixed> $integration
+     * @return array<string,mixed>
+     */
+    private function setIntegrationForTenant(int $tenantId, string $providerKey, array $integration): array
+    {
+        global $wpdb;
+
+        $providerKey = \strtolower(\preg_replace('/[^a-zA-Z0-9_.-]+/', '', $providerKey) ?? '');
+        if ($providerKey === '') {
+            throw new RuntimeException('provider key is required.');
+        }
+
+        $status = (string) ($integration['status'] ?? 'disabled');
+        $status = \in_array($status, ['disabled', 'test', 'live'], true) ? $status : 'disabled';
+        $table = $wpdb->prefix . 'mercato_tenant_integrations';
+        $wpdb->replace($table, [
+            'tenant_id' => $tenantId,
+            'provider_key' => $providerKey,
+            'status' => $status,
+            'public_config' => \wp_json_encode($this->sanitizeFlatMap((array) ($integration['public_config'] ?? [])), JSON_THROW_ON_ERROR),
+            'secret_refs' => \wp_json_encode($this->sanitizeFlatMap((array) ($integration['secret_refs'] ?? [])), JSON_THROW_ON_ERROR),
+            'updated_by' => \function_exists('get_current_user_id') ? \get_current_user_id() : null,
+        ]);
+
+        $payload = ['tenant_id' => $tenantId, 'provider_key' => $providerKey, 'status' => $status];
+        $this->outbox->publish('mercato.tenant.integration.updated.v1', $payload, $providerKey, $tenantId);
+
+        return $payload;
     }
 
     /**
@@ -365,6 +430,23 @@ final class Repository
                 }
                 return $row;
             }, $config[$key]);
+        }
+
+        return $clean;
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @return array<string,string>
+     */
+    private function sanitizeFlatMap(array $data): array
+    {
+        $clean = [];
+        foreach ($data as $key => $value) {
+            if (\is_array($value) || \is_object($value)) {
+                continue;
+            }
+            $clean[(string) \preg_replace('/[^a-zA-Z0-9_.-]+/', '', (string) $key)] = \sanitize_text_field((string) $value);
         }
 
         return $clean;

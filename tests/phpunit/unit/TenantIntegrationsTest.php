@@ -33,4 +33,14 @@ final class TenantIntegrationsTest extends TestCase
         self::assertStringContainsString('setIntegration', $provider);
         self::assertStringContainsString(IntegrationSettings::class, $provider);
     }
+
+    public function testProvisioningCanSeedTenantIntegrationDefaults(): void
+    {
+        $root = dirname(__DIR__, 3);
+        $repository = file_get_contents($root . '/apps/wordpress/wp-content/plugins/mercato-suite/modules/mercato-enterprise/src/Repository.php') ?: '';
+
+        self::assertStringContainsString("data['integrations']", $repository);
+        self::assertStringContainsString('setIntegrationForTenant', $repository);
+        self::assertStringContainsString('mercato.tenant.integration.updated.v1', $repository);
+    }
 }

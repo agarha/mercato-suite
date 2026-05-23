@@ -21,6 +21,15 @@ final class TenantResolverTest extends TestCase
         self::assertSame(42, (new Resolver())->currentTenantId());
     }
 
+    public function testTenantPathRootIsAllowedForStorefrontRendering(): void
+    {
+        $root = dirname(__DIR__, 3);
+        $provider = file_get_contents($root . '/apps/wordpress/wp-content/plugins/mercato-suite/modules/mercato-core/src/Provider.php') ?: '';
+
+        self::assertStringContainsString('/t/[a-z0-9]', $provider);
+        self::assertStringContainsString('renderDemoStorefront', $provider);
+    }
+
     public function testResolvesTenantFromMappedDomain(): void
     {
         $GLOBALS['mercato_test_tenants'] = ['slugs' => [], 'domains' => ['gigsii.test' => 77]];
