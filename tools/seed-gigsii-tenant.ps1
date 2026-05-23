@@ -66,6 +66,7 @@ $storefront = @{
         @{ href = "#shop"; label = "Services" },
         @{ href = "#vendors"; label = "Providers" },
         @{ href = "#buyer"; label = "Client" },
+        @{ href = "#requests"; label = "Requests" },
         @{ href = "#operations"; label = "Operations" },
         @{ href = "#seller"; label = "Provider" },
         @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
@@ -112,7 +113,7 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
         "mercato.service_ops" = $true
         "gigsii.otp" = $false
         "gigsii.monetization" = $false
-        "gigsii.task_posting" = $false
+        "gigsii.task_posting" = $true
         "gigsii.referral_redemption" = $false
         "mercato.ai" = $false
         "mercato.promotions" = $false

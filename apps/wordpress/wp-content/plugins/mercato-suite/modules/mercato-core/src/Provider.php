@@ -368,6 +368,7 @@ final class Provider extends ServiceProvider
                 ['href' => '#shop', 'label' => 'Shop'],
                 ['href' => '#vendors', 'label' => 'Vendors'],
                 ['href' => '#buyer', 'label' => 'Buyer Account'],
+                ['href' => '#requests', 'label' => 'Requests'],
                 ['href' => '#operations', 'label' => 'Operations'],
                 ['href' => '#seller', 'label' => 'Seller Portal'],
                 ['href' => '/wp-admin/admin.php?page=mercato-admin', 'label' => 'Admin'],
@@ -476,6 +477,8 @@ final class Provider extends ServiceProvider
         $bookingTable = $wpdb->prefix . 'mercato_booking_requests';
         $estimatesTable = $wpdb->prefix . 'mercato_estimates';
         $referralsTable = $wpdb->prefix . 'mercato_referrals';
+        $serviceRequestsTable = $wpdb->prefix . 'mercato_service_requests';
+        $serviceBidsTable = $wpdb->prefix . 'mercato_service_bids';
         $vendors = $wpdb->get_results($wpdb->prepare("SELECT vendor_id, business_name, store_slug, status, stripe_account_id FROM `{$vendorsTable}` WHERE tenant_id = %d AND status = 'approved' ORDER BY vendor_id DESC LIMIT 6", $tenantId), ARRAY_A) ?: [];
         $orders = $wpdb->get_results($wpdb->prepare("SELECT suborder_id, vendor_id, wc_order_id, status, payment_status, total_minor, refunded_minor, tracking_carrier, tracking_number FROM `{$subordersTable}` WHERE tenant_id = %d ORDER BY suborder_id DESC LIMIT 5", $tenantId), ARRAY_A) ?: [];
         $latestPayout = $wpdb->get_row($wpdb->prepare("SELECT batch_id, status, total_minor, created_at FROM `{$payoutsTable}` WHERE tenant_id = %d ORDER BY batch_id DESC LIMIT 1", $tenantId), ARRAY_A) ?: [];
@@ -503,6 +506,15 @@ final class Provider extends ServiceProvider
         $jobCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$jobsTable}` WHERE tenant_id = %d", $tenantId));
         $estimateCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$estimatesTable}` WHERE tenant_id = %d", $tenantId));
         $referralCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$referralsTable}` WHERE tenant_id = %d", $tenantId));
+        $requestRows = $wpdb->get_results($wpdb->prepare("SELECT r.request_id, r.title, r.city, r.region, r.budget_max_minor, r.currency, r.bid_mode, r.status, COUNT(b.bid_id) AS bid_count
+            FROM `{$serviceRequestsTable}` r
+            LEFT JOIN `{$serviceBidsTable}` b ON b.tenant_id = r.tenant_id AND b.request_id = r.request_id
+            WHERE r.tenant_id = %d
+            GROUP BY r.request_id, r.title, r.city, r.region, r.budget_max_minor, r.currency, r.bid_mode, r.status
+            ORDER BY r.request_id DESC
+            LIMIT 5", $tenantId), ARRAY_A) ?: [];
+        $requestCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$serviceRequestsTable}` WHERE tenant_id = %d", $tenantId));
+        $bidCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$serviceBidsTable}` WHERE tenant_id = %d", $tenantId));
 
         $vendorCards = '';
         foreach ($vendors as $vendor) {
@@ -540,6 +552,15 @@ final class Provider extends ServiceProvider
         }
         if ($jobRowsHtml === '') {
             $jobRowsHtml = '<tr><td colspan="5">No service jobs yet.</td></tr>';
+        }
+
+        $requestRowsHtml = '';
+        foreach ($requestRows as $request) {
+            $location = \trim((string) ($request['city'] ?? '') . ', ' . (string) ($request['region'] ?? ''), ' ,');
+            $requestRowsHtml .= '<tr><td>#' . $esc($request['request_id']) . '</td><td>' . $esc($request['title']) . '</td><td>' . $esc($location === '' ? 'Remote/local' : $location) . '</td><td>' . $esc($request['bid_mode']) . '</td><td>' . $money($request['budget_max_minor']) . ' ' . $esc($request['currency']) . '</td><td>' . $esc($request['bid_count']) . '</td><td>' . $esc($request['status']) . '</td></tr>';
+        }
+        if ($requestRowsHtml === '') {
+            $requestRowsHtml = '<tr><td colspan="7">No client service requests yet.</td></tr>';
         }
 
         $payoutSummary = $latestPayout === []
@@ -615,6 +636,7 @@ final class Provider extends ServiceProvider
     <section class="section" id="shop"><div class="section-head"><div><h2>' . $esc($config['catalog_headline']) . '</h2><p>' . $esc($config['catalog_copy']) . '</p></div><span class="pill">' . $esc($config['catalog_badge']) . '</span></div><div class="product-grid">' . $cards . '</div></section>
     <section class="section" id="vendors"><div class="section-head"><div><h2>' . $esc($config['vendor_headline']) . '</h2><p>' . $esc($config['vendor_copy']) . '</p></div><span class="pill">' . $esc($config['vendor_badge']) . '</span></div><div class="vendor-grid">' . $vendorCards . '</div></section>
     <section class="section" id="buyer"><div class="section-head"><div><h2>' . $esc($config['buyer_headline']) . '</h2><p>' . $esc($config['buyer_copy']) . '</p></div></div><div class="user-grid"><div class="cart-panel"><h3>Checkout preview</h3><div class="cart-line"><span>Cart contains products from multiple vendors</span><strong>Split after payment</strong></div><div class="cart-line"><span>Tax, shipping, discounts</span><strong>Allocated by suborder</strong></div><div class="cart-line"><span>Payment</span><strong>Stripe test intent</strong></div><div class="cart-line"><span>Refund support</span><strong>Commission reversal</strong></div></div><div class="account-panel"><h3>Buyer order history</h3><table class="table"><thead><tr><th>Order</th><th>Status</th><th>Payment</th><th>Total</th><th>Refunded</th><th>Tracking</th></tr></thead><tbody>' . $orderRows . '</tbody></table></div></div></section>
+    <section class="section" id="requests"><div class="section-head"><div><h2>Post a request and let providers bid</h2><p>Clients can publish a service request, then approved providers can submit sealed bids or open-auction offers.</p></div><span class="pill">Request board</span></div><div class="ops-grid"><div class="ops-score"><div><span>Requests</span><strong>' . $requestCount . '</strong></div><div><span>Provider bids</span><strong>' . $bidCount . '</strong></div><div><span>Bid modes</span><strong>2</strong></div><div><span>Award creates job</span><strong>Yes</strong></div></div><div class="account-panel"><h3>Recent service requests</h3><table class="table"><thead><tr><th>Request</th><th>Title</th><th>Location</th><th>Mode</th><th>Budget</th><th>Bids</th><th>Status</th></tr></thead><tbody>' . $requestRowsHtml . '</tbody></table></div></div></section>
     <section class="section" id="operations"><div class="section-head"><div><h2>Service operations cockpit</h2><p>Booking, dispatch, estimate, and referral records come from the shared Mercato service-ops module.</p></div><span class="pill">Soft-launch ops</span></div><div class="ops-grid"><div class="ops-score"><div><span>Bookings</span><strong>' . $bookingCount . '</strong></div><div><span>Jobs</span><strong>' . $jobCount . '</strong></div><div><span>Estimates</span><strong>' . $estimateCount . '</strong></div><div><span>Referrals</span><strong>' . $referralCount . '</strong></div></div><div class="account-panel"><h3>Recent jobs</h3><table class="table"><thead><tr><th>Job</th><th>Provider</th><th>Status</th><th>Assignee</th><th>Updated</th></tr></thead><tbody>' . $jobRowsHtml . '</tbody></table></div></div></section>
     <section class="section" id="seller"><div class="section-head"><div><h2>' . $esc($config['seller_headline']) . '</h2><p>' . $esc($config['seller_copy']) . '</p></div><a class="button secondary" href="/wp-admin/admin.php?page=mercato-vendor">' . $esc($config['secondary_cta']) . '</a></div><div class="seller-grid">' . $sellerSteps . '</div></section>
     <section class="section"><div class="section-head"><div><h2>' . $esc($config['workflow_headline']) . '</h2><p>' . $esc($config['workflow_copy']) . '</p></div></div><div class="workflow">' . $workflowSteps . '</div></section>

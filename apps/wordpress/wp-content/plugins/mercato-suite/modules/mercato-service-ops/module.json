@@ -16,14 +16,19 @@
     "mercato.lead.created.v1",
     "mercato.estimate.sent.v1",
     "mercato.estimate.accepted.v1",
-    "mercato.referral.accrued.v1"
+    "mercato.referral.accrued.v1",
+    "mercato.service_request.created.v1",
+    "mercato.service_bid.created.v1",
+    "mercato.service_bid.accepted.v1"
   ],
   "consumes_events": [],
   "capabilities": [
     "mercato_bookings_manage",
     "mercato_jobs_manage",
     "mercato_estimates_manage",
-    "mercato_referrals_manage"
+    "mercato_referrals_manage",
+    "mercato_service_requests_manage",
+    "mercato_service_bids_manage"
   ],
   "tables": [
     "wp_mercato_booking_requests",
@@ -32,7 +37,9 @@
     "wp_mercato_leads",
     "wp_mercato_estimates",
     "wp_mercato_estimate_line_items",
-    "wp_mercato_referrals"
+    "wp_mercato_referrals",
+    "wp_mercato_service_requests",
+    "wp_mercato_service_bids"
   ],
   "tier": "domain",
   "feature_flag": "mercato.service_ops"

@@ -21,9 +21,13 @@ final class ServiceOpsModuleTest extends TestCase
         self::assertContains('mercato.booking.created.v1', $manifest['provides_events']);
         self::assertContains('mercato.job.status_changed.v1', $manifest['provides_events']);
         self::assertContains('mercato.estimate.accepted.v1', $manifest['provides_events']);
+        self::assertContains('mercato.service_request.created.v1', $manifest['provides_events']);
+        self::assertContains('mercato.service_bid.accepted.v1', $manifest['provides_events']);
         self::assertContains('wp_mercato_booking_requests', $manifest['tables']);
         self::assertContains('wp_mercato_jobs', $manifest['tables']);
         self::assertContains('wp_mercato_referrals', $manifest['tables']);
+        self::assertContains('wp_mercato_service_requests', $manifest['tables']);
+        self::assertContains('wp_mercato_service_bids', $manifest['tables']);
     }
 
     public function testMigrationCoversBookingJobsEstimatesAndReferralTables(): void
@@ -44,6 +48,17 @@ final class ServiceOpsModuleTest extends TestCase
         ] as $needle) {
             self::assertStringContainsString($needle, $migration);
         }
+
+        $biddingMigration = (string) file_get_contents($this->root . '/apps/wordpress/wp-content/plugins/mercato-suite/modules/mercato-service-ops/migrations/0002_request_bidding.sql');
+        foreach ([
+            'mercato_service_requests',
+            'mercato_service_bids',
+            "ENUM('sealed_bid','open_auction')",
+            "ENUM('open','awarded','cancelled','expired')",
+            'UNIQUE KEY `uk_request_vendor`',
+        ] as $needle) {
+            self::assertStringContainsString($needle, $biddingMigration);
+        }
     }
 
     public function testRepositoryEnforcesCoreStateAndConflictRequirements(): void
@@ -55,17 +70,21 @@ final class ServiceOpsModuleTest extends TestCase
         self::assertStringContainsString('mercato.booking.created.v1', $repository);
         self::assertStringContainsString('mercato.job.created.v1', $repository);
         self::assertStringContainsString('mercato.referral.accrued.v1', $repository);
+        self::assertStringContainsString('createServiceRequest', $repository);
+        self::assertStringContainsString('createBid', $repository);
+        self::assertStringContainsString('acceptBid', $repository);
+        self::assertStringContainsString('mercato.service_bid.accepted.v1', $repository);
         self::assertStringContainsString("hash('sha256'", $repository);
     }
 
-    public function testGigsiiSeedKeepsSoftLaunchFlagsOff(): void
+    public function testGigsiiSeedKeepsGuardedLaunchFlags(): void
     {
         $seed = (string) file_get_contents($this->root . '/tools/seed-gigsii-tenant.ps1');
 
         foreach ([
             '"gigsii.otp" = $false',
             '"gigsii.monetization" = $false',
-            '"gigsii.task_posting" = $false',
+            '"gigsii.task_posting" = $true',
             '"gigsii.referral_redemption" = $false',
             '"mercato.ai" = $false',
         ] as $needle) {

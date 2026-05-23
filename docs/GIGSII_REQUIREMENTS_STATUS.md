@@ -18,7 +18,8 @@ Source documents: `C:/GIGsii/Gigsii_Project_Artifacts_v1.1/*_v1.1.docx`.
 | Lead to estimate to job flow | Mercato codebase | Done | `mercato-service-ops` lead/estimate tables, accept-estimate job conversion |
 | Messaging | Mercato codebase | Done | `mercato-messaging` module |
 | Referral tracking and points accrual | Mercato codebase | Done | `mercato-service-ops` referrals table; redemption returns `FEATURE_DISABLED` |
-| Soft-launch disabled features | Gigsii tenant flags | Done | `gigsii.otp=false`, `gigsii.monetization=false`, `gigsii.task_posting=false`, `gigsii.referral_redemption=false`, `mercato.ai=false` |
+| Client service request posting and provider bidding/auction | Mercato codebase + Gigsii tenant flag | Done | `mercato-service-ops` service request/bid tables and REST routes; `gigsii.task_posting=true` |
+| Soft-launch disabled features | Gigsii tenant flags | Done | `gigsii.otp=false`, `gigsii.monetization=false`, `gigsii.referral_redemption=false`, `mercato.ai=false`; task posting enabled for the current Gigsii demo per updated product direction |
 | RBAC server-side enforcement | Mercato codebase | Partial | REST permissions and test secret exist; full Gigsii role matrix still needs role-specific capabilities beyond admin/authenticated split |
 | Public/client/provider/org/admin screens | Mercato UI | Partial | Tenant storefront and WP admin/vendor views exist; complete Gigsii SPA-level portals remain open |
 | Offline technician mode | Mercato codebase | Deferred | SRS marks Phase 1; not soft-launch blocker |

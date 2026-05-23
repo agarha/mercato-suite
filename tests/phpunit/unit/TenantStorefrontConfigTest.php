@@ -64,6 +64,9 @@ final class TenantStorefrontConfigTest extends TestCase
             'mercato_referrals',
             'Service operations cockpit',
             'Recent jobs',
+            'Post a request and let providers bid',
+            'mercato_service_requests',
+            'mercato_service_bids',
         ] as $needle) {
             self::assertStringContainsString($needle, $this->coreProvider);
         }

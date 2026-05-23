@@ -278,6 +278,142 @@ final class Repository
         return $referral;
     }
 
+    /** @param array<string,mixed> $data @return array<string,mixed> */
+    public function createServiceRequest(array $data): array
+    {
+        global $wpdb;
+
+        $title = $this->clean((string) ($data['title'] ?? ''));
+        if ($title === '') {
+            throw new RuntimeException('title is required.');
+        }
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $table = $wpdb->prefix . 'mercato_service_requests';
+        $inserted = $wpdb->insert($table, [
+            'tenant_id' => $tenantId,
+            'client_user_id' => isset($data['client_user_id']) ? (int) $data['client_user_id'] : (\function_exists('get_current_user_id') ? (int) \get_current_user_id() : null),
+            'category_id' => isset($data['category_id']) ? (int) $data['category_id'] : null,
+            'title' => $title,
+            'description' => isset($data['description']) ? $this->clean((string) $data['description']) : null,
+            'city' => isset($data['city']) ? $this->clean((string) $data['city']) : null,
+            'region' => isset($data['region']) ? $this->clean((string) $data['region']) : null,
+            'country' => isset($data['country']) ? \strtoupper($this->clean((string) $data['country'])) : null,
+            'latitude' => isset($data['latitude']) ? (float) $data['latitude'] : null,
+            'longitude' => isset($data['longitude']) ? (float) $data['longitude'] : null,
+            'budget_min_minor' => isset($data['budget_min_minor']) ? (int) $data['budget_min_minor'] : null,
+            'budget_max_minor' => isset($data['budget_max_minor']) ? (int) $data['budget_max_minor'] : null,
+            'currency' => $this->clean((string) ($data['currency'] ?? 'USD')),
+            'bid_mode' => \in_array((string) ($data['bid_mode'] ?? 'sealed_bid'), ['sealed_bid', 'open_auction'], true) ? (string) ($data['bid_mode'] ?? 'sealed_bid') : 'sealed_bid',
+            'expires_at' => isset($data['expires_at']) ? $this->dateTime((string) $data['expires_at']) : null,
+        ]);
+        if ($inserted === false) {
+            throw new RuntimeException('Unable to create service request: ' . (string) $wpdb->last_error);
+        }
+
+        $request = $this->serviceRequest((int) $wpdb->insert_id);
+        $this->outbox->publish('mercato.service_request.created.v1', $request, (string) $request['request_id'], $tenantId);
+
+        return $request;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function serviceRequests(?string $status = null): array
+    {
+        global $wpdb;
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $table = $wpdb->prefix . 'mercato_service_requests';
+        if ($status !== null && $status !== '') {
+            return $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `status` = %s ORDER BY `created_at` DESC", $tenantId, $status), ARRAY_A) ?: [];
+        }
+
+        return $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$table}` WHERE `tenant_id` = %d ORDER BY `created_at` DESC", $tenantId), ARRAY_A) ?: [];
+    }
+
+    /** @param array<string,mixed> $data @return array<string,mixed> */
+    public function createBid(int $requestId, array $data): array
+    {
+        global $wpdb;
+
+        $request = $this->serviceRequest($requestId);
+        if ((string) $request['status'] !== 'open') {
+            throw new RuntimeException('REQUEST_NOT_OPEN');
+        }
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $vendorId = (int) ($data['vendor_id'] ?? 0);
+        $amountMinor = (int) ($data['amount_minor'] ?? 0);
+        if ($vendorId < 1 || $amountMinor < 0) {
+            throw new RuntimeException('vendor_id and non-negative amount_minor are required.');
+        }
+
+        $table = $wpdb->prefix . 'mercato_service_bids';
+        $row = [
+            'tenant_id' => $tenantId,
+            'request_id' => $requestId,
+            'vendor_id' => $vendorId,
+            'amount_minor' => $amountMinor,
+            'currency' => $this->clean((string) ($data['currency'] ?? $request['currency'] ?? 'USD')),
+            'message' => isset($data['message']) ? $this->clean((string) $data['message']) : null,
+            'estimated_start_at' => isset($data['estimated_start_at']) ? $this->dateTime((string) $data['estimated_start_at']) : null,
+            'estimated_duration_minutes' => isset($data['estimated_duration_minutes']) ? (int) $data['estimated_duration_minutes'] : null,
+        ];
+        $written = $wpdb->replace($table, $row);
+        if ($written === false) {
+            throw new RuntimeException('Unable to create service bid: ' . (string) $wpdb->last_error);
+        }
+
+        $bid = $this->bidForVendor($requestId, $vendorId);
+        $this->outbox->publish('mercato.service_bid.created.v1', $bid, (string) $bid['bid_id'], $tenantId);
+
+        return $bid;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function bids(int $requestId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_service_bids';
+        return $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `request_id` = %d ORDER BY `amount_minor` ASC, `created_at` ASC", $this->tenantResolver->currentTenantId(), $requestId), ARRAY_A) ?: [];
+    }
+
+    /** @return array<string,mixed> */
+    public function acceptBid(int $requestId, int $bidId): array
+    {
+        global $wpdb;
+
+        $request = $this->serviceRequest($requestId);
+        if ((string) $request['status'] !== 'open') {
+            throw new RuntimeException('REQUEST_NOT_OPEN');
+        }
+
+        $bid = $this->row('mercato_service_bids', 'bid_id', $bidId);
+        if ((int) $bid['request_id'] !== $requestId) {
+            throw new RuntimeException('Bid does not belong to request.');
+        }
+
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $bidsTable = $wpdb->prefix . 'mercato_service_bids';
+        $requestsTable = $wpdb->prefix . 'mercato_service_requests';
+        $wpdb->update($bidsTable, ['status' => 'rejected'], ['tenant_id' => $tenantId, 'request_id' => $requestId]);
+        $wpdb->update($bidsTable, ['status' => 'accepted'], ['tenant_id' => $tenantId, 'bid_id' => $bidId]);
+        $wpdb->update($requestsTable, ['status' => 'awarded'], ['tenant_id' => $tenantId, 'request_id' => $requestId]);
+
+        $job = $this->createJob([
+            'vendor_id' => $bid['vendor_id'],
+            'lead_id' => null,
+            'estimate_id' => null,
+        ]);
+        $accepted = $this->row('mercato_service_bids', 'bid_id', $bidId);
+        $accepted['request'] = $this->serviceRequest($requestId);
+        $accepted['job'] = $job;
+        $this->outbox->publish('mercato.service_bid.accepted.v1', $accepted, (string) $bidId, $tenantId);
+
+        return $accepted;
+    }
+
     /** @return array<string,mixed> */
     private function createJob(array $data): array
     {
@@ -327,6 +463,29 @@ final class Repository
         $estimate['line_items'] = $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$lineTable}` WHERE `tenant_id` = %d AND `estimate_id` = %d ORDER BY `line_item_id` ASC", $this->tenantResolver->currentTenantId(), $estimateId), ARRAY_A) ?: [];
 
         return $estimate;
+    }
+
+    /** @return array<string,mixed> */
+    private function serviceRequest(int $requestId): array
+    {
+        $request = $this->row('mercato_service_requests', 'request_id', $requestId);
+        $request['bids'] = $this->bids($requestId);
+
+        return $request;
+    }
+
+    /** @return array<string,mixed> */
+    private function bidForVendor(int $requestId, int $vendorId): array
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'mercato_service_bids';
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM `{$table}` WHERE `tenant_id` = %d AND `request_id` = %d AND `vendor_id` = %d", $this->tenantResolver->currentTenantId(), $requestId, $vendorId), ARRAY_A);
+        if (!$row) {
+            throw new RuntimeException('Bid not found.');
+        }
+
+        return $row;
     }
 
     /** @return array<string,mixed> */
