@@ -39,22 +39,22 @@ $storefront = @{
     brand = "Gigsii"
     mark = "G"
     title = "Gigsii Service Marketplace"
-    hero_headline = "Book trusted local services and run provider operations from one site."
-    hero_copy = "Gigsii is a Xusmo-ready Mercato tenant for local services: verified providers, service discovery, booking-ready offers, dispatch, estimates, jobs, notifications, and trust operations."
+    hero_headline = "The service marketplace for homeowners who want the job handled right."
+    hero_copy = "Discover verified local providers, compare bookable services, and keep every job moving from request to completion. Gigsii is powered by Mercato as a Xusmo-ready marketplace tenant."
     primary_cta = "Open tenant admin"
     secondary_cta = "Open provider console"
-    catalog_headline = "Bookable services"
-    catalog_copy = "Services are tenant-scoped Mercato records with category, location, and provider offering support."
-    catalog_badge = "Services marketplace"
-    vendor_headline = "Verified providers"
-    vendor_copy = "Approved Gigers and service companies available inside the Gigsii tenant."
-    vendor_badge = "Approval + service areas"
-    buyer_headline = "Client booking path"
-    buyer_copy = "Clients choose a service and a specific provider offering so checkout routes work to the right provider."
-    seller_headline = "Provider operations"
-    seller_copy = "Providers manage services, jobs, estimates, messages, and fulfillment from the shared Mercato engine."
-    workflow_headline = "Gigsii tenant workflow"
-    workflow_copy = "One Mercato codebase powers this tenant with tenant-scoped data, storefront copy, domains, integrations, and feature flags."
+    catalog_headline = "Popular services ready to book"
+    catalog_copy = "Curated local service cards with provider routing, category support, and booking capacity."
+    catalog_badge = "Verified local help"
+    vendor_headline = "Providers customers can trust"
+    vendor_copy = "Approved service companies with clear service areas, operational workflows, and tenant-scoped accountability."
+    vendor_badge = "Verified network"
+    buyer_headline = "A cleaner path from request to done"
+    buyer_copy = "Clients choose the service and the provider offering, then Mercato keeps fulfillment, tracking, notifications, and audit evidence aligned."
+    seller_headline = "Built for serious service operators"
+    seller_copy = "Providers can publish services, manage assigned work, respond to clients, and grow inside a marketplace that feels professional from day one."
+    workflow_headline = "How Gigsii works inside Xusmo"
+    workflow_copy = "Xusmo creates the site, Mercato powers the marketplace, and every tenant gets isolated providers, services, configuration, and operations."
     footer = "Gigsii tenant running inside the Mercato SaaS platform"
     item_empty_title = "No Gigsii services yet"
     item_empty_copy = "Run tools\seed-gigsii-tenant.ps1 to create providers and services."
@@ -75,18 +75,18 @@ $storefront = @{
         take = "Marketplace fees"
     }
     positioning_cards = @(
-        @{ eyebrow = "01"; title = "Xusmo-ready tenant"; copy = "Gigsii is tenant data and configuration inside one Mercato codebase." },
-        @{ eyebrow = "02"; title = "Many-provider services"; copy = "Multiple providers can offer the same service through provider offerings." },
-        @{ eyebrow = "03"; title = "Local-service discovery"; copy = "Categories, service areas, and provider locations are tenant scoped." },
-        @{ eyebrow = "04"; title = "Operations foundation"; copy = "Orders, suborders, messages, notifications, and audit stay isolated by tenant." }
+        @{ eyebrow = "Trust"; title = "Verified from the start"; copy = "Providers are approved before they appear in the marketplace." },
+        @{ eyebrow = "Choice"; title = "One service, many providers"; copy = "Customers can compare local providers offering the same service." },
+        @{ eyebrow = "Local"; title = "Service areas built in"; copy = "Categories, service radius, and provider locations are scoped per tenant." },
+        @{ eyebrow = "Ops"; title = "From booking to completion"; copy = "Orders, jobs, messages, notifications, and audit stay connected." }
     )
     seller_steps = @(
-        @{ eyebrow = "Apply"; title = "Provider onboarding"; copy = "Providers are reviewed and approved before publishing active services." },
-        @{ eyebrow = "Offer"; title = "Service offerings"; copy = "A provider can offer many services, and a service can be offered by many providers." },
-        @{ eyebrow = "Serve"; title = "Job-ready operations"; copy = "Checkout preserves the selected offering so work routes to the correct provider." },
-        @{ eyebrow = "Notify"; title = "__NOTIFICATION_SUMMARY__"; copy = "Tenant notifications flow through the configured mail pipeline." },
-        @{ eyebrow = "Audit"; title = "Tenant evidence"; copy = "Audit, outbox, and reports stay tenant-scoped." },
-        @{ eyebrow = "Scale"; title = "Xusmo service module"; copy = "Xusmo can enable Mercato per site without creating a code fork." }
+        @{ eyebrow = "Join"; title = "A polished provider profile"; copy = "Service businesses can present their work with trust and clarity." },
+        @{ eyebrow = "Offer"; title = "Bookable service catalog"; copy = "Each provider can attach pricing, duration, capacity, and service area." },
+        @{ eyebrow = "Route"; title = "Correct provider fulfillment"; copy = "Checkout preserves the selected offering so the work routes correctly." },
+        @{ eyebrow = "Update"; title = "__NOTIFICATION_SUMMARY__"; copy = "Email and event updates keep clients and operators aligned." },
+        @{ eyebrow = "Control"; title = "Tenant operations evidence"; copy = "Audit, outbox, reports, and feature flags stay isolated." },
+        @{ eyebrow = "Grow"; title = "Ready for Xusmo sites"; copy = "Xusmo can enable this marketplace experience per website." }
     )
     workflow_steps = @(
         @{ eyebrow = "01"; title = "Xusmo enables Mercato"; copy = "The Xusmo site maps to a Mercato tenant ID." },
