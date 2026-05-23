@@ -130,6 +130,7 @@ final class Repository
         $vendors = $prefix . 'mercato_vendors';
         $products = $prefix . 'mercato_products';
         $jobs = $prefix . 'mercato_jobs';
+        $reviews = $prefix . 'mercato_reviews';
 
         $provider = $wpdb->get_row($wpdb->prepare("SELECT vendor_id, business_name, store_slug, status, stripe_account_id FROM `{$vendors}` WHERE tenant_id = %d AND store_slug = %s AND status = 'approved'", $tenantId, $slug), ARRAY_A);
         if (!\is_array($provider) || empty($provider)) {
@@ -137,10 +138,26 @@ final class Repository
         }
         $vendorId = (int) $provider['vendor_id'];
 
+        // Reviews summary + recent. Guarded with SHOW TABLES so the storefront
+        // doesn't 500 on installs where the mercato-reviews migration hasn't run.
+        $reviewsTableExists = (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $reviews)) === $reviews;
+        $reviewSummary = ['avg_rating' => 0, 'review_count' => 0];
+        $recentReviews = [];
+        if ($reviewsTableExists) {
+            $row = $wpdb->get_row($wpdb->prepare("SELECT COALESCE(AVG(rating), 0) AS avg_rating, COUNT(*) AS review_count FROM `{$reviews}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'published'", $tenantId, $vendorId), ARRAY_A);
+            if (\is_array($row)) {
+                $reviewSummary = $row;
+            }
+            $recentReviews = $wpdb->get_results($wpdb->prepare("SELECT review_id, rating, title, body, buyer_user_id, created_at FROM `{$reviews}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'published' ORDER BY created_at DESC LIMIT 5", $tenantId, $vendorId), ARRAY_A) ?: [];
+        }
+
         return [
             'provider' => $provider,
             'services' => $wpdb->get_results($wpdb->prepare("SELECT product_id, title, description, price_minor, stock_quantity FROM `{$products}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'active' ORDER BY created_at DESC LIMIT 24", $tenantId, $vendorId), ARRAY_A) ?: [],
             'recent_jobs' => $wpdb->get_results($wpdb->prepare("SELECT job_id, status, updated_at FROM `{$jobs}` WHERE tenant_id = %d AND vendor_id = %d ORDER BY job_id DESC LIMIT 10", $tenantId, $vendorId), ARRAY_A) ?: [],
+            'review_average' => \round((float) $reviewSummary['avg_rating'], 2),
+            'review_count' => (int) $reviewSummary['review_count'],
+            'reviews' => $recentReviews,
         ];
     }
 
