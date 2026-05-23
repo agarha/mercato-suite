@@ -6,13 +6,6 @@ namespace Mercato\Core\Storefront;
 
 /**
  * Storefront data access. Every method is tenant-scoped at the SQL layer.
- *
- * Previously these queries lived inline in
- * `Mercato\Core\Provider::renderDemoStorefront()` and
- * `::storefrontHtml()`. They were moved here to:
- *   - separate data access from presentation
- *   - make tenant scoping reviewable in one place
- *   - allow unit tests to mock the storefront data slice
  */
 final class Repository
 {
@@ -65,19 +58,49 @@ final class Repository
     }
 
     /**
+     * Services index page with optional full-text query + category filter.
+     *
      * @return array<string,mixed>
      */
-    public function servicesPage(int $tenantId): array
+    public function servicesPage(int $tenantId, string $query = '', int $categoryId = 0): array
     {
         global $wpdb;
         $prefix = $wpdb->prefix;
         $products = $prefix . 'mercato_products';
         $vendors = $prefix . 'mercato_vendors';
         $categories = $prefix . 'mercato_categories';
+        $productCategories = $prefix . 'mercato_product_categories';
+
+        // Build SQL + params in lockstep so placeholders and values stay aligned.
+        $sql = "SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, v.business_name, v.store_slug
+                FROM `{$products}` p
+                INNER JOIN `{$vendors}` v ON v.vendor_id = p.vendor_id AND v.tenant_id = p.tenant_id";
+        $params = [];
+
+        if ($categoryId > 0) {
+            $sql .= " INNER JOIN `{$productCategories}` pc ON pc.product_id = p.product_id AND pc.tenant_id = p.tenant_id AND pc.category_id = %d";
+            $params[] = $categoryId;
+        }
+
+        $sql .= " WHERE p.tenant_id = %d AND p.status = 'active'";
+        $params[] = $tenantId;
+
+        if ($query !== '') {
+            $like = '%' . $wpdb->esc_like($query) . '%';
+            $sql .= " AND (p.title LIKE %s OR p.description LIKE %s OR v.business_name LIKE %s)";
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql .= " ORDER BY p.created_at DESC LIMIT 60";
 
         return [
-            'categories' => $wpdb->get_results($wpdb->prepare("SELECT category_id, name FROM `{$categories}` WHERE tenant_id = %d AND parent_id IS NULL ORDER BY sort_order ASC, name ASC", $tenantId), ARRAY_A) ?: [],
-            'services' => $wpdb->get_results($wpdb->prepare("SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, v.business_name, v.store_slug FROM `{$products}` p INNER JOIN `{$vendors}` v ON v.vendor_id = p.vendor_id AND v.tenant_id = p.tenant_id WHERE p.tenant_id = %d AND p.status = 'active' ORDER BY p.created_at DESC LIMIT 60", $tenantId), ARRAY_A) ?: [],
+            'categories' => $wpdb->get_results($wpdb->prepare(
+                "SELECT category_id, name FROM `{$categories}` WHERE tenant_id = %d AND parent_id IS NULL ORDER BY sort_order ASC, name ASC",
+                $tenantId
+            ), ARRAY_A) ?: [],
+            'services' => $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) ?: [],
         ];
     }
 

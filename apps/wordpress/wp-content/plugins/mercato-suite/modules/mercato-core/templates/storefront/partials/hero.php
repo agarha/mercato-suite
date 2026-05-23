@@ -14,8 +14,14 @@ $home = '/t/' . ($config['tenant_slug'] ?? 'gigsii'); ?>
     <div class="booking-panel" role="search" aria-label="Find a service">
       <h3>Find help near you</h3>
       <form class="search-row" action="<?= $attr($home . '/services') ?>" method="get" novalidate>
-        <label class="field"><span>Service</span><strong>Cleaning, repairs, installs</strong><input type="hidden" name="q" value=""></label>
-        <label class="field"><span>Location</span><strong>Toronto area</strong></label>
+        <label class="field" for="hero-q">
+          <span>Service</span>
+          <input id="hero-q" name="q" type="search" placeholder="Cleaning, repairs, installs" autocomplete="off" style="display:block;width:100%;border:0;background:transparent;font:inherit;color:var(--ink);outline:none;margin-top:4px;padding:0">
+        </label>
+        <label class="field" for="hero-loc">
+          <span>Location</span>
+          <input id="hero-loc" type="text" placeholder="Toronto area" autocomplete="off" disabled style="display:block;width:100%;border:0;background:transparent;font:inherit;color:var(--ink);outline:none;margin-top:4px;padding:0">
+        </label>
         <button class="search-btn" type="submit">Search</button>
       </form>
     </div>

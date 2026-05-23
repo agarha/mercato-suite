@@ -13,7 +13,7 @@ use Mercato\Core\Tenant\Resolver;
  * Route table:
  *   /                                          -> home (default tenant)
  *   /t/<slug>/                                 -> home
- *   /t/<slug>/services                         -> services index
+ *   /t/<slug>/services[?q=&category=]          -> services index (filterable)
  *   /t/<slug>/providers                        -> provider directory
  *   /t/<slug>/providers/<provider-slug>        -> provider detail
  *   /t/<slug>/requests/new                     -> request-new form
@@ -79,9 +79,20 @@ final class Renderer
     public function renderServices(): string
     {
         $tid = $this->tenants->currentTenantId();
+        $q = isset($_GET['q']) ? \trim((string) $_GET['q']) : '';
+        $category = isset($_GET['category']) ? (int) $_GET['category'] : 0;
+        if (\function_exists('sanitize_text_field')) {
+            $q = \sanitize_text_field($q);
+        }
+        if (\strlen($q) > 100) {
+            $q = \substr($q, 0, 100);
+        }
+
         return $this->render('services-page.php', [
-            'data' => $this->repository->servicesPage($tid),
+            'data' => $this->repository->servicesPage($tid, $q, $category),
             'current_page' => 'services',
+            'search_q' => $q,
+            'search_category' => $category,
         ]);
     }
 
