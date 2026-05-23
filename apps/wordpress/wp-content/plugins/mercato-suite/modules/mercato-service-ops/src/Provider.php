@@ -194,9 +194,15 @@ final class Provider extends ServiceProvider
         }
     }
 
-    public function redeemReferral(): WP_Error
+    public function redeemReferral(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        return new WP_Error('FEATURE_DISABLED', 'Referral redemption is disabled for this tenant.', ['status' => 403]);
+        try {
+            $referral = $this->repo()->redeemReferral((int) $request->get_param('id'));
+            $this->audit('referral.redeemed', 'referral', (int) $referral['referral_id'], null, $referral);
+            return new WP_REST_Response($referral, 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_referral_redeem_failed', $e->getMessage(), ['status' => 400]);
+        }
     }
 
     public function serviceRequests(WP_REST_Request $request): WP_REST_Response

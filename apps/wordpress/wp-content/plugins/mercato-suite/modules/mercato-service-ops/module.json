@@ -17,6 +17,7 @@
     "mercato.estimate.sent.v1",
     "mercato.estimate.accepted.v1",
     "mercato.referral.accrued.v1",
+    "mercato.referral.redeemed.v1",
     "mercato.service_request.created.v1",
     "mercato.service_bid.created.v1",
     "mercato.service_bid.accepted.v1"

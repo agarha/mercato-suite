@@ -67,6 +67,9 @@ final class TenantStorefrontConfigTest extends TestCase
             'Post a request and let providers bid',
             'mercato_service_requests',
             'mercato_service_bids',
+            'All Gigsii capabilities enabled',
+            'mercato_tenant_feature_flags',
+            'mercato_tenant_integrations',
         ] as $needle) {
             self::assertStringContainsString($needle, $this->coreProvider);
         }

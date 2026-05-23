@@ -67,6 +67,7 @@ $storefront = @{
         @{ href = "#vendors"; label = "Providers" },
         @{ href = "#buyer"; label = "Client" },
         @{ href = "#requests"; label = "Requests" },
+        @{ href = "#features"; label = "Features" },
         @{ href = "#operations"; label = "Operations" },
         @{ href = "#seller"; label = "Provider" },
         @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
@@ -109,14 +110,42 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
         @{ domain = "localhost"; path_prefix = "/t/gigsii"; is_primary = $true; status = "active"; verified = $true }
     )
     feature_flags = @{
-        "mercato.integration.stripe_connect" = $false
+        "mercato.ai" = $true
+        "mercato.collaboration" = $true
+        "mercato.commissions" = $true
+        "mercato.core" = $true
+        "mercato.disputes" = $true
+        "mercato.enterprise" = $true
+        "mercato.fraud" = $true
+        "mercato.integration.avalara" = $true
+        "mercato.integration.aws_s3" = $true
+        "mercato.integration.paypal" = $true
+        "mercato.integration.postmark" = $true
+        "mercato.integration.sendgrid" = $true
+        "mercato.integration.shippo" = $true
+        "mercato.integration.stripe" = $true
+        "mercato.integration.stripe_connect" = $true
+        "mercato.integration.taxjar" = $true
+        "mercato.integration.twilio" = $true
+        "mercato.kyc" = $true
+        "mercato.messaging" = $true
+        "mercato.migration" = $true
+        "mercato.notifications" = $true
+        "mercato.orders" = $true
+        "mercato.payouts" = $true
+        "mercato.products" = $true
+        "mercato.promotions" = $true
+        "mercato.reports" = $true
+        "mercato.reviews" = $true
+        "mercato.search" = $true
         "mercato.service_ops" = $true
-        "gigsii.otp" = $false
-        "gigsii.monetization" = $false
+        "mercato.subscriptions" = $true
+        "mercato.tax" = $true
+        "mercato.vendors" = $true
+        "gigsii.otp" = $true
+        "gigsii.monetization" = $true
         "gigsii.task_posting" = $true
-        "gigsii.referral_redemption" = $false
-        "mercato.ai" = $false
-        "mercato.promotions" = $false
+        "gigsii.referral_redemption" = $true
     }
     integrations = @{
         sendgrid = @{
@@ -130,9 +159,9 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
             secret_refs = @{ access_key = "env:MERCATO_S3_ACCESS_KEY"; secret_key = "env:MERCATO_S3_SECRET_KEY" }
         }
         stripe = @{
-            status = "disabled"
-            public_config = @{ mode = "soft-launch-off" }
-            secret_refs = @{}
+            status = "test"
+            public_config = @{ mode = "test"; connect = $true; payouts = "sandbox" }
+            secret_refs = @{ secret_key = "env:STRIPE_SECRET_KEY"; webhook_secret = "env:STRIPE_WEBHOOK_SECRET" }
         }
     }
     storefront = $storefront

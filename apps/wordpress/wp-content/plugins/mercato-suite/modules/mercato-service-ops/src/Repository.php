@@ -278,6 +278,33 @@ final class Repository
         return $referral;
     }
 
+    /** @return array<string,mixed> */
+    public function redeemReferral(int $referralId): array
+    {
+        global $wpdb;
+
+        $referral = $this->row('mercato_referrals', 'referral_id', $referralId);
+        if ((string) $referral['status'] === 'redeemed') {
+            return $referral;
+        }
+
+        $table = $wpdb->prefix . 'mercato_referrals';
+        $updated = $wpdb->update($table, [
+            'status' => 'redeemed',
+        ], [
+            'tenant_id' => $this->tenantResolver->currentTenantId(),
+            'referral_id' => $referralId,
+        ]);
+        if ($updated === false) {
+            throw new RuntimeException('Unable to redeem referral: ' . (string) $wpdb->last_error);
+        }
+
+        $redeemed = $this->row('mercato_referrals', 'referral_id', $referralId);
+        $this->outbox->publish('mercato.referral.redeemed.v1', $redeemed, (string) $referralId, (int) $redeemed['tenant_id']);
+
+        return $redeemed;
+    }
+
     /** @param array<string,mixed> $data @return array<string,mixed> */
     public function createServiceRequest(array $data): array
     {
