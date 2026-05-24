@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mercato\Core\Storefront;
 
+use Mercato\Core\Geo\Geocoder;
 use Mercato\Core\Tenant\Resolver;
 
 /**
@@ -13,11 +14,12 @@ use Mercato\Core\Tenant\Resolver;
  * Route table:
  *   /                                          -> home (default tenant)
  *   /t/<slug>/                                 -> home
- *   /t/<slug>/services[?q=&category=]          -> services index (filterable)
- *   /t/<slug>/providers                        -> provider directory
+ *   /t/<slug>/services[?q=&category=&near=&radius=] -> services index
+ *   /t/<slug>/providers[?near=&radius=&category=]   -> provider directory
  *   /t/<slug>/providers/<provider-slug>        -> provider detail
  *   /t/<slug>/requests/new                     -> request-new form
  *   /t/<slug>/provider/dashboard               -> provider self-service dashboard
+ *   /t/<slug>/signup                           -> provider self-registration
  *   /t/<slug>/account                          -> buyer account
  *   anything else                              -> null (WP fallthrough)
  */
@@ -32,6 +34,7 @@ final class Renderer
         private readonly Resolver $tenants,
         private readonly Config $config,
         private readonly Repository $repository,
+        private readonly Geocoder $geocoder = new Geocoder(),
     ) {
         $this->templateDir = \dirname(__DIR__, 2) . '/templates/storefront';
         $this->assetUrl = (\defined('MERCATO_SUITE_FILE') && \function_exists('plugin_dir_url'))
@@ -66,6 +69,9 @@ final class Renderer
         if ($local === '/provider/dashboard') {
             return $this->renderProviderDashboard();
         }
+        if ($local === '/signup' || $local === '/become-a-pro') {
+            return $this->renderSignup();
+        }
         if ($local === '/account') {
             return $this->renderAccount();
         }
@@ -78,9 +84,6 @@ final class Renderer
         $config = $this->config->forTenant($tid);
         $theme  = (string) ($config['theme'] ?? '');
 
-        // Per-tenant theme override. Mercato default = page.php.
-        // Gigsii sets theme="taskfirst" in its tenant settings JSON to use
-        // the bespoke design pulled from the Gigsii design canvas.
         $template = $theme === 'taskfirst' ? 'page-taskfirst.php' : 'page.php';
 
         return $this->render($template, [
@@ -101,20 +104,85 @@ final class Renderer
             $q = \substr($q, 0, 100);
         }
 
+        [$lat, $lng, $nearText, $nearDisplay, $radiusKm] = $this->resolveGeoQuery();
+
         return $this->render('services-page.php', [
-            'data' => $this->repository->servicesPage($tid, $q, $category),
+            'data' => $this->repository->servicesPage($tid, $q, $category, $lat, $lng, $radiusKm),
             'current_page' => 'services',
             'search_q' => $q,
             'search_category' => $category,
+            'search_near' => $nearText,
+            'search_near_display' => $nearDisplay,
+            'search_radius_km' => $radiusKm,
+            'search_lat' => $lat,
+            'search_lng' => $lng,
         ]);
     }
 
     public function renderProviders(): string
     {
         $tid = $this->tenants->currentTenantId();
+        $category = isset($_GET['category']) ? (int) $_GET['category'] : 0;
+        [$lat, $lng, $nearText, $nearDisplay, $radiusKm] = $this->resolveGeoQuery();
+
         return $this->render('providers-page.php', [
-            'data' => $this->repository->providersPage($tid),
+            'data' => $this->repository->providersPage($tid, $lat, $lng, $radiusKm, $category),
             'current_page' => 'providers',
+            'search_category' => $category,
+            'search_near' => $nearText,
+            'search_near_display' => $nearDisplay,
+            'search_radius_km' => $radiusKm,
+            'search_lat' => $lat,
+            'search_lng' => $lng,
+        ]);
+    }
+
+    /**
+     * Resolve ?near=&radius= (and optional already-geocoded lat/lng pair)
+     * from the query string into a normalized 5-tuple.
+     *
+     * @return array{0:?float,1:?float,2:string,3:string,4:float}
+     */
+    private function resolveGeoQuery(): array
+    {
+        $nearText = isset($_GET['near']) ? \trim((string) $_GET['near']) : '';
+        if (\function_exists('sanitize_text_field')) {
+            $nearText = \sanitize_text_field($nearText);
+        }
+        if (\strlen($nearText) > 120) {
+            $nearText = \substr($nearText, 0, 120);
+        }
+
+        $radiusKm = isset($_GET['radius']) ? (float) $_GET['radius'] : 25.0;
+        if ($radiusKm < 1) {
+            $radiusKm = 25.0;
+        }
+        if ($radiusKm > 500) {
+            $radiusKm = 500.0;
+        }
+
+        $lat = isset($_GET['lat']) && \is_numeric($_GET['lat']) ? (float) $_GET['lat'] : null;
+        $lng = isset($_GET['lng']) && \is_numeric($_GET['lng']) ? (float) $_GET['lng'] : null;
+        $display = $nearText;
+
+        if (($lat === null || $lng === null) && $nearText !== '') {
+            $hit = $this->geocoder->geocode($nearText);
+            if ($hit !== null) {
+                $lat = $hit['lat'];
+                $lng = $hit['lng'];
+                $display = $hit['display'];
+            }
+        }
+
+        return [$lat, $lng, $nearText, $display, $radiusKm];
+    }
+
+    public function renderSignup(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        return $this->render('signup-page.php', [
+            'data' => $this->repository->signupPage($tid),
+            'current_page' => 'signup',
         ]);
     }
 

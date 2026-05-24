@@ -21,6 +21,11 @@ final class Provider extends ServiceProvider
             $c->get(Resolver::class),
             $c->get(Outbox::class),
         ));
+        $this->container->bind(Signup::class, fn ($c): Signup => new Signup(
+            $c->get(Resolver::class),
+            $c->get(Repository::class),
+            $c,
+        ));
     }
 
     public function boot(): void
@@ -53,6 +58,47 @@ final class Provider extends ServiceProvider
                 'methods' => 'GET',
                 'callback' => [$this, 'onboarding'],
                 'permission_callback' => [Permissions::class, 'canRead'],
+            ]);
+
+            \register_rest_route('mercato/v1', '/vendors/(?P<id>\d+)/profile', [
+                'methods' => 'PATCH',
+                'callback' => [$this, 'updateProfile'],
+                'permission_callback' => [Permissions::class, 'canRead'],
+            ]);
+
+            \register_rest_route('mercato/v1', '/vendors/(?P<id>\d+)/locations', [
+                [
+                    'methods' => 'GET',
+                    'callback' => [$this, 'listLocations'],
+                    'permission_callback' => [Permissions::class, 'canRead'],
+                ],
+                [
+                    'methods' => 'POST',
+                    'callback' => [$this, 'createLocation'],
+                    'permission_callback' => [Permissions::class, 'canRead'],
+                ],
+            ]);
+
+            \register_rest_route('mercato/v1', '/vendors/(?P<id>\d+)/service-areas', [
+                [
+                    'methods' => 'GET',
+                    'callback' => [$this, 'listServiceAreas'],
+                    'permission_callback' => [Permissions::class, 'canRead'],
+                ],
+                [
+                    'methods' => 'POST',
+                    'callback' => [$this, 'createServiceArea'],
+                    'permission_callback' => [Permissions::class, 'canRead'],
+                ],
+            ]);
+
+            // Public storefront self-signup. One call drops a draft vendor
+            // with the full profile, location, areas and starter services
+            // attached. Admin still has to approve before products go active.
+            \register_rest_route('mercato/v1', '/storefront/signup', [
+                'methods' => 'POST',
+                'callback' => [$this, 'storefrontSignup'],
+                'permission_callback' => [Permissions::class, 'canPublicRegister'],
             ]);
         });
     }
@@ -99,6 +145,76 @@ final class Provider extends ServiceProvider
             });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_status_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function updateProfile(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            $vendor = $this->repo()->updateProfile((int) $request->get_param('id'), (array) $request->get_json_params());
+            $this->audit('vendor.profile.updated', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
+            return new WP_REST_Response($vendor, 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_profile_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function listLocations(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->repo()->locations((int) $request->get_param('id')), 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_locations_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function createLocation(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $location = $this->repo()->createLocation((int) $request->get_param('id'), (array) $request->get_json_params());
+                $this->audit('vendor.location.created', 'vendor_location', (int) ($location['location_id'] ?? 0), null, $location);
+                return new WP_REST_Response($location, 201);
+            });
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_location_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function listServiceAreas(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return new WP_REST_Response($this->repo()->serviceAreas((int) $request->get_param('id')), 200);
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_areas_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function createServiceArea(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $area = $this->repo()->createServiceArea((int) $request->get_param('id'), (array) $request->get_json_params());
+                $this->audit('vendor.service_area.created', 'vendor_service_area', (int) ($area['area_id'] ?? 0), null, $area);
+                return new WP_REST_Response($area, 201);
+            });
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_service_area_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function storefrontSignup(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            return $this->idempotent($request, function () use ($request): WP_REST_Response {
+                $loggedIn = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
+                $signup = $this->container->get(Signup::class);
+                $result = $signup->run((array) $request->get_json_params(), $loggedIn);
+                $this->audit('vendor.storefront_signup', 'vendor', (int) ($result['vendor']['vendor_id'] ?? 0), null, $result);
+                return new WP_REST_Response($result, 201);
+            });
+        } catch (\Throwable $e) {
+            return new WP_Error('mercato_vendor_signup_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 

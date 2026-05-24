@@ -212,17 +212,41 @@ foreach ($categoryName in $categories) {
 }
 
 $providers = @(
-    @{ business_name = "MapleFix Home Services"; store_slug = "maplefix"; category = "Plumbing"; latitude = 43.6532; longitude = -79.3832; service_radius_km = 30; services = @(
-        @{ title = "Emergency Leak Diagnosis"; sku = "GIGSII-LEAK"; price_minor = 12500; stock_quantity = 12; description = "Licensed plumbing assessment with arrival window, photos, and repair estimate." },
-        @{ title = "Faucet Replacement Visit"; sku = "GIGSII-FAUCET"; price_minor = 18500; stock_quantity = 8; description = "On-site faucet replacement with parts review and completion notes." }
+    @{ business_name = "MapleFix Home Services"; store_slug = "maplefix"; category = "Plumbing";
+       headline = "Licensed plumber, 18 years on Toronto kitchens.";
+       bio = "Family-run plumbing serving the GTA since 2007. Same-day for emergencies, transparent flat-rate quotes, and parts warranty on every job.";
+       years_experience = 18; hourly_rate_minor = 11500; phone = "+1-416-555-0142"; languages = "English, Mandarin";
+       license_number = "ON-P-44219"; insurance_carrier = "Intact"; insurance_amount_minor = 200000000;
+       latitude = 43.6532; longitude = -79.3832; service_radius_km = 30;
+       extra_areas = @(@{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15}, @{label="Etobicoke"; city="Etobicoke"; region="ON"; latitude=43.6205; longitude=-79.5132; radius_km=20});
+       services = @(
+        @{ title = "Emergency Leak Diagnosis"; sku = "GIGSII-LEAK"; price_minor = 12500; stock_quantity = 12; description = "Licensed plumbing assessment with arrival window, photos, and repair estimate."; pricing_type = "fixed"; duration_minutes = 60 },
+        @{ title = "Faucet Replacement Visit"; sku = "GIGSII-FAUCET"; price_minor = 18500; stock_quantity = 8; description = "On-site faucet replacement with parts review and completion notes."; pricing_type = "fixed"; duration_minutes = 90 },
+        @{ title = "Hourly Plumbing Labour"; sku = "GIGSII-PLUMBHR"; price_minor = 11500; stock_quantity = 99; description = "By-the-hour for non-standard jobs. Parts at cost."; pricing_type = "hourly"; duration_minutes = 60 }
     ) },
-    @{ business_name = "BrightNest Cleaning Co"; store_slug = "brightnest"; category = "Cleaning"; latitude = 43.6605; longitude = -79.4320; service_radius_km = 25; services = @(
-        @{ title = "Move-Out Deep Clean"; sku = "GIGSII-MOVEOUT"; price_minor = 32000; stock_quantity = 10; description = "Turnover clean with checklist, supplies, and photo proof." },
-        @{ title = "Recurring Home Cleaning"; sku = "GIGSII-RECURRING"; price_minor = 14500; stock_quantity = 20; description = "Standard recurring home visit for kitchens, baths, floors, and reset tasks." }
+    @{ business_name = "BrightNest Cleaning Co"; store_slug = "brightnest"; category = "Cleaning";
+       headline = "Eco-friendly cleaning, recurring or one-off.";
+       bio = "Crew of five, all WSIB-covered, all background-checked. Non-toxic supplies provided. Bond-back guarantee on move-outs.";
+       years_experience = 9; hourly_rate_minor = 7500; phone = "+1-416-555-0188"; languages = "English, Portuguese";
+       license_number = "BL-9912"; insurance_carrier = "Co-operators"; insurance_amount_minor = 200000000;
+       latitude = 43.6605; longitude = -79.4320; service_radius_km = 25;
+       extra_areas = @(@{label="Annex / Yorkville"; city="Toronto"; region="ON"; latitude=43.6700; longitude=-79.4050; radius_km=8}, @{label="Liberty Village"; city="Toronto"; region="ON"; latitude=43.6385; longitude=-79.4225; radius_km=8});
+       services = @(
+        @{ title = "Move-Out Deep Clean"; sku = "GIGSII-MOVEOUT"; price_minor = 32000; stock_quantity = 10; description = "Turnover clean with checklist, supplies, and photo proof."; pricing_type = "fixed"; duration_minutes = 240 },
+        @{ title = "Recurring Home Cleaning"; sku = "GIGSII-RECURRING"; price_minor = 14500; stock_quantity = 20; description = "Standard recurring home visit for kitchens, baths, floors, and reset tasks."; pricing_type = "fixed"; duration_minutes = 150 },
+        @{ title = "Window Cleaning (per window)"; sku = "GIGSII-WIN"; price_minor = 800; stock_quantity = 99; description = "Inside + outside, frame wipe-down, screens rinsed."; pricing_type = "per_unit"; unit_label = "window"; duration_minutes = 15 }
     ) },
-    @{ business_name = "UrbanSpark Electric"; store_slug = "urbanspark"; category = "Electrical"; latitude = 43.6440; longitude = -79.4000; service_radius_km = 35; services = @(
-        @{ title = "Smart Lighting Install"; sku = "GIGSII-LIGHTING"; price_minor = 17500; stock_quantity = 11; description = "Install connected dimmers, fixtures, and room scenes with safety verification." },
-        @{ title = "Panel Safety Inspection"; sku = "GIGSII-PANEL"; price_minor = 15500; stock_quantity = 7; description = "Breaker panel inspection with findings, photos, and follow-up estimate." }
+    @{ business_name = "UrbanSpark Electric"; store_slug = "urbanspark"; category = "Electrical";
+       headline = "ESA-licensed master electrician. Smart-home specialist.";
+       bio = "Master electrician with 22 years on residential and light commercial work. Specialises in smart-home retrofits, EV charger installs, and panel upgrades.";
+       years_experience = 22; hourly_rate_minor = 13500; phone = "+1-416-555-0203"; languages = "English";
+       license_number = "ESA-77310"; insurance_carrier = "Aviva"; insurance_amount_minor = 500000000;
+       latitude = 43.6440; longitude = -79.4000; service_radius_km = 35;
+       extra_areas = @(@{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=12}, @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=18});
+       services = @(
+        @{ title = "Smart Lighting Install"; sku = "GIGSII-LIGHTING"; price_minor = 17500; stock_quantity = 11; description = "Install connected dimmers, fixtures, and room scenes with safety verification."; pricing_type = "fixed"; duration_minutes = 120 },
+        @{ title = "Panel Safety Inspection"; sku = "GIGSII-PANEL"; price_minor = 15500; stock_quantity = 7; description = "Breaker panel inspection with findings, photos, and follow-up estimate."; pricing_type = "fixed"; duration_minutes = 90 },
+        @{ title = "EV Charger Install (Level 2)"; sku = "GIGSII-EV"; price_minor = 85000; stock_quantity = 5; description = "Hardwired Level-2 EV charger install including permit and inspection."; pricing_type = "quote_required"; duration_minutes = 240 }
     ) }
 )
 
@@ -232,16 +256,43 @@ foreach ($providerSpec in $providers) {
     if ($existingVendors.Count -gt 0) {
         $provider = $existingVendors[0]
     } else {
+        # Self-signup style register: send the full profile in one shot so the
+        # storefront immediately reflects what a real pro would have filled
+        # out via the multi-step form.
         $provider = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" -Method "POST" -Body @{
             business_name = $providerSpec.business_name
             store_slug = $providerSpec.store_slug
             return_policy = "Service appointments can be rescheduled before dispatch."
+            headline = $providerSpec.headline
+            bio = $providerSpec.bio
+            years_experience = [int] $providerSpec.years_experience
+            hourly_rate_minor = [int] $providerSpec.hourly_rate_minor
+            currency = "CAD"
+            phone = $providerSpec.phone
+            languages = $providerSpec.languages
+            license_number = $providerSpec.license_number
+            insurance_carrier = $providerSpec.insurance_carrier
+            insurance_amount_minor = [int] $providerSpec.insurance_amount_minor
         }
     }
 
+    # Ensure profile fields are present even on re-runs against an older
+    # vendor row created before the profile migration ran.
+    Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/profile" -Method "PATCH" -Body @{
+        headline = $providerSpec.headline
+        bio = $providerSpec.bio
+        years_experience = [int] $providerSpec.years_experience
+        hourly_rate_minor = [int] $providerSpec.hourly_rate_minor
+        phone = $providerSpec.phone
+        languages = $providerSpec.languages
+        license_number = $providerSpec.license_number
+        insurance_carrier = $providerSpec.insurance_carrier
+        insurance_amount_minor = [int] $providerSpec.insurance_amount_minor
+    } | Out-Null
+
     Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/status" -Method "POST" -Body @{ status = "approved" } | Out-Null
     Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/locations" -Method "POST" -Body @{
-        label = "$($providerSpec.business_name) service area"
+        label = "$($providerSpec.business_name) HQ"
         city = "Toronto"
         region = "ON"
         country = "CA"
@@ -251,10 +302,24 @@ foreach ($providerSpec in $providers) {
         is_primary = $true
     } | Out-Null
 
+    # Declare extra geo-tagged service areas so the discovery filter has
+    # multiple polygons to match against (mirrors TaskRabbit's Work Area Map).
+    foreach ($area in $providerSpec.extra_areas) {
+        Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/service-areas" -Method "POST" -Body @{
+            label = $area.label
+            city = $area.city
+            region = $area.region
+            country = "CA"
+            latitude = [double] $area.latitude
+            longitude = [double] $area.longitude
+            radius_km = [double] $area.radius_km
+        } | Out-Null
+    }
+
     foreach ($serviceSpec in $providerSpec.services) {
         $existingServices = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" | ForEach-Object { $_ } | Where-Object { $_.sku -eq $serviceSpec.sku })
         if ($existingServices.Count -eq 0) {
-            Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" -Method "POST" -Body @{
+            $serviceBody = @{
                 vendor_id = [int] $provider.vendor_id
                 title = $serviceSpec.title
                 description = $serviceSpec.description
@@ -262,11 +327,16 @@ foreach ($providerSpec in $providers) {
                 price_minor = [int] $serviceSpec.price_minor
                 stock_quantity = [int] $serviceSpec.stock_quantity
                 category_ids = @([int] $categoryByName[$providerSpec.category].category_id)
-                duration_minutes = 90
+                duration_minutes = [int] $serviceSpec.duration_minutes
                 lead_time_minutes = 180
                 capacity = 1
                 status = "active"
-            } | Out-Null
+                pricing_type = $serviceSpec.pricing_type
+            }
+            if ($serviceSpec.PSObject.Properties.Match('unit_label').Count -gt 0) {
+                $serviceBody.unit_label = $serviceSpec.unit_label
+            }
+            Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" -Method "POST" -Body $serviceBody | Out-Null
             $createdServices++
         }
     }
@@ -305,4 +375,44 @@ foreach ($providerSlug in $reviewsByProvider.Keys) {
             Write-Host "  reviews: provider $providerSlug not found, skipping"
             continue
         }
-        $vendorId = [int] $matchingVendor[0].vend
+        $vendorId = [int] $matchingVendor[0].vendor_id
+        $current = $null
+        try {
+            $current = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "GET"
+        } catch {
+            Write-Host "  reviews: GET /vendors/$vendorId/reviews failed (table probably missing); skipping $providerSlug"
+            continue
+        }
+        $currentCount = if ($current.count) { [int] $current.count } else { 0 }
+        if ($currentCount -ge 3) {
+            Write-Host "  reviews: $providerSlug already has $currentCount; skipping"
+            continue
+        }
+        foreach ($review in $reviewsByProvider[$providerSlug]) {
+            try {
+                Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "POST" -Body $review | Out-Null
+                $reviewsInserted++
+            } catch {
+                Write-Host "  reviews: insert failed for $providerSlug ($($_.Exception.Message)); continuing"
+            }
+        }
+        $reviewedProviders++
+    } catch {
+        Write-Host "  reviews: $providerSlug lookup failed ($($_.Exception.Message)); continuing"
+    }
+}
+
+$services = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products"
+$vendors = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors"
+$serviceCount = @($services | ForEach-Object { $_ }).Count
+$vendorCount = @($vendors | ForEach-Object { $_ }).Count
+
+[pscustomobject]@{
+    status = "seeded"
+    tenant_id = $tenant.tenant_id
+    tenant_slug = $tenant.tenant_slug
+    storefront = "$baseUrl/t/gigsii"
+    vendors = $vendorCount
+    services = $serviceCount
+    new_services = $createdServices
+} | ConvertTo-Json -Depth 8

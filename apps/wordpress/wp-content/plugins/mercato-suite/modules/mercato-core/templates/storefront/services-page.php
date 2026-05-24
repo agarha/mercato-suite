@@ -9,9 +9,12 @@
 /** @var string $current_page */
 $search_q = (string) ($search_q ?? '');
 $search_category = (int) ($search_category ?? 0);
+$search_near = (string) ($search_near ?? '');
+$search_near_display = (string) ($search_near_display ?? '');
+$search_radius_km = (float) ($search_radius_km ?? 25);
 $home = '/t/' . ($config['tenant_slug'] ?? 'gigsii');
 $resultCount = count($data['services']);
-$hasFilter = ($search_q !== '' || $search_category > 0);
+$hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -42,25 +45,47 @@ $hasFilter = ($search_q !== '' || $search_category > 0);
         <aside class="hero-media" aria-label="Search and filter">
           <div class="booking-panel" role="search" aria-label="Filter services">
             <h3>Find a service</h3>
-            <form class="search-row" action="<?= $attr($home . '/services') ?>" method="get" novalidate style="grid-template-columns: 1fr 1fr auto">
+            <form class="search-row geo-search" action="<?= $attr($home . '/services') ?>" method="get" novalidate>
               <label class="field" for="svc-q">
                 <span>Keywords</span>
-                <input id="svc-q" name="q" type="search" value="<?= $attr($search_q) ?>" placeholder="cleaning, repairs, install…" autocomplete="off" style="display:block;width:100%;border:0;background:transparent;font:inherit;color:var(--ink);outline:none;margin-top:4px;padding:0">
+                <input id="svc-q" name="q" type="search" value="<?= $attr($search_q) ?>" placeholder="cleaning, repairs, install…" autocomplete="off">
               </label>
               <label class="field" for="svc-cat">
                 <span>Category</span>
-                <select id="svc-cat" name="category" style="display:block;width:100%;border:0;background:transparent;font:inherit;color:var(--ink);outline:none;margin-top:4px;padding:0">
+                <select id="svc-cat" name="category">
                   <option value="0">Any category</option>
                   <?php foreach ($data['categories'] as $category): ?>
                     <option value="<?= $attr($category['category_id']) ?>"<?= $search_category === (int) $category['category_id'] ? ' selected' : '' ?>><?= $esc($category['name']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </label>
-              <button type="submit" class="search-btn">Search</button>
+              <label class="field" for="svc-near">
+                <span>Near</span>
+                <input id="svc-near" name="near" type="text" value="<?= $attr($search_near) ?>" placeholder="postcode or suburb" autocomplete="postal-code">
+              </label>
+              <label class="field" for="svc-radius">
+                <span>Within</span>
+                <select id="svc-radius" name="radius">
+                  <?php foreach ([5, 10, 25, 50, 100] as $r): ?>
+                    <option value="<?= $r ?>"<?= (int) $search_radius_km === $r ? ' selected' : '' ?>><?= $r ?> km</option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <input type="hidden" name="lat" id="svc-lat">
+              <input type="hidden" name="lng" id="svc-lng">
+              <div class="search-actions">
+                <button type="button" class="button secondary geo-locate-btn" data-geo-btn>
+                  <span aria-hidden="true">📍</span> Use my location
+                </button>
+                <button type="submit" class="search-btn">Search</button>
+              </div>
             </form>
+            <?php if ($search_near_display !== '' && $search_near_display !== $search_near): ?>
+              <p class="geo-resolved-hint" aria-live="polite">Showing pros near <strong><?= $esc($search_near_display) ?></strong> within <?= (int) $search_radius_km ?> km.</p>
+            <?php endif; ?>
             <?php if ($hasFilter): ?>
-              <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">
-                <a href="<?= $attr($home . '/services') ?>" style="color:var(--brand-deep);font-weight:600">Clear filters</a>
+              <p class="clear-filters">
+                <a href="<?= $attr($home . '/services') ?>">Clear filters</a>
               </p>
             <?php endif; ?>
           </div>
@@ -84,16 +109,43 @@ $hasFilter = ($search_q !== '' || $search_category > 0);
             <p>Try a different keyword or <a href="<?= $attr($home . '/services') ?>">clear filters</a> to see the full catalog.</p>
           </article>
         <?php else: foreach ($data['services'] as $index => $service):
-          $tone = ['market-blue', 'market-green', 'market-red', 'market-gold'][$index % 4]; ?>
+          $tone = ['market-blue', 'market-green', 'market-red', 'market-gold'][$index % 4];
+          $pricingType = (string) ($service['pricing_type'] ?? 'fixed');
+          $unitLabel = (string) ($service['unit_label'] ?? '');
+          $pricingSuffix = match ($pricingType) {
+            'hourly' => ' / hr',
+            'per_unit' => $unitLabel !== '' ? ' / ' . $unitLabel : ' / unit',
+            'quote_required' => '',
+            default => '',
+          };
+          $distance = $service['distance_km'] ?? null;
+          $servesArea = !empty($service['serves_area']);
+        ?>
           <article class="product-card">
-            <div class="product-media <?= $tone ?>"><span><?= $esc(mb_substr((string) $service['title'], 0, 1)) ?></span><small>Verified provider</small></div>
+            <div class="product-media <?= $tone ?>">
+              <?php if (!empty($service['photo_url'])): ?>
+                <img src="<?= $attr($service['photo_url']) ?>" alt="">
+              <?php else: ?>
+                <span><?= $esc(mb_substr((string) $service['title'], 0, 1)) ?></span>
+              <?php endif; ?>
+              <?php if ($servesArea): ?><small class="badge-serves">✓ Serves your area</small>
+              <?php elseif ($distance !== null): ?><small class="badge-distance"><?= (string) $distance ?> km away</small>
+              <?php else: ?><small>Verified provider</small><?php endif; ?>
+            </div>
             <div class="product-body">
-              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a></p>
+              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a><?php if (!empty($service['years_experience'])): ?> · <span class="exp-pill"><?= (int) $service['years_experience'] ?>+ yrs</span><?php endif; ?></p>
               <h3><?= $esc($service['title']) ?></h3>
-              <p><?= $esc($service['description'] ?: $config['item_fallback_copy']) ?></p>
+              <?php if (!empty($service['headline'])): ?><p class="headline-line"><?= $esc($service['headline']) ?></p><?php endif; ?>
+              <p><?= $esc($service['summary'] ?: ($service['description'] ?: $config['item_fallback_copy'])) ?></p>
               <div class="product-meta">
-                <strong><?= $money($service['price_minor']) ?></strong>
-                <span><?= $esc($service['stock_quantity']) ?> <?= $esc($config['item_quantity_label']) ?></span>
+                <?php if ($pricingType === 'quote_required'): ?>
+                  <strong>Quote on request</strong>
+                <?php else: ?>
+                  <strong><?= $money($service['price_minor']) ?><?= $pricingSuffix !== '' ? '<span class="price-suffix">' . $esc($pricingSuffix) . '</span>' : '' ?></strong>
+                <?php endif; ?>
+                <?php if (!empty($service['duration_minutes'])): ?>
+                  <span>~<?= (int) $service['duration_minutes'] ?> min</span>
+                <?php endif; ?>
               </div>
             </div>
           </article>
@@ -102,5 +154,30 @@ $hasFilter = ($search_q !== '' || $search_category > 0);
     </section>
   </main>
   <?php include $partials . '/footer.php'; ?>
+<script>
+// Wire the "Use my location" button on the geo-search form. On success
+// fills the hidden lat/lng inputs and submits — the server uses the exact
+// coords and skips Nominatim. Failure leaves the typed postcode/suburb to
+// be geocoded server-side.
+(function () {
+  var btn = document.querySelector('[data-geo-btn]');
+  if (!btn || !navigator.geolocation) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    btn.textContent = 'Locating…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = document.getElementById('svc-lat') || document.getElementById('pro-lat');
+      var lng = document.getElementById('svc-lng') || document.getElementById('pro-lng');
+      if (lat) lat.value = pos.coords.latitude.toFixed(7);
+      if (lng) lng.value = pos.coords.longitude.toFixed(7);
+      var form = btn.closest('form');
+      if (form) form.submit();
+    }, function () {
+      btn.disabled = false;
+      btn.textContent = '📍 Use my location';
+    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
+  });
+})();
+</script>
 </body>
 </html>

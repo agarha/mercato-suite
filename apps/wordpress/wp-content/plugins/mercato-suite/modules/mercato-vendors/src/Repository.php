@@ -32,24 +32,227 @@ final class Repository
             throw new RuntimeException('business_name and store_slug are required.');
         }
 
-        $table = $wpdb->prefix . 'mercato_vendors';
-        $inserted = $wpdb->insert($table, [
+        // Profile fields populated during multi-step onboarding. All optional
+        // at insert time so legacy callers (admin-only register) still work.
+        $row = [
             'tenant_id' => $tenantId,
             'owner_user_id' => $ownerUserId,
             'business_name' => $businessName,
             'store_slug' => $storeSlug,
             'return_policy' => isset($data['return_policy']) ? $this->cleanText((string) $data['return_policy']) : null,
             'status' => 'pending',
-        ]);
+        ];
+        foreach ([
+            'headline', 'bio', 'phone', 'contact_email', 'photo_url', 'cover_url',
+            'languages', 'license_number', 'license_state', 'insurance_carrier',
+        ] as $textKey) {
+            if (isset($data[$textKey]) && $data[$textKey] !== '') {
+                $row[$textKey] = $this->cleanText((string) $data[$textKey]);
+            }
+        }
+        if (isset($data['years_experience'])) {
+            $row['years_experience'] = (int) $data['years_experience'];
+        }
+        if (isset($data['hourly_rate_minor'])) {
+            $row['hourly_rate_minor'] = (int) $data['hourly_rate_minor'];
+        }
+        if (isset($data['insurance_amount_minor'])) {
+            $row['insurance_amount_minor'] = (int) $data['insurance_amount_minor'];
+        }
+        if (isset($data['currency']) && \is_string($data['currency'])) {
+            $row['currency'] = \strtoupper(\substr($data['currency'], 0, 3));
+        }
+
+        $table = $wpdb->prefix . 'mercato_vendors';
+        $inserted = $wpdb->insert($table, $row);
 
         if ($inserted === false) {
             throw new RuntimeException('Unable to register vendor: ' . (string) $wpdb->last_error);
         }
 
-        $vendor = $this->find((int) $wpdb->insert_id);
+        $vendorId = (int) $wpdb->insert_id;
+
+        // Attach the owner to vendor_staff so downstream permission checks
+        // (Stripe Connect linking, payouts) treat them as the owner.
+        $staff = $wpdb->prefix . 'mercato_vendor_staff';
+        $wpdb->insert($staff, [
+            'vendor_id' => $vendorId,
+            'user_id' => $ownerUserId,
+            'role' => 'owner',
+        ]);
+
+        $vendor = $this->find($vendorId);
         $this->outbox->publish('mercato.vendor.registered.v1', $vendor, (string) $vendor['vendor_id'], $tenantId);
 
         return $vendor;
+    }
+
+    /**
+     * Update profile-only fields on a vendor. Used after onboarding to fill
+     * in bio, hourly rate, license/insurance details. Status workflow lives
+     * in setStatus() and is intentionally not touched here.
+     *
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function updateProfile(int $vendorId, array $data): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+
+        $update = [];
+        foreach ([
+            'business_name', 'headline', 'bio', 'phone', 'contact_email',
+            'photo_url', 'cover_url', 'languages', 'license_number',
+            'license_state', 'insurance_carrier', 'return_policy',
+        ] as $textKey) {
+            if (\array_key_exists($textKey, $data)) {
+                $update[$textKey] = $data[$textKey] === null ? null : $this->cleanText((string) $data[$textKey]);
+            }
+        }
+        if (\array_key_exists('years_experience', $data)) {
+            $update['years_experience'] = $data['years_experience'] === null ? null : (int) $data['years_experience'];
+        }
+        if (\array_key_exists('hourly_rate_minor', $data)) {
+            $update['hourly_rate_minor'] = $data['hourly_rate_minor'] === null ? null : (int) $data['hourly_rate_minor'];
+        }
+        if (\array_key_exists('insurance_amount_minor', $data)) {
+            $update['insurance_amount_minor'] = $data['insurance_amount_minor'] === null ? null : (int) $data['insurance_amount_minor'];
+        }
+        if ($update === []) {
+            return $this->find($vendorId);
+        }
+
+        $table = $wpdb->prefix . 'mercato_vendors';
+        $updated = $wpdb->update($table, $update, [
+            'tenant_id' => $tenantId,
+            'vendor_id' => $vendorId,
+        ]);
+        if ($updated === false) {
+            throw new RuntimeException('Unable to update vendor profile: ' . (string) $wpdb->last_error);
+        }
+
+        $vendor = $this->find($vendorId);
+        $this->outbox->publish('mercato.vendor.profile.updated.v1', $vendor, (string) $vendorId, $tenantId);
+        return $vendor;
+    }
+
+    /**
+     * Create a primary or secondary physical location for a vendor.
+     * service_radius_km is optional — when present, this location alone
+     * is enough to satisfy proximity discovery.
+     *
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function createLocation(int $vendorId, array $data): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        // Ensure caller can address this vendor under the current tenant.
+        $this->find($vendorId);
+
+        if (!isset($data['latitude'], $data['longitude'])) {
+            throw new RuntimeException('latitude and longitude are required.');
+        }
+
+        $row = [
+            'tenant_id' => $tenantId,
+            'vendor_id' => $vendorId,
+            'label' => isset($data['label']) ? $this->cleanText((string) $data['label']) : null,
+            'address_line1' => isset($data['address_line1']) ? $this->cleanText((string) $data['address_line1']) : null,
+            'city' => isset($data['city']) ? $this->cleanText((string) $data['city']) : null,
+            'region' => isset($data['region']) ? $this->cleanText((string) $data['region']) : null,
+            'postal_code' => isset($data['postal_code']) ? $this->cleanText((string) $data['postal_code']) : null,
+            'country' => isset($data['country']) ? \strtoupper(\substr((string) $data['country'], 0, 2)) : null,
+            'latitude' => (float) $data['latitude'],
+            'longitude' => (float) $data['longitude'],
+            'service_radius_km' => isset($data['service_radius_km']) ? (float) $data['service_radius_km'] : null,
+            'is_primary' => !empty($data['is_primary']) ? 1 : 0,
+        ];
+
+        $table = $wpdb->prefix . 'mercato_vendor_locations';
+        if ($row['is_primary'] === 1) {
+            $wpdb->update($table, ['is_primary' => 0], ['tenant_id' => $tenantId, 'vendor_id' => $vendorId]);
+        }
+        $inserted = $wpdb->insert($table, $row);
+        if ($inserted === false) {
+            throw new RuntimeException('Unable to create vendor location: ' . (string) $wpdb->last_error);
+        }
+
+        return ['location_id' => (int) $wpdb->insert_id] + $row;
+    }
+
+    /**
+     * Declare a service area (city/region/postal-code or geo radius) that the
+     * vendor covers. Multiple per vendor. Optionally scoped to a specific
+     * offering via product_id.
+     *
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    public function createServiceArea(int $vendorId, array $data): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $this->find($vendorId);
+
+        $label = $this->cleanText((string) ($data['label'] ?? ''));
+        if ($label === '') {
+            throw new RuntimeException('Service area label is required.');
+        }
+
+        $row = [
+            'tenant_id' => $tenantId,
+            'vendor_id' => $vendorId,
+            'product_id' => isset($data['product_id']) ? (int) $data['product_id'] : null,
+            'label' => $label,
+            'city' => isset($data['city']) ? $this->cleanText((string) $data['city']) : null,
+            'region' => isset($data['region']) ? $this->cleanText((string) $data['region']) : null,
+            'postal_code_prefix' => isset($data['postal_code_prefix']) ? $this->cleanText((string) $data['postal_code_prefix']) : null,
+            'country' => isset($data['country']) ? \strtoupper(\substr((string) $data['country'], 0, 2)) : null,
+            'latitude' => isset($data['latitude']) ? (float) $data['latitude'] : null,
+            'longitude' => isset($data['longitude']) ? (float) $data['longitude'] : null,
+            'radius_km' => isset($data['radius_km']) ? (float) $data['radius_km'] : null,
+        ];
+
+        $table = $wpdb->prefix . 'mercato_service_areas';
+        $inserted = $wpdb->insert($table, $row);
+        if ($inserted === false) {
+            throw new RuntimeException('Unable to create service area: ' . (string) $wpdb->last_error);
+        }
+
+        return ['area_id' => (int) $wpdb->insert_id] + $row;
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function locations(int $vendorId): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $table = $wpdb->prefix . 'mercato_vendor_locations';
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT location_id, label, address_line1, city, region, postal_code, country, latitude, longitude, service_radius_km, is_primary FROM `{$table}` WHERE tenant_id = %d AND vendor_id = %d ORDER BY is_primary DESC, location_id ASC",
+            $tenantId,
+            $vendorId
+        ), ARRAY_A) ?: [];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function serviceAreas(int $vendorId): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $table = $wpdb->prefix . 'mercato_service_areas';
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT area_id, product_id, label, city, region, postal_code_prefix, country, latitude, longitude, radius_km FROM `{$table}` WHERE tenant_id = %d AND vendor_id = %d ORDER BY area_id ASC",
+            $tenantId,
+            $vendorId
+        ), ARRAY_A) ?: [];
     }
 
     /**

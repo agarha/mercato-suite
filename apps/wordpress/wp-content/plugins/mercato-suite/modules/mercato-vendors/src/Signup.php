@@ -1,0 +1,208 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mercato\Vendors;
+
+use Mercato\Core\Container;
+use Mercato\Core\Tenant\Resolver;
+use RuntimeException;
+
+/**
+ * Self-signup orchestrator. Translates the multi-step storefront form into:
+ *   1. WordPress user (or reuses the logged-in one)
+ *   2. Vendor row with profile fields
+ *   3. Primary vendor location with lat/lng + service radius
+ *   4. Zero+ service-area declarations
+ *   5. Zero+ services (product + offering pairs) tagged with categories
+ *
+ * The whole flow is "best-effort transactional": if any step after the
+ * vendor insert fails we still leave a draft vendor in place so the admin
+ * can complete onboarding manually. Step 1 (user creation) is gated by
+ * tenant policy — when a logged-in WP user submits the form we skip
+ * creating a new one.
+ *
+ * Lives in mercato-vendors because the vendor record is the spine of the
+ * relationship; the orchestrator just hands off to peer repositories
+ * (ProductsRepository for services) via the DI container.
+ */
+final class Signup
+{
+    public function __construct(
+        private readonly Resolver $tenantResolver,
+        private readonly Repository $vendors,
+        private readonly Container $container,
+    ) {
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     * @return array<string,mixed>
+     */
+    public function run(array $payload, int $loggedInUserId): array
+    {
+        $tenantId = $this->tenantResolver->currentTenantId();
+
+        $userId = $loggedInUserId > 0
+            ? $loggedInUserId
+            : $this->ensureUser((array) ($payload['account'] ?? []));
+
+        $businessPayload = (array) ($payload['business'] ?? []);
+        $vendor = $this->vendors->register($businessPayload, $userId);
+        $vendorId = (int) $vendor['vendor_id'];
+
+        $created = [
+            'tenant_id' => $tenantId,
+            'user_id' => $userId,
+            'vendor' => $vendor,
+            'location' => null,
+            'service_areas' => [],
+            'services' => [],
+            'warnings' => [],
+        ];
+
+        // Primary location: required for geo-discovery to find this provider.
+        $location = (array) ($payload['location'] ?? []);
+        if (!empty($location['latitude']) && !empty($location['longitude'])) {
+            try {
+                $created['location'] = $this->vendors->createLocation($vendorId, [
+                    'label' => $location['label'] ?? 'Main location',
+                    'address_line1' => $location['address_line1'] ?? null,
+                    'city' => $location['city'] ?? null,
+                    'region' => $location['region'] ?? null,
+                    'postal_code' => $location['postal_code'] ?? null,
+                    'country' => $location['country'] ?? null,
+                    'latitude' => (float) $location['latitude'],
+                    'longitude' => (float) $location['longitude'],
+                    'service_radius_km' => isset($location['service_radius_km']) ? (float) $location['service_radius_km'] : 25.0,
+                    'is_primary' => true,
+                ]);
+            } catch (\Throwable $e) {
+                $created['warnings'][] = 'location: ' . $e->getMessage();
+            }
+        }
+
+        // Service areas: TaskRabbit-style "Work Area Map" entries. May be
+        // none if the provider works wherever the radius reaches.
+        foreach ((array) ($payload['service_areas'] ?? []) as $area) {
+            if (!\is_array($area)) {
+                continue;
+            }
+            try {
+                $created['service_areas'][] = $this->vendors->createServiceArea($vendorId, $area);
+            } catch (\Throwable $e) {
+                $created['warnings'][] = 'service_area: ' . $e->getMessage();
+            }
+        }
+
+        // Services: one product + offering per item. Categories are attached
+        // by category_ids on the product row.
+        $productsRepoClass = '\Mercato\Products\Repository';
+        if (\class_exists($productsRepoClass)) {
+            /** @var \Mercato\Products\Repository $productsRepo */
+            $productsRepo = $this->resolveProductsRepo();
+            foreach ((array) ($payload['services'] ?? []) as $service) {
+                if (!\is_array($service)) {
+                    continue;
+                }
+                try {
+                    $serviceRow = $productsRepo->create([
+                        'vendor_id' => $vendorId,
+                        'title' => (string) ($service['title'] ?? ''),
+                        'description' => $service['description'] ?? null,
+                        'price_minor' => (int) ($service['price_minor'] ?? 0),
+                        'stock_quantity' => isset($service['stock_quantity']) ? (int) $service['stock_quantity'] : 99,
+                        // Self-signup creates draft products until the vendor
+                        // is approved. Admin flips status to active.
+                        'status' => 'draft',
+                        'category_ids' => isset($service['category_ids']) ? (array) $service['category_ids'] : [],
+                        'duration_minutes' => isset($service['duration_minutes']) ? (int) $service['duration_minutes'] : null,
+                    ]);
+                    $created['services'][] = $serviceRow;
+                } catch (\Throwable $e) {
+                    $created['warnings'][] = 'service: ' . $e->getMessage();
+                }
+            }
+        } else {
+            $created['warnings'][] = 'services: mercato-products module unavailable';
+        }
+
+        return $created;
+    }
+
+    /**
+     * @param array<string,mixed> $account
+     */
+    private function ensureUser(array $account): int
+    {
+        if (!\function_exists('wp_create_user')) {
+            throw new RuntimeException('WordPress user functions unavailable.');
+        }
+
+        $email = \filter_var((string) ($account['email'] ?? ''), FILTER_VALIDATE_EMAIL);
+        if (!$email) {
+            throw new RuntimeException('A valid email address is required.');
+        }
+
+        if (\function_exists('email_exists')) {
+            $existing = \email_exists($email);
+            if ($existing) {
+                return (int) $existing;
+            }
+        }
+
+        $login = isset($account['username']) && $account['username'] !== ''
+            ? (string) $account['username']
+            : \strtolower(\preg_replace('/[^a-z0-9]+/i', '', \explode('@', $email)[0]));
+        $login = \substr($login, 0, 60) ?: 'pro_' . \time();
+
+        // Make login unique to avoid clobbering an existing account.
+        $base = $login;
+        $i = 1;
+        while (\function_exists('username_exists') && \username_exists($login)) {
+            $login = $base . $i++;
+            if ($i > 99) {
+                $login = $base . \time();
+                break;
+            }
+        }
+
+        $password = isset($account['password']) && \strlen((string) $account['password']) >= 8
+            ? (string) $account['password']
+            : (\function_exists('wp_generate_password') ? \wp_generate_password(20) : \bin2hex(\random_bytes(10)));
+
+        $userId = \wp_create_user($login, $password, $email);
+        if ($userId instanceof \WP_Error) {
+            throw new RuntimeException('Unable to create account: ' . $userId->get_error_message());
+        }
+
+        // Tag the user with a "provider applicant" capability for downstream
+        // permission checks. We deliberately don't grant full vendor caps
+        // until the admin approves; this is just for the onboarding inbox.
+        if (\function_exists('wp_update_user')) {
+            \wp_update_user([
+                'ID' => (int) $userId,
+                'first_name' => (string) ($account['first_name'] ?? ''),
+                'last_name' => (string) ($account['last_name'] ?? ''),
+                'role' => 'subscriber',
+            ]);
+        }
+
+        return (int) $userId;
+    }
+
+    /**
+     * Late-bind the products repository so the Vendors module doesn't have
+     * a hard load-order dependency on mercato-products. The Container is
+     * injected; we look up the bound concrete class by FQCN string so the
+     * use-statement isn't required.
+     */
+    private function resolveProductsRepo(): object
+    {
+        $cls = '\\Mercato\\Products\\Repository';
+        if (!$this->container->has($cls)) {
+            throw new RuntimeException('mercato-products module is not loaded.');
+        }
+        return $this->container->get($cls);
+    }
+}

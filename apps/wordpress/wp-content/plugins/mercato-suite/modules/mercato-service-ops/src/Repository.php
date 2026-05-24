@@ -375,6 +375,11 @@ final class Repository
             throw new RuntimeException('vendor_id and non-negative amount_minor are required.');
         }
 
+        // Admin-configurable bid throttling. Limits live in
+        // mercato_tenant_feature_flags so the admin can adjust them through
+        // the existing /flags REST surface without a schema change.
+        $this->enforceBidLimits($tenantId, $vendorId, $requestId);
+
         $table = $wpdb->prefix . 'mercato_service_bids';
         $row = [
             'tenant_id' => $tenantId,
@@ -557,5 +562,74 @@ final class Repository
     private function clean(string $value): string
     {
         return \function_exists('sanitize_text_field') ? \sanitize_text_field($value) : \trim($value);
+    }
+
+    /**
+     * Enforce admin-configurable bid throttling. Limits live in
+     * mercato_tenant_feature_flags so admins can tweak them via the existing
+     * /flags REST surface without a schema change. Three keys:
+     *   - bidding.daily_bid_limit_per_vendor  (max bids submitted in last 24h)
+     *   - bidding.max_bids_per_request        (counts current+previous bids on this request)
+     *   - bidding.min_seconds_between_bids    (cooldown since the vendor's most recent bid)
+     *
+     * Any limit set to 0 or unset is treated as "no limit" so a tenant can
+     * intentionally disable a control. Exceeding a limit raises a
+     * RuntimeException with a stable, machine-readable code suffix
+     * ("BID_LIMIT_*") that the storefront and admin UIs can branch on.
+     */
+    private function enforceBidLimits(int $tenantId, int $vendorId, int $requestId): void
+    {
+        global $wpdb;
+        $flags = $wpdb->prefix . 'mercato_tenant_feature_flags';
+        $bids = $wpdb->prefix . 'mercato_service_bids';
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT feature_key, limit_value FROM `{$flags}` WHERE tenant_id = %d AND feature_key LIKE 'bidding.%%'",
+            $tenantId
+        ), ARRAY_A) ?: [];
+        $limits = [];
+        foreach ($rows as $row) {
+            $limits[(string) $row['feature_key']] = $row['limit_value'] === null ? 0 : (int) $row['limit_value'];
+        }
+
+        $perRequest = (int) ($limits['bidding.max_bids_per_request'] ?? 0);
+        if ($perRequest > 0) {
+            $existingOnRequest = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM `{$bids}` WHERE tenant_id = %d AND request_id = %d AND vendor_id = %d AND status IN ('submitted','accepted')",
+                $tenantId,
+                $requestId,
+                $vendorId
+            ));
+            if ($existingOnRequest >= $perRequest) {
+                throw new RuntimeException('BID_LIMIT_PER_REQUEST');
+            }
+        }
+
+        $daily = (int) ($limits['bidding.daily_bid_limit_per_vendor'] ?? 0);
+        if ($daily > 0) {
+            $last24h = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM `{$bids}` WHERE tenant_id = %d AND vendor_id = %d AND created_at >= (UTC_TIMESTAMP(3) - INTERVAL 1 DAY)",
+                $tenantId,
+                $vendorId
+            ));
+            if ($last24h >= $daily) {
+                throw new RuntimeException('BID_LIMIT_DAILY');
+            }
+        }
+
+        $cooldown = (int) ($limits['bidding.min_seconds_between_bids'] ?? 0);
+        if ($cooldown > 0) {
+            $lastBidAt = (string) $wpdb->get_var($wpdb->prepare(
+                "SELECT created_at FROM `{$bids}` WHERE tenant_id = %d AND vendor_id = %d ORDER BY bid_id DESC LIMIT 1",
+                $tenantId,
+                $vendorId
+            ));
+            if ($lastBidAt !== '') {
+                $elapsed = \time() - (int) \strtotime($lastBidAt . ' UTC');
+                if ($elapsed < $cooldown) {
+                    throw new RuntimeException('BID_LIMIT_COOLDOWN');
+                }
+            }
+        }
     }
 }

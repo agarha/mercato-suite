@@ -245,6 +245,25 @@ final class Repository
         ] as $feature) {
             $this->setFlagForTenant($tenantId, $feature, true);
         }
+
+        // Bidding controls. Stored as feature flags with limit_value so
+        // tenants can adjust them through the existing /flags REST surface.
+        // Enforcement lives in ServiceOps\Repository::createBid().
+        $this->setFlagLimitForTenant($tenantId, 'bidding.daily_bid_limit_per_vendor', 10);
+        $this->setFlagLimitForTenant($tenantId, 'bidding.max_bids_per_request', 3);
+        $this->setFlagLimitForTenant($tenantId, 'bidding.min_seconds_between_bids', 60);
+    }
+
+    private function setFlagLimitForTenant(int $tenantId, string $featureKey, int $limit): void
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'mercato_tenant_feature_flags';
+        $wpdb->replace($table, [
+            'tenant_id' => $tenantId,
+            'feature_key' => $featureKey,
+            'enabled' => 1,
+            'limit_value' => $limit,
+        ]);
     }
 
     private function setFlagForTenant(int $tenantId, string $featureKey, bool $enabled): void
@@ -434,9 +453,7 @@ final class Repository
         }
 
         // Per-tenant theme override. Constrained to a tiny enum of known
-        // theme names so a tenant can't smuggle in an arbitrary template
-        // path. Unknown values are silently dropped (renderer falls back
-        // to the Mercato default page.php).
+        // theme names so a tenant can't smuggle in an arbitrary template path.
         if (isset($config['theme']) && \is_string($config['theme'])) {
             $theme = \sanitize_text_field($config['theme']);
             if (\in_array($theme, ['taskfirst'], true)) {
@@ -444,40 +461,18 @@ final class Repository
             }
         }
 
-        // Task-First nested config (Gigsii-only at present). Whitelist of
-        // text-scalar fields the page-taskfirst.php template reads. Anything
-        // else under `taskfirst` is silently dropped. The `chips` and
-        // `how_steps` arrays are passed through with shallow sanitization
-        // because their items contain icon glyphs that must round-trip.
+        // Task-First nested config (Gigsii-only at present).
         if (isset($config['taskfirst']) && \is_array($config['taskfirst'])) {
             $tf = $config['taskfirst'];
             $tfClean = [];
             foreach ([
-                'status_chip',
-                'hero_lead',
-                'hero_accent',
-                'hero_trail',
-                'input_label',
-                'input_text',
-                'polaroid_label',
-                'polaroid_caption',
-                'sticker_top',
-                'sticker_bottom',
-                'how_eyebrow',
-                'how_h2_lead',
-                'how_h2_em',
-                'how_h2_tail',
-                'pros_eyebrow',
-                'pros_h2_lead',
-                'pros_h2_em',
-                'pros_h2_tail',
-                'pros_link',
-                'provider_cta_eyebrow',
-                'provider_cta_lead',
-                'provider_cta_em',
-                'provider_cta_tail',
-                'provider_cta_copy',
-                'provider_cta_button',
+                'status_chip', 'hero_lead', 'hero_accent', 'hero_trail',
+                'input_label', 'input_text', 'polaroid_label', 'polaroid_caption',
+                'sticker_top', 'sticker_bottom',
+                'how_eyebrow', 'how_h2_lead', 'how_h2_em', 'how_h2_tail',
+                'pros_eyebrow', 'pros_h2_lead', 'pros_h2_em', 'pros_h2_tail', 'pros_link',
+                'provider_cta_eyebrow', 'provider_cta_lead', 'provider_cta_em',
+                'provider_cta_tail', 'provider_cta_copy', 'provider_cta_button',
             ] as $tfKey) {
                 if (\array_key_exists($tfKey, $tf)) {
                     $tfClean[$tfKey] = $sanitize($tf[$tfKey]);

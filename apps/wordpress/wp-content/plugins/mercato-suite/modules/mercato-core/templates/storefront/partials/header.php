@@ -33,7 +33,7 @@ if ($theme === 'taskfirst'):
     <?php endforeach; ?>
   </nav>
   <div class="tf-nav-actions">
-    <button class="ghost" type="button">Sign in</button>
+    <a class="ghost" href="<?= $attr($home . '/signup') ?>">Become a Pro</a>
     <a class="tf-cta-app" href="<?= $attr($home . '/account') ?>">Open app</a>
   </div>
 </header>
