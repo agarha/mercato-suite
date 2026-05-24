@@ -36,13 +36,50 @@ function Invoke-MercatoApi {
 }
 
 $storefront = @{
+    # Gigsii uses the Task-First theme overlay (storefront-taskfirst.css
+    # + templates/storefront/page-taskfirst.php). This is a per-tenant
+    # override; Mercato defaults are unchanged. To revert Gigsii back to
+    # the Mercato default look, remove the `theme` key.
+    theme = "taskfirst"
     brand = "Gigsii"
-    mark = "G"
-    title = "Gigsii Service Marketplace"
-    hero_headline = "The service marketplace for homeowners who want the job handled right."
-    hero_copy = "Discover verified local providers, compare bookable services, and keep every job moving from request to completion. Gigsii is powered by Mercato as a Xusmo-ready marketplace tenant."
-    primary_cta = "Open tenant admin"
-    secondary_cta = "Open provider console"
+    mark = "g"
+    title = "Gigsii — What needs doing today?"
+    hero_headline = "What needs doing today?"
+    hero_copy = "Tell us what's broken — or what you'd love off your list. Local pros respond with a quote in minutes."
+    primary_cta = "Find me help"
+    secondary_cta = "List your trade"
+    # Task-First text overrides. Emoji / decorative glyphs are NOT set here
+    # because PowerShell-on-Windows source-file UTF-8 round-tripping for
+    # multi-byte chars is unreliable. The PHP template
+    # (page-taskfirst.php) ships the emoji defaults inline, so leaving
+    # `chips` / `how_steps.icon` / `polaroid_caption` unset here means the
+    # PHP defaults win — which is what we want.
+    taskfirst = @{
+        status_chip = "1,248 pros online . avg. 14 min response"
+        hero_lead = "What"
+        hero_accent = "needs doing"
+        hero_trail = "today?"
+        input_label = "Describe it however you want"
+        input_text = 'My kitchen sink is leaking under the cabinet...'
+        polaroid_label = "Worker in action"
+        sticker_top = "smiled"
+        sticker_bottom = "at 4:18pm"
+        how_eyebrow = "How it goes"
+        how_h2_lead = 'From "ugh" to'
+        how_h2_em = "fixed"
+        how_h2_tail = ", in three messages."
+        pros_eyebrow = "People, not algorithms"
+        pros_h2_lead = "Meet a few of the"
+        pros_h2_em = "1,248"
+        pros_h2_tail = "pros nearby."
+        pros_link = "Browse the directory"
+        provider_cta_eyebrow = "For tradespeople"
+        provider_cta_lead = "Your phone, full of"
+        provider_cta_em = "real jobs"
+        provider_cta_tail = "."
+        provider_cta_copy = "Flat 4% on what you earn. No leads. No subscription."
+        provider_cta_button = "List your trade"
+    }
     catalog_headline = "Popular services ready to book"
     catalog_copy = "Curated local service cards with provider routing, category support, and booking capacity."
     catalog_badge = "Verified local help"
@@ -61,15 +98,16 @@ $storefront = @{
     item_fallback_copy = "Verified local service ready for booking."
     item_quantity_label = "booking slots"
     vendor_status_label = "verified provider"
+    # Nav uses __TENANT_HOME__ placeholders that Storefront\Config substitutes
+    # with /t/<tenant_slug> at render time. These point at real pages
+    # introduced in claude/storefront-navigation (Phase 5b) and later branches.
     nav = @(
-        @{ href = "#categories"; label = "Categories" },
-        @{ href = "#shop"; label = "Services" },
-        @{ href = "#vendors"; label = "Providers" },
-        @{ href = "#buyer"; label = "Client" },
-        @{ href = "#requests"; label = "Requests" },
-        @{ href = "#features"; label = "Features" },
-        @{ href = "#operations"; label = "Operations" },
-        @{ href = "#seller"; label = "Provider" },
+        @{ href = "__TENANT_HOME__"; label = "Home" },
+        @{ href = "__TENANT_HOME__/services"; label = "Services" },
+        @{ href = "__TENANT_HOME__/providers"; label = "Providers" },
+        @{ href = "__TENANT_HOME__/requests/new"; label = "Post request" },
+        @{ href = "__TENANT_HOME__/account"; label = "Client" },
+        @{ href = "__TENANT_HOME__/provider/dashboard"; label = "Provider" },
         @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
     )
     metric_labels = @{
@@ -109,27 +147,22 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
     domains = @(
         @{ domain = "localhost"; path_prefix = "/t/gigsii"; is_primary = $true; status = "active"; verified = $true }
     )
+    # Flags listed here are tenant-visible on the storefront feature-cloud.
+    # Dead/scaffold modules (ai-copilot, collaboration, disputes, fraud-risk,
+    # avalara, paypal-marketplace, postmark, shippo, taxjar, twilio, migration,
+    # subscriptions-module) are intentionally NOT seeded for the gigsii demo
+    # tenant because their backends are 29-LOC scaffolds. Re-enable here once
+    # the corresponding modules have real implementations.
     feature_flags = @{
-        "mercato.ai" = $true
-        "mercato.collaboration" = $true
         "mercato.commissions" = $true
         "mercato.core" = $true
-        "mercato.disputes" = $true
         "mercato.enterprise" = $true
-        "mercato.fraud" = $true
-        "mercato.integration.avalara" = $true
         "mercato.integration.aws_s3" = $true
-        "mercato.integration.paypal" = $true
-        "mercato.integration.postmark" = $true
         "mercato.integration.sendgrid" = $true
-        "mercato.integration.shippo" = $true
         "mercato.integration.stripe" = $true
         "mercato.integration.stripe_connect" = $true
-        "mercato.integration.taxjar" = $true
-        "mercato.integration.twilio" = $true
         "mercato.kyc" = $true
         "mercato.messaging" = $true
-        "mercato.migration" = $true
         "mercato.notifications" = $true
         "mercato.orders" = $true
         "mercato.payouts" = $true
@@ -139,7 +172,6 @@ $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
         "mercato.reviews" = $true
         "mercato.search" = $true
         "mercato.service_ops" = $true
-        "mercato.subscriptions" = $true
         "mercato.tax" = $true
         "mercato.vendors" = $true
         "gigsii.otp" = $true
@@ -240,17 +272,37 @@ foreach ($providerSpec in $providers) {
     }
 }
 
-$services = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products"
-$vendors = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors"
-$serviceCount = @($services | ForEach-Object { $_ }).Count
-$vendorCount = @($vendors | ForEach-Object { $_ }).Count
-
-[pscustomobject]@{
-    status = "seeded"
-    tenant_id = $tenant.tenant_id
-    tenant_slug = $tenant.tenant_slug
-    storefront = "$baseUrl/t/gigsii"
-    vendors = $vendorCount
-    services = $serviceCount
-    new_services = $createdServices
-} | ConvertTo-Json -Depth 8
+# Sample reviews per provider. Idempotent: skips when a provider already has
+# >= 3 published reviews. Tolerant of the reviews table not existing yet
+# (claude/reviews-mvp introduces the migration; if it has not run, the POST
+# returns 400 and we just continue).
+$reviewsByProvider = @{
+    "maplefix" = @(
+        @{ rating = 5; title = "Quick fix, clean job"; body = "Booked same-day for a leaking sink trap. Tech arrived in the window, fixed it in 25 minutes, left the area cleaner than they found it." },
+        @{ rating = 5; title = "Saved our weekend"; body = "Water heater started leaking Friday night. They came Saturday morning with the right replacement and had us back in hot water by lunch." },
+        @{ rating = 4; title = "Solid work, fair price"; body = "Replaced an outdoor hose bib. Quote matched the final invoice. Would book again." }
+    )
+    "brightnest" = @(
+        @{ rating = 5; title = "Best deep clean in years"; body = "Move-out cleaning before we handed over the keys. Got the deposit back in full. Highly recommend." },
+        @{ rating = 5; title = "Reliable weekly cleaning"; body = "Have used them every two weeks for four months now. Consistent crew, consistent quality." },
+        @{ rating = 4; title = "Good with a quick turnaround"; body = "Needed the place spotless before in-laws arrived. They squeezed us in with a day''s notice." },
+        @{ rating = 5; title = "Friendly and thorough"; body = "Crew was professional, paid attention to baseboards and inside cabinets. Worth every penny." }
+    )
+    "urbanspark" = @(
+        @{ rating = 5; title = "Smart-switch install done right"; body = "Replaced six outlets and two light switches with smart-home gear. Labelled the breaker, tested every device, walked us through the app." },
+        @{ rating = 4; title = "Diagnosed the flicker"; body = "Living room lights had been flickering for months. Found a loose neutral in the panel, fixed it inside an hour." },
+        @{ rating = 5; title = "Professional from quote to invoice"; body = "Clear scope up front, change order documented when we added a circuit. Will use them again for the basement reno." }
+    )
+}
+$reviewedProviders = 0
+$reviewsInserted = 0
+foreach ($providerSlug in $reviewsByProvider.Keys) {
+    try {
+        $existingReviews = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors?slug=$providerSlug" -Method "GET"
+        # Look up the vendor row for this slug
+        $matchingVendor = @($existingReviews | ForEach-Object { $_ } | Where-Object { $_.store_slug -eq $providerSlug })
+        if ($matchingVendor.Count -eq 0) {
+            Write-Host "  reviews: provider $providerSlug not found, skipping"
+            continue
+        }
+        $vendorId = [int] $matchingVendor[0].vend

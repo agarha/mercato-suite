@@ -13,10 +13,11 @@ use Mercato\Core\Tenant\Resolver;
  * Route table:
  *   /                                          -> home (default tenant)
  *   /t/<slug>/                                 -> home
- *   /t/<slug>/services                         -> services index
+ *   /t/<slug>/services[?q=&category=]          -> services index (filterable)
  *   /t/<slug>/providers                        -> provider directory
  *   /t/<slug>/providers/<provider-slug>        -> provider detail
  *   /t/<slug>/requests/new                     -> request-new form
+ *   /t/<slug>/provider/dashboard               -> provider self-service dashboard
  *   /t/<slug>/account                          -> buyer account
  *   anything else                              -> null (WP fallthrough)
  */
@@ -62,6 +63,9 @@ final class Renderer
         if ($local === '/requests/new') {
             return $this->renderRequestNew();
         }
+        if ($local === '/provider/dashboard') {
+            return $this->renderProviderDashboard();
+        }
         if ($local === '/account') {
             return $this->renderAccount();
         }
@@ -70,8 +74,17 @@ final class Renderer
 
     public function renderHome(): string
     {
-        return $this->render('page.php', [
-            'data' => $this->repository->snapshot($this->tenants->currentTenantId()),
+        $tid    = $this->tenants->currentTenantId();
+        $config = $this->config->forTenant($tid);
+        $theme  = (string) ($config['theme'] ?? '');
+
+        // Per-tenant theme override. Mercato default = page.php.
+        // Gigsii sets theme="taskfirst" in its tenant settings JSON to use
+        // the bespoke design pulled from the Gigsii design canvas.
+        $template = $theme === 'taskfirst' ? 'page-taskfirst.php' : 'page.php';
+
+        return $this->render($template, [
+            'data'         => $this->repository->snapshot($tid),
             'current_page' => 'home',
         ]);
     }
@@ -79,9 +92,20 @@ final class Renderer
     public function renderServices(): string
     {
         $tid = $this->tenants->currentTenantId();
+        $q = isset($_GET['q']) ? \trim((string) $_GET['q']) : '';
+        $category = isset($_GET['category']) ? (int) $_GET['category'] : 0;
+        if (\function_exists('sanitize_text_field')) {
+            $q = \sanitize_text_field($q);
+        }
+        if (\strlen($q) > 100) {
+            $q = \substr($q, 0, 100);
+        }
+
         return $this->render('services-page.php', [
-            'data' => $this->repository->servicesPage($tid),
+            'data' => $this->repository->servicesPage($tid, $q, $category),
             'current_page' => 'services',
+            'search_q' => $q,
+            'search_category' => $category,
         ]);
     }
 
@@ -113,6 +137,16 @@ final class Renderer
         return $this->render('request-new.php', [
             'data' => $this->repository->requestNewPage($tid),
             'current_page' => 'requests',
+        ]);
+    }
+
+    public function renderProviderDashboard(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        $uid = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
+        return $this->render('provider-dashboard.php', [
+            'data' => $this->repository->providerDashboard($tid, $uid),
+            'current_page' => 'provider',
         ]);
     }
 
@@ -160,19 +194,4 @@ final class Renderer
             'esc' => static fn (mixed $v): string => \esc_html((string) $v),
             'attr' => static fn (mixed $v): string => \esc_attr((string) $v),
             'money' => static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2),
-            'partials' => $this->templateDir . '/partials',
-        ], $extra);
-
-        $path = $this->templateDir . '/' . $templateFile;
-        if (!\is_readable($path)) {
-            return '';
-        }
-
-        \ob_start();
-        (static function (string $__file, array $__ctx): void {
-            \extract($__ctx, EXTR_OVERWRITE);
-            include $__file;
-        })($path, $context);
-        return (string) \ob_get_clean();
-    }
-}
+            'partials
