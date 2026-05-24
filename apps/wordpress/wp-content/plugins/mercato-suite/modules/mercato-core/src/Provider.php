@@ -29,11 +29,15 @@ final class Provider extends ServiceProvider
             $c->get(Storefront\Config::class),
             $c->get(Storefront\Repository::class),
         ));
+        $this->container->bind(Geo\Provider::class, fn ($c): Geo\Provider => new Geo\Provider(
+            $c->get(Tenant\Resolver::class),
+        ));
     }
 
     public function boot(): void
     {
         $this->container->get(WooCommerce\HookAdapter::class)->register();
+        $this->container->get(Geo\Provider::class)->boot();
 
         if (\function_exists('add_action')) {
             \add_action('init', [$this, 'serveMetricsEndpoint']);
