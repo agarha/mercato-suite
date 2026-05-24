@@ -61,15 +61,16 @@ $storefront = @{
     item_fallback_copy = "Verified local service ready for booking."
     item_quantity_label = "booking slots"
     vendor_status_label = "verified provider"
+    # Nav uses __TENANT_HOME__ placeholders that Storefront\Config substitutes
+    # with /t/<tenant_slug> at render time. These point at real pages
+    # introduced in claude/storefront-navigation (Phase 5b) and later branches.
     nav = @(
-        @{ href = "#categories"; label = "Categories" },
-        @{ href = "#shop"; label = "Services" },
-        @{ href = "#vendors"; label = "Providers" },
-        @{ href = "#buyer"; label = "Client" },
-        @{ href = "#requests"; label = "Requests" },
-        @{ href = "#features"; label = "Features" },
-        @{ href = "#operations"; label = "Operations" },
-        @{ href = "#seller"; label = "Provider" },
+        @{ href = "__TENANT_HOME__"; label = "Home" },
+        @{ href = "__TENANT_HOME__/services"; label = "Services" },
+        @{ href = "__TENANT_HOME__/providers"; label = "Providers" },
+        @{ href = "__TENANT_HOME__/requests/new"; label = "Post request" },
+        @{ href = "__TENANT_HOME__/account"; label = "Client" },
+        @{ href = "__TENANT_HOME__/provider/dashboard"; label = "Provider" },
         @{ href = "/wp-admin/admin.php?page=mercato-admin"; label = "Admin" }
     )
     metric_labels = @{
