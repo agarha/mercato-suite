@@ -73,4 +73,18 @@ If the design tool just wants the HTML or CSS as plain text (no rendering):
 
 - **Tenant:** Gigsii (services marketplace for home services). With the Task-First theme: cream `#fff8ee` base, sage `#b8d4c0`, peach `#ffd5b8`, butter `#ffe79b`, deep navy `#1f2a52` text, peach-deep `#ff8a5b` CTA.
 - **Design system — default Mercato:** Inter type, 1.25× type scale, deep evergreen brand. Unchanged by this pass.
-- **Design system — Task-First overlay (Gigsii-only):** Geist sans + Instrument Serif italic acce
+- **Design system — Task-First overlay (Gigsii-only):** Geist sans + Instrument Serif italic accents + JetBrains Mono step tags. Pill-shaped CTAs, 22–28px radii, soft pastel blobs as decoration. Loads via `storefront-taskfirst.css` and `page-taskfirst.php` only when `storefront.theme = "taskfirst"`.
+- **A11y baseline:** WCAG 2.1 AA contrast on body text, skip-link, semantic landmarks (`<header role="banner">`, `<main id="main">`, `<footer role="contentinfo">`), ARIA-labeled regions, visible focus rings using `--accent`.
+- **Three seeded providers** with realistic copy: MapleFix (plumbing), BrightNest (cleaning), UrbanSpark (electrical).
+- **Ten sample reviews** spread across them (mix of 4-star and 5-star, plausible service-marketplace text).
+- **Server-rendered:** PHP templates inside WordPress, not a React SPA. Tenant-agnostic — same template stack drives any future Xusmo tenant.
+
+## 5. What I'd ask a design reviewer to look for
+
+- Visual rhythm across the hero → metrics → sections cascade.
+- Card density on the services index and provider directory.
+- Star-rating treatment (Unicode glyphs `★ ⯨ ☆` — could be SVG later).
+- Empty states (visible on `account.html` when not logged in; intentionally not shown in this snapshot which is the logged-in variant).
+- Type hierarchy on `provider-dashboard.html` — three sections stacked.
+- Form aesthetic on `request-new.html`.
+

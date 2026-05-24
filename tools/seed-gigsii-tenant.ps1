@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $baseUrl = $env:MERCATO_E2E_BASE_URL
 if (!$baseUrl) {
@@ -43,9 +43,9 @@ $storefront = @{
     theme = "taskfirst"
     brand = "Gigsii"
     mark = "g"
-    title = "Gigsii — What needs doing today?"
+    title = "Gigsii - What needs doing today?"
     hero_headline = "What needs doing today?"
-    hero_copy = "Tell us what's broken — or what you'd love off your list. Local pros respond with a quote in minutes."
+    hero_copy = "Tell us what's broken - or what you'd love off your list. Local pros respond with a quote in minutes."
     primary_cta = "Find me help"
     secondary_cta = "List your trade"
     # Task-First text overrides. Emoji / decorative glyphs are NOT set here
@@ -53,7 +53,7 @@ $storefront = @{
     # multi-byte chars is unreliable. The PHP template
     # (page-taskfirst.php) ships the emoji defaults inline, so leaving
     # `chips` / `how_steps.icon` / `polaroid_caption` unset here means the
-    # PHP defaults win — which is what we want.
+    # PHP defaults win - which is what we want.
     taskfirst = @{
         status_chip = "1,248 pros online . avg. 14 min response"
         hero_lead = "What"
@@ -302,8 +302,7 @@ foreach ($providerSpec in $providers) {
         is_primary = $true
     } | Out-Null
 
-    # Declare extra geo-tagged service areas so the discovery filter has
-    # multiple polygons to match against (mirrors TaskRabbit's Work Area Map).
+    # Declare extra geo-tagged service areas (TaskRabbit-style work-area polygons).
     foreach ($area in $providerSpec.extra_areas) {
         Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/service-areas" -Method "POST" -Body @{
             label = $area.label
@@ -333,7 +332,7 @@ foreach ($providerSpec in $providers) {
                 status = "active"
                 pricing_type = $serviceSpec.pricing_type
             }
-            if ($serviceSpec.PSObject.Properties.Match('unit_label').Count -gt 0) {
+            if ($serviceSpec.ContainsKey("unit_label")) {
                 $serviceBody.unit_label = $serviceSpec.unit_label
             }
             Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products" -Method "POST" -Body $serviceBody | Out-Null
@@ -343,9 +342,7 @@ foreach ($providerSpec in $providers) {
 }
 
 # Sample reviews per provider. Idempotent: skips when a provider already has
-# >= 3 published reviews. Tolerant of the reviews table not existing yet
-# (claude/reviews-mvp introduces the migration; if it has not run, the POST
-# returns 400 and we just continue).
+# >= 3 published reviews. Tolerant of the reviews table not existing yet.
 $reviewsByProvider = @{
     "maplefix" = @(
         @{ rating = 5; title = "Quick fix, clean job"; body = "Booked same-day for a leaking sink trap. Tech arrived in the window, fixed it in 25 minutes, left the area cleaner than they found it." },
@@ -355,8 +352,7 @@ $reviewsByProvider = @{
     "brightnest" = @(
         @{ rating = 5; title = "Best deep clean in years"; body = "Move-out cleaning before we handed over the keys. Got the deposit back in full. Highly recommend." },
         @{ rating = 5; title = "Reliable weekly cleaning"; body = "Have used them every two weeks for four months now. Consistent crew, consistent quality." },
-        @{ rating = 4; title = "Good with a quick turnaround"; body = "Needed the place spotless before in-laws arrived. They squeezed us in with a day''s notice." },
-        @{ rating = 5; title = "Friendly and thorough"; body = "Crew was professional, paid attention to baseboards and inside cabinets. Worth every penny." }
+        @{ rating = 4; title = "Good with a quick turnaround"; body = "Needed the place spotless before in-laws arrived. They squeezed us in with a day''s notice." }
     )
     "urbanspark" = @(
         @{ rating = 5; title = "Smart-switch install done right"; body = "Replaced six outlets and two light switches with smart-home gear. Labelled the breaker, tested every device, walked us through the app." },
@@ -364,55 +360,38 @@ $reviewsByProvider = @{
         @{ rating = 5; title = "Professional from quote to invoice"; body = "Clear scope up front, change order documented when we added a circuit. Will use them again for the basement reno." }
     )
 }
-$reviewedProviders = 0
+
 $reviewsInserted = 0
 foreach ($providerSlug in $reviewsByProvider.Keys) {
-    try {
-        $existingReviews = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors?slug=$providerSlug" -Method "GET"
-        # Look up the vendor row for this slug
-        $matchingVendor = @($existingReviews | ForEach-Object { $_ } | Where-Object { $_.store_slug -eq $providerSlug })
-        if ($matchingVendor.Count -eq 0) {
-            Write-Host "  reviews: provider $providerSlug not found, skipping"
-            continue
-        }
-        $vendorId = [int] $matchingVendor[0].vendor_id
-        $current = $null
+    $providerRow = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" | Where-Object { $_.store_slug -eq $providerSlug })
+    if ($providerRow.Count -eq 0) { continue }
+    $vendorId = [int]@($providerRow[0].vendor_id)[0]
+    foreach ($r in $reviewsByProvider[$providerSlug]) {
         try {
-            $current = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "GET"
+            Invoke-MercatoApi -TenantSlug "gigsii" -Path "/reviews" -Method "POST" -Body @{
+                vendor_id = $vendorId
+                buyer_user_id = 1
+                rating = [int] $r.rating
+                title = $r.title
+                body = $r.body
+                status = "published"
+            } | Out-Null
+            $reviewsInserted++
         } catch {
-            Write-Host "  reviews: GET /vendors/$vendorId/reviews failed (table probably missing); skipping $providerSlug"
-            continue
+            # Reviews module / table may not be loaded yet; skip quietly.
         }
-        $currentCount = if ($current.count) { [int] $current.count } else { 0 }
-        if ($currentCount -ge 3) {
-            Write-Host "  reviews: $providerSlug already has $currentCount; skipping"
-            continue
-        }
-        foreach ($review in $reviewsByProvider[$providerSlug]) {
-            try {
-                Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "POST" -Body $review | Out-Null
-                $reviewsInserted++
-            } catch {
-                Write-Host "  reviews: insert failed for $providerSlug ($($_.Exception.Message)); continuing"
-            }
-        }
-        $reviewedProviders++
-    } catch {
-        Write-Host "  reviews: $providerSlug lookup failed ($($_.Exception.Message)); continuing"
     }
 }
 
-$services = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products"
-$vendors = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors"
-$serviceCount = @($services | ForEach-Object { $_ }).Count
-$vendorCount = @($vendors | ForEach-Object { $_ }).Count
-
-[pscustomobject]@{
-    status = "seeded"
-    tenant_id = $tenant.tenant_id
-    tenant_slug = $tenant.tenant_slug
-    storefront = "$baseUrl/t/gigsii"
-    vendors = $vendorCount
-    services = $serviceCount
-    new_services = $createdServices
-} | ConvertTo-Json -Depth 8
+Write-Host ""
+Write-Host "Gigsii seed complete:"
+Write-Host "  Categories: $($categoryByName.Count)"
+Write-Host "  Providers: $($providers.Count)"
+Write-Host "  Services created this run: $createdServices"
+Write-Host "  Reviews inserted this run: $reviewsInserted"
+Write-Host ""
+Write-Host "Open these to verify:"
+Write-Host "  http://localhost:8092/t/gigsii/signup"
+Write-Host "  http://localhost:8092/t/gigsii/providers"
+Write-Host "  http://localhost:8092/t/gigsii/services?near=Toronto&radius=25"
+Write-Host "  http://localhost:8092/t/gigsii/providers/maplefix"

@@ -65,6 +65,12 @@ final class Repository
             throw new RuntimeException('body is required.');
         }
 
+        // Authorisation check: refuse if the thread does not belong to the
+        // current tenant. find() throws RuntimeException('Thread not found.')
+        // when the tenant scope rejects, intentionally indistinguishable from
+        // a missing-thread response so cross-tenant existence cannot be probed.
+        $this->find($threadId);
+
         $messages = $wpdb->prefix . 'mercato_messages';
         $wpdb->insert($messages, [
             'thread_id' => $threadId,
@@ -78,19 +84,36 @@ final class Repository
     }
 
     /**
+     * Resolve a thread + its messages for the *current* tenant.
+     * Throws if the thread does not exist OR belongs to a different tenant —
+     * same error in both cases so the API does not leak cross-tenant existence.
+     *
      * @return array<string,mixed>
      */
     public function find(int $threadId): array
     {
         global $wpdb;
 
+        $tenantId = $this->tenantResolver->currentTenantId();
         $threads = $wpdb->prefix . 'mercato_message_threads';
         $messages = $wpdb->prefix . 'mercato_messages';
-        $thread = $wpdb->get_row($wpdb->prepare("SELECT * FROM `{$threads}` WHERE `thread_id` = %d", $threadId), ARRAY_A);
+
+        $thread = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$threads}` WHERE `thread_id` = %d AND `tenant_id` = %d",
+            $threadId,
+            $tenantId
+        ), ARRAY_A);
         if (!$thread) {
             throw new RuntimeException('Thread not found.');
         }
-        $thread['messages'] = $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$messages}` WHERE `thread_id` = %d ORDER BY `created_at` ASC", $threadId), ARRAY_A) ?: [];
+
+        // Messages inherit tenant via thread_id; the parent check above
+        // already enforced tenant ownership of the thread.
+        $thread['messages'] = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM `{$messages}` WHERE `thread_id` = %d ORDER BY `created_at` ASC",
+            $threadId
+        ), ARRAY_A) ?: [];
+
         return $thread;
     }
 

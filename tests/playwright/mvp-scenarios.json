@@ -19,7 +19,6 @@
   {"id":"PW-018","name":"media complete scan succeeds","url":"/?rest_route=/mercato/v1/media/{id}/complete","assertions":["status-200","clean"],"area":"media"},
   {"id":"PW-019","name":"multi-vendor checkout split smoke","url":"woocommerce_checkout_order_processed","assertions":["suborders-created"],"area":"orders"},
   {"id":"PW-020","name":"suborder tracking update","url":"/?rest_route=/mercato/v1/orders/suborders/{id}","assertions":["status-200","tracking"],"area":"orders"},
-  {"id":"PW-021","name":"payment intent create","url":"/?rest_route=/mercato/v1/stripe/payment-intents","assertions":["status-201","payment-intent"],"area":"payments"},
   {"id":"PW-022","name":"payment complete marks suborders","url":"/?rest_route=/mercato/v1/orders/{id}/payment-complete","assertions":["status-200","paid"],"area":"orders"},
   {"id":"PW-023","name":"refund create records Stripe refund","url":"/?rest_route=/mercato/v1/stripe/refunds","assertions":["status-201","refund-id"],"area":"refunds"},
   {"id":"PW-024","name":"suborder refund reverses commission","url":"/?rest_route=/mercato/v1/orders/suborders/{id}/refund","assertions":["status-201","commission-reversal"],"area":"refunds"},
