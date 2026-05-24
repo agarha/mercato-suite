@@ -235,6 +235,66 @@ foreach ($providerSpec in $providers) {
     }
 }
 
+# Sample reviews per provider. Idempotent: skips when a provider already has
+# >= 3 published reviews. Tolerant of the reviews table not existing yet
+# (claude/reviews-mvp introduces the migration; if it has not run, the POST
+# returns 400 and we just continue).
+$reviewsByProvider = @{
+    "maplefix" = @(
+        @{ rating = 5; title = "Quick fix, clean job"; body = "Booked same-day for a leaking sink trap. Tech arrived in the window, fixed it in 25 minutes, left the area cleaner than they found it." },
+        @{ rating = 5; title = "Saved our weekend"; body = "Water heater started leaking Friday night. They came Saturday morning with the right replacement and had us back in hot water by lunch." },
+        @{ rating = 4; title = "Solid work, fair price"; body = "Replaced an outdoor hose bib. Quote matched the final invoice. Would book again." }
+    )
+    "brightnest" = @(
+        @{ rating = 5; title = "Best deep clean in years"; body = "Move-out cleaning before we handed over the keys. Got the deposit back in full. Highly recommend." },
+        @{ rating = 5; title = "Reliable weekly cleaning"; body = "Have used them every two weeks for four months now. Consistent crew, consistent quality." },
+        @{ rating = 4; title = "Good with a quick turnaround"; body = "Needed the place spotless before in-laws arrived. They squeezed us in with a day''s notice." },
+        @{ rating = 5; title = "Friendly and thorough"; body = "Crew was professional, paid attention to baseboards and inside cabinets. Worth every penny." }
+    )
+    "urbanspark" = @(
+        @{ rating = 5; title = "Smart-switch install done right"; body = "Replaced six outlets and two light switches with smart-home gear. Labelled the breaker, tested every device, walked us through the app." },
+        @{ rating = 4; title = "Diagnosed the flicker"; body = "Living room lights had been flickering for months. Found a loose neutral in the panel, fixed it inside an hour." },
+        @{ rating = 5; title = "Professional from quote to invoice"; body = "Clear scope up front, change order documented when we added a circuit. Will use them again for the basement reno." }
+    )
+}
+$reviewedProviders = 0
+$reviewsInserted = 0
+foreach ($providerSlug in $reviewsByProvider.Keys) {
+    try {
+        $existingReviews = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors?slug=$providerSlug" -Method "GET"
+        # Look up the vendor row for this slug
+        $matchingVendor = @($existingReviews | ForEach-Object { $_ } | Where-Object { $_.store_slug -eq $providerSlug })
+        if ($matchingVendor.Count -eq 0) {
+            Write-Host "  reviews: provider $providerSlug not found, skipping"
+            continue
+        }
+        $vendorId = [int] $matchingVendor[0].vendor_id
+        $current = $null
+        try {
+            $current = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "GET"
+        } catch {
+            Write-Host "  reviews: GET /vendors/$vendorId/reviews failed (table probably missing); skipping $providerSlug"
+            continue
+        }
+        $currentCount = if ($current.count) { [int] $current.count } else { 0 }
+        if ($currentCount -ge 3) {
+            Write-Host "  reviews: $providerSlug already has $currentCount; skipping"
+            continue
+        }
+        foreach ($review in $reviewsByProvider[$providerSlug]) {
+            try {
+                Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$vendorId/reviews" -Method "POST" -Body $review | Out-Null
+                $reviewsInserted++
+            } catch {
+                Write-Host "  reviews: insert failed for $providerSlug ($($_.Exception.Message)); continuing"
+            }
+        }
+        $reviewedProviders++
+    } catch {
+        Write-Host "  reviews: $providerSlug lookup failed ($($_.Exception.Message)); continuing"
+    }
+}
+
 $services = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/products"
 $vendors = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors"
 $serviceCount = @($services | ForEach-Object { $_ }).Count
