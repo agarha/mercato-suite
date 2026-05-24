@@ -72,6 +72,9 @@ final class Renderer
         if ($local === '/signup' || $local === '/become-a-pro') {
             return $this->renderSignup();
         }
+        if ($local === '/verify-email') {
+            return $this->renderVerifyEmail();
+        }
         if ($local === '/account') {
             return $this->renderAccount();
         }
@@ -104,13 +107,22 @@ final class Renderer
             $q = \substr($q, 0, 100);
         }
 
+        // ?type=rental|service|digital|physical filters the listing pool.
+        // Anything else (or absent) falls back to no listing-type filter.
+        $type = isset($_GET['type']) ? (string) $_GET['type'] : '';
+        $allowedTypes = ['service', 'rental', 'digital', 'physical'];
+        if (!\in_array($type, $allowedTypes, true)) {
+            $type = '';
+        }
+
         [$lat, $lng, $nearText, $nearDisplay, $radiusKm] = $this->resolveGeoQuery();
 
         return $this->render('services-page.php', [
-            'data' => $this->repository->servicesPage($tid, $q, $category, $lat, $lng, $radiusKm),
+            'data' => $this->repository->servicesPage($tid, $q, $category, $lat, $lng, $radiusKm, $type),
             'current_page' => 'services',
             'search_q' => $q,
             'search_category' => $category,
+            'search_type' => $type,
             'search_near' => $nearText,
             'search_near_display' => $nearDisplay,
             'search_radius_km' => $radiusKm,
@@ -182,6 +194,15 @@ final class Renderer
         $tid = $this->tenants->currentTenantId();
         return $this->render('signup-page.php', [
             'data' => $this->repository->signupPage($tid),
+            'current_page' => 'signup',
+        ]);
+    }
+
+    public function renderVerifyEmail(): string
+    {
+        $token = isset($_GET['token']) ? (string) $_GET['token'] : '';
+        return $this->render('verify-email-page.php', [
+            'data' => ['token' => $token],
             'current_page' => 'signup',
         ]);
     }
@@ -258,24 +279,4 @@ final class Renderer
 
         $context = \array_merge([
             'config' => $config,
-            'theme' => (string) ($config['theme'] ?? ''),
-            'asset_url' => $this->assetUrl,
-            'esc' => static fn (mixed $v): string => \esc_html((string) $v),
-            'attr' => static fn (mixed $v): string => \esc_attr((string) $v),
-            'money' => static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2),
-            'partials' => $this->templateDir . '/partials',
-        ], $extra);
-
-        $path = $this->templateDir . '/' . $templateFile;
-        if (!\is_readable($path)) {
-            return '';
-        }
-
-        \ob_start();
-        (static function (string $__file, array $__ctx): void {
-            \extract($__ctx, EXTR_OVERWRITE);
-            include $__file;
-        })($path, $context);
-        return (string) \ob_get_clean();
-    }
-}
+        

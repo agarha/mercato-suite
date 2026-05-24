@@ -26,8 +26,8 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
-  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
-  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
+  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront.css')) ?>">
+  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront-taskfirst.css')) ?>"><?php endif; ?>
 </head>
 <body<?= $theme === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -92,10 +92,43 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
     <section class="section">
       <div class="section-head">
         <div>
-          <h2><?= $resultCount ?> active service<?= $resultCount === 1 ? '' : 's' ?></h2>
-          <p>Each service is offered by a verified provider on this tenant.</p>
+          <h2><?= $resultCount ?> active <?= ($search_type ?? '') === 'rental' ? 'rental' : 'listing' ?><?= $resultCount === 1 ? '' : 's' ?></h2>
+          <p>Each listing is offered by a verified provider on this tenant.</p>
         </div>
         <span class="pill"><?= count($data['categories']) ?> categories</span>
+      </div>
+
+      <?php
+        // Listing-type chips — let users narrow to Services, Rentals, etc.
+        // The 'type' query param survives across pagination/filters.
+        $activeType = (string) ($search_type ?? '');
+        $typeOptions = [
+          ['key' => '', 'label' => 'All'],
+          ['key' => 'service', 'label' => 'Services'],
+          ['key' => 'rental', 'label' => 'Rentals'],
+          ['key' => 'digital', 'label' => 'Digital'],
+          ['key' => 'physical', 'label' => 'Items'],
+        ];
+        $baseQs = [];
+        if (!empty($search_q)) $baseQs['q'] = $search_q;
+        if (!empty($search_category)) $baseQs['category'] = (string) $search_category;
+        if (!empty($search_near)) $baseQs['near'] = $search_near;
+        if (!empty($search_radius_km)) $baseQs['radius'] = (string) $search_radius_km;
+      ?>
+      <div class="listing-type-filter" role="tablist" aria-label="Filter by listing type">
+        <?php foreach ($typeOptions as $opt):
+          $qs = $baseQs;
+          if ($opt['key'] !== '') $qs['type'] = $opt['key'];
+          $href = $home . '/services' . (empty($qs) ? '' : '?' . http_build_query($qs));
+          $isActive = $activeType === $opt['key'];
+        ?>
+          <a
+            href="<?= $attr($href) ?>"
+            role="tab"
+            aria-selected="<?= $isActive ? 'true' : 'false' ?>"
+            class="listing-type-chip<?= $isActive ? ' is-active' : '' ?>"
+          ><?= $esc($opt['label']) ?></a>
+        <?php endforeach; ?>
       </div>
 
       <div class="product-grid">
@@ -108,11 +141,23 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
           $tone = ['market-blue', 'market-green', 'market-red', 'market-gold'][$index % 4];
           $pricingType = (string) ($service['pricing_type'] ?? 'fixed');
           $unitLabel = (string) ($service['unit_label'] ?? '');
+          // Cover the legacy values (hourly/per_unit/quote_required) PLUS the
+          // rental cadences added in migration 0004 (per_hour/per_day/per_week/per_month).
           $pricingSuffix = match ($pricingType) {
-            'hourly' => ' / hr',
+            'hourly', 'per_hour' => ' / hr',
+            'per_day' => ' / day',
+            'per_week' => ' / week',
+            'per_month' => ' / month',
             'per_unit' => $unitLabel !== '' ? ' / ' . $unitLabel : ' / unit',
             'quote_required' => '',
             default => '',
+          };
+          $listingType = (string) ($service['listing_type'] ?? 'service');
+          $listingBadge = match ($listingType) {
+            'rental' => ['label' => 'Rental', 'class' => 'badge-rental'],
+            'digital' => ['label' => 'Digital', 'class' => 'badge-digital'],
+            'physical' => ['label' => 'Item', 'class' => 'badge-physical'],
+            default => null,
           };
           $distance = $service['distance_km'] ?? null;
           $servesArea = !empty($service['serves_area']);
@@ -120,7 +165,7 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
           <article class="product-card">
             <div class="product-media <?= $tone ?>">
               <?php if (!empty($service['photo_url'])): ?>
-                <img src="<?= $attr($service['photo_url']) ?>" alt="" loading="lazy">
+                <img src="<?= $attr($service['photo_url']) ?>" alt="">
               <?php else: ?>
                 <span><?= $esc(mb_substr((string) $service['title'], 0, 1)) ?></span>
               <?php endif; ?>
@@ -128,47 +173,4 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
               <?php elseif ($distance !== null): ?><small class="badge-distance"><?= (string) $distance ?> km away</small>
               <?php else: ?><small>Verified provider</small><?php endif; ?>
             </div>
-            <div class="product-body">
-              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a><?php if (!empty($service['years_experience'])): ?> &middot; <span class="exp-pill"><?= (int) $service['years_experience'] ?>+ yrs</span><?php endif; ?></p>
-              <h3><?= $esc($service['title']) ?></h3>
-              <?php if (!empty($service['headline'])): ?><p class="headline-line"><?= $esc($service['headline']) ?></p><?php endif; ?>
-              <p><?= $esc($service['summary'] ?: ($service['description'] ?: $config['item_fallback_copy'])) ?></p>
-              <div class="product-meta">
-                <?php if ($pricingType === 'quote_required'): ?>
-                  <strong>Quote on request</strong>
-                <?php elseif ((int) $service['price_minor'] === 0): ?>
-                  <strong>Free consultation</strong>
-                <?php else: ?>
-                  <strong><?= $money($service['price_minor']) ?><?php if ($pricingSuffix !== ''): ?><span class="price-suffix"><?= $esc($pricingSuffix) ?></span><?php endif; ?></strong>
-                <?php endif; ?>
-                <?php if (!empty($service['duration_minutes'])): ?>
-                  <span>~<?= (int) $service['duration_minutes'] ?> min</span>
-                <?php endif; ?>
-              </div>
-            </div>
-          </article>
-        <?php endforeach; endif; ?>
-      </div>
-    </section>
-  </main>
-  <?php include $partials . '/footer.php'; ?>
-<script>
-(function () {
-  var btn = document.querySelector('[data-geo-btn]');
-  if (!btn || !navigator.geolocation) return;
-  btn.addEventListener('click', function () {
-    btn.disabled = true; btn.textContent = 'Locating...';
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      var lat = document.getElementById('svc-lat');
-      var lng = document.getElementById('svc-lng');
-      if (lat) lat.value = pos.coords.latitude.toFixed(7);
-      if (lng) lng.value = pos.coords.longitude.toFixed(7);
-      btn.closest('form').submit();
-    }, function () {
-      btn.disabled = false; btn.textContent = 'Use my location';
-    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
-  });
-})();
-</script>
-</body>
-</html>
+            <div class="product-body"

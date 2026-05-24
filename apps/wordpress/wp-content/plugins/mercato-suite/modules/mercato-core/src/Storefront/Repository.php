@@ -66,7 +66,7 @@ final class Repository
      *
      * @return array<string,mixed>
      */
-    public function servicesPage(int $tenantId, string $query = '', int $categoryId = 0, ?float $lat = null, ?float $lng = null, float $radiusKm = 25.0): array
+    public function servicesPage(int $tenantId, string $query = '', int $categoryId = 0, ?float $lat = null, ?float $lng = null, float $radiusKm = 25.0, string $listingType = ''): array
     {
         global $wpdb;
         $prefix = $wpdb->prefix;
@@ -76,7 +76,11 @@ final class Repository
         $productCategories = $prefix . 'mercato_product_categories';
         $offerings = $prefix . 'mercato_vendor_service_offerings';
 
+        // p.listing_type comes from migration 0004 — service|rental|digital|physical.
+        // Older rows default to 'service' which keeps Gigsii correct.
         $sql = "SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity, p.vendor_id,
+                       p.listing_type, p.min_rental_window_minutes, p.max_rental_window_minutes,
+                       p.deposit_minor, p.replacement_value_minor,
                        v.business_name, v.store_slug, v.headline, v.photo_url, v.years_experience,
                        o.offering_id, o.pricing_type, o.unit_label, o.summary, o.duration_minutes
                 FROM `{$products}` p
@@ -99,6 +103,11 @@ final class Repository
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;
+        }
+
+        if ($listingType !== '' && \in_array($listingType, ['service', 'rental', 'digital', 'physical'], true)) {
+            $sql .= " AND p.listing_type = %s";
+            $params[] = $listingType;
         }
 
         $sql .= " ORDER BY p.created_at DESC LIMIT 120";
@@ -342,6 +351,8 @@ final class Repository
 
         $services = $wpdb->get_results($wpdb->prepare(
             "SELECT p.product_id, p.title, p.description, p.price_minor, p.stock_quantity,
+                    p.listing_type, p.min_rental_window_minutes, p.max_rental_window_minutes,
+                    p.deposit_minor, p.replacement_value_minor,
                     o.offering_id, o.pricing_type, o.unit_label, o.summary, o.duration_minutes,
                     o.lead_time_minutes, o.capacity, o.min_charge_minor
              FROM `{$products}` p
@@ -531,23 +542,3 @@ final class Repository
             }
             $recentReviews = $wpdb->get_results($wpdb->prepare(
                 "SELECT review_id, rating, title, body, buyer_user_id, created_at
-                 FROM `{$reviews}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'published'
-                 ORDER BY created_at DESC LIMIT 5",
-                $tenantId,
-                $vendorId
-            ), ARRAY_A) ?: [];
-        }
-
-        return [
-            'vendor' => $vendor,
-            'services_count' => $servicesCount,
-            'jobs_count' => $jobsCount,
-            'recent_jobs' => $recentJobs,
-            'kyc_status' => $kycStatus !== '' ? $kycStatus : 'not_started',
-            'latest_payout' => $latestPayout,
-            'review_average' => $reviewSummary['avg'],
-            'review_count' => $reviewSummary['count'],
-            'reviews' => $recentReviews,
-        ];
-    }
-}

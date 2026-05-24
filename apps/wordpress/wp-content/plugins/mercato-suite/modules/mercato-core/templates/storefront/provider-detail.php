@@ -35,8 +35,8 @@ $stars = static function (float $rating): string {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
-  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
-  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
+  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront.css')) ?>">
+  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront-taskfirst.css')) ?>"><?php endif; ?>
 </head>
 <body<?= $theme === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -111,10 +111,20 @@ $stars = static function (float $rating): string {
           $pricingType = (string) ($service['pricing_type'] ?? 'fixed');
           $unitLabel = (string) ($service['unit_label'] ?? '');
           $pricingSuffix = match ($pricingType) {
-            'hourly' => ' / hr',
+            'hourly', 'per_hour' => ' / hr',
+            'per_day' => ' / day',
+            'per_week' => ' / week',
+            'per_month' => ' / month',
             'per_unit' => $unitLabel !== '' ? ' / ' . $unitLabel : ' / unit',
             'quote_required' => '',
             default => '',
+          };
+          $listingType = (string) ($service['listing_type'] ?? 'service');
+          $listingBadge = match ($listingType) {
+            'rental' => ['label' => 'Rental', 'class' => 'badge-rental'],
+            'digital' => ['label' => 'Digital', 'class' => 'badge-digital'],
+            'physical' => ['label' => 'Item', 'class' => 'badge-physical'],
+            default => null,
           };
         ?>
           <article class="product-card">
@@ -123,13 +133,20 @@ $stars = static function (float $rating): string {
               <small><?= $esc(ucfirst(str_replace('_', ' ', $pricingType))) ?></small>
             </div>
             <div class="product-body">
-              <h3><?= $esc($service['title']) ?></h3>
+              <h3>
+                <?= $esc($service['title']) ?>
+                <?php if ($listingBadge !== null): ?>
+                  <span class="listing-type-badge <?= $attr($listingBadge['class']) ?>"><?= $esc($listingBadge['label']) ?></span>
+                <?php endif; ?>
+              </h3>
               <p><?= $esc($service['summary'] ?: ($service['description'] ?: $config['item_fallback_copy'])) ?></p>
               <div class="product-meta">
                 <?php if ($pricingType === 'quote_required'): ?>
                   <strong>Quote on request</strong>
+                <?php elseif ((int) $service['price_minor'] === 0): ?>
+                  <strong>Free consultation</strong>
                 <?php else: ?>
-                  <strong><?= $money($service['price_minor']) ?><?= $pricingSuffix !== '' ? '<span class="price-suffix">' . $esc($pricingSuffix) . '</span>' : '' ?></strong>
+                  <strong><?= $money($service['price_minor']) ?><?php if ($pricingSuffix !== ''): ?><span class="price-suffix"><?= $esc($pricingSuffix) ?></span><?php endif; ?></strong>
                 <?php endif; ?>
                 <?php if (!empty($service['duration_minutes'])): ?>
                   <span>~<?= (int) $service['duration_minutes'] ?> min</span>
@@ -142,7 +159,6 @@ $stars = static function (float $rating): string {
       </div>
     </section>
 
-    <!-- Service areas + locations -->
     <?php if (!empty($serviceAreas) || !empty($locations)): ?>
     <section class="section" id="service-areas">
       <div class="section-head">
@@ -157,7 +173,7 @@ $stars = static function (float $rating): string {
                 <strong><?= $esc($loc['label'] ?: 'Main location') ?></strong>
                 <?= $esc(trim(($loc['city'] ?? '') . ' ' . ($loc['region'] ?? ''))) ?>
                 <?php if (!empty($loc['service_radius_km'])): ?>
-                  · <?= (int) $loc['service_radius_km'] ?> km radius
+                  &middot; <?= (int) $loc['service_radius_km'] ?> km radius
                 <?php endif; ?>
               </li>
             <?php endforeach; ?>
@@ -167,7 +183,7 @@ $stars = static function (float $rating): string {
           <p class="area-label">Also covers</p>
           <ul class="area-chips">
             <?php foreach ($serviceAreas as $area): ?>
-              <li><strong><?= $esc($area['label']) ?></strong><?php if (!empty($area['radius_km'])): ?> · <?= (int) $area['radius_km'] ?> km<?php endif; ?></li>
+              <li><strong><?= $esc($area['label']) ?></strong><?php if (!empty($area['radius_km'])): ?> &middot; <?= (int) $area['radius_km'] ?> km<?php endif; ?></li>
             <?php endforeach; ?>
           </ul>
         <?php endif; ?>
@@ -175,7 +191,6 @@ $stars = static function (float $rating): string {
     </section>
     <?php endif; ?>
 
-    <!-- Portfolio gallery -->
     <?php if (!empty($portfolio)): ?>
     <section class="section">
       <div class="section-head"><div><h2>Past work</h2></div></div>
@@ -190,34 +205,15 @@ $stars = static function (float $rating): string {
     </section>
     <?php endif; ?>
 
-    <!-- Reviews -->
     <section class="section" id="reviews">
       <div class="section-head">
         <div><h2>Reviews</h2><p>Verified buyer ratings and comments for this provider.</p></div>
         <?php if ($count > 0): ?>
-          <span class="pill"><?= $stars($avg) ?> <?= number_format($avg, 1) ?>/5 · <?= $count ?> total</span>
+          <span class="pill"><?= $stars($avg) ?> <?= number_format($avg, 1) ?>/5 &middot; <?= $count ?> total</span>
         <?php endif; ?>
       </div>
 
       <?php if (empty($reviews)): ?>
         <article class="empty-state">
           <h3>No reviews yet</h3>
-          <p>Be the first to share your experience after a completed job.</p>
-        </article>
-      <?php else: ?>
-        <div class="positioning">
-          <?php foreach ($reviews as $r): ?>
-            <article class="positioning-card">
-              <b aria-label="rating <?= $attr($r['rating']) ?> out of 5"><?= $stars((float) $r['rating']) ?></b>
-              <?php if (!empty($r['title'])): ?><strong><?= $esc($r['title']) ?></strong><?php endif; ?>
-              <p><?= $esc($r['body'] ?: 'No comment provided.') ?></p>
-              <p class="review-meta">Buyer #<?= $esc($r['buyer_user_id']) ?> · <?= $esc($r['created_at']) ?></p>
-            </article>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-    </section>
-  </main>
-  <?php include $partials . '/footer.php'; ?>
-</body>
-</html>
+          <p>Be the first to share your experience after a complet
