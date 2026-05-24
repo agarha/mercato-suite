@@ -190,8 +190,24 @@ final class Renderer
 
         $context = \array_merge([
             'config' => $config,
+            'theme' => (string) ($config['theme'] ?? ''),
             'asset_url' => $this->assetUrl,
             'esc' => static fn (mixed $v): string => \esc_html((string) $v),
             'attr' => static fn (mixed $v): string => \esc_attr((string) $v),
             'money' => static fn (mixed $minor): string => '$' . \number_format(((int) $minor) / 100, 2),
-            'partials
+            'partials' => $this->templateDir . '/partials',
+        ], $extra);
+
+        $path = $this->templateDir . '/' . $templateFile;
+        if (!\is_readable($path)) {
+            return '';
+        }
+
+        \ob_start();
+        (static function (string $__file, array $__ctx): void {
+            \extract($__ctx, EXTR_OVERWRITE);
+            include $__file;
+        })($path, $context);
+        return (string) \ob_get_clean();
+    }
+}

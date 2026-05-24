@@ -7,6 +7,16 @@
 /** @var \Closure $attr */
 /** @var \Closure $money */
 $provider = $data['provider'];
+$home = '/t/' . ($config['tenant_slug'] ?? 'gigsii');
+$avg = (float) ($data['review_average'] ?? 0);
+$count = (int) ($data['review_count'] ?? 0);
+$reviews = (array) ($data['reviews'] ?? []);
+$stars = static function (float $rating): string {
+    $full = (int) floor($rating);
+    $half = ($rating - $full) >= 0.5 ? 1 : 0;
+    $empty = 5 - $full - $half;
+    return str_repeat('★', $full) . str_repeat('⯨', $half) . str_repeat('☆', $empty);
+};
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -14,13 +24,14 @@ $provider = $data['provider'];
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= $esc($provider['business_name']) ?> — <?= $esc($config['brand']) ?></title>
   <meta name="description" content="<?= $attr($provider['business_name']) ?> on <?= $attr($config['brand']) ?>.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
   <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
+  <?php if (($theme ?? '') === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
 </head>
-<body>
+<body<?= ($theme ?? '') === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
   <?php include $partials . '/header.php'; ?>
   <main id="main" tabindex="-1">
@@ -29,10 +40,20 @@ $provider = $data['provider'];
         <div>
           <div class="eyebrow">Verified provider</div>
           <h1><?= $esc($provider['business_name']) ?></h1>
-          <p>@<?= $esc($provider['store_slug']) ?> · <?= $provider['stripe_account_id'] ? 'Connected to Stripe payouts' : 'Payouts pending' ?> · Status: <?= $esc($provider['status']) ?></p>
+          <p>
+            @<?= $esc($provider['store_slug']) ?>
+            · <?= $provider['stripe_account_id'] ? 'Connected to Stripe payouts' : 'Payouts pending' ?>
+            <?php if ($count > 0): ?>
+              · <span aria-label="rating <?= $attr(number_format($avg, 1)) ?> out of 5"><?= $stars($avg) ?></span>
+              <strong style="margin-left:6px"><?= number_format($avg, 1) ?></strong>
+              <span style="color:var(--muted)"> (<?= $count ?> review<?= $count === 1 ? '' : 's' ?>)</span>
+            <?php else: ?>
+              · <span style="color:var(--muted)">No reviews yet</span>
+            <?php endif; ?>
+          </p>
           <div class="hero-actions">
-            <a class="button" href="/t/<?= $attr($config['tenant_slug'] ?? 'gigsii') ?>/requests/new?provider=<?= $attr($provider['store_slug']) ?>">Request a quote</a>
-            <a class="button secondary" href="/t/<?= $attr($config['tenant_slug'] ?? 'gigsii') ?>/providers">All providers</a>
+            <a class="button" href="<?= $attr($home . '/requests/new?provider=' . $provider['store_slug']) ?>">Request a quote</a>
+            <a class="button secondary" href="<?= $attr($home . '/providers') ?>">All providers</a>
           </div>
         </div>
         <aside class="hero-media">
@@ -40,6 +61,7 @@ $provider = $data['provider'];
             <h3>About this provider</h3>
             <div class="cart-line"><span>Services offered</span><strong><?= count($data['services']) ?></strong></div>
             <div class="cart-line"><span>Recent jobs</span><strong><?= count($data['recent_jobs']) ?></strong></div>
+            <div class="cart-line"><span>Average rating</span><strong><?= $count > 0 ? number_format($avg, 1) . ' / 5' : '—' ?></strong></div>
             <div class="cart-line"><span>Payout method</span><strong><?= $provider['stripe_account_id'] ? 'Stripe Connect' : 'Pending' ?></strong></div>
           </div>
         </aside>
@@ -63,6 +85,35 @@ $provider = $data['provider'];
           </article>
         <?php endforeach; endif; ?>
       </div>
+    </section>
+
+    <section class="section" id="reviews">
+      <div class="section-head">
+        <div><h2>Reviews</h2><p>Verified buyer ratings and comments for this provider.</p></div>
+        <?php if ($count > 0): ?>
+          <span class="pill"><?= $stars($avg) ?> <?= number_format($avg, 1) ?>/5 · <?= $count ?> total</span>
+        <?php endif; ?>
+      </div>
+
+      <?php if (empty($reviews)): ?>
+        <article class="empty-state">
+          <h3>No reviews yet</h3>
+          <p>Be the first to share your experience after a completed job.</p>
+        </article>
+      <?php else: ?>
+        <div class="positioning">
+          <?php foreach ($reviews as $r): ?>
+            <article class="positioning-card">
+              <b aria-label="rating <?= $attr($r['rating']) ?> out of 5"><?= $stars((float) $r['rating']) ?></b>
+              <?php if (!empty($r['title'])): ?>
+                <strong><?= $esc($r['title']) ?></strong>
+              <?php endif; ?>
+              <p><?= $esc($r['body'] ?: 'No comment provided.') ?></p>
+              <p style="margin-top:12px;font-size:12px;color:var(--muted)">Buyer #<?= $esc($r['buyer_user_id']) ?> · <?= $esc($r['created_at']) ?></p>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </section>
 
     <section class="section">
