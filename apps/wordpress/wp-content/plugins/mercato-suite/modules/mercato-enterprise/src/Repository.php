@@ -433,6 +433,76 @@ final class Repository
             }, $config[$key]);
         }
 
+        // Per-tenant theme override. Constrained to a tiny enum of known
+        // theme names so a tenant can't smuggle in an arbitrary template
+        // path. Unknown values are silently dropped (renderer falls back
+        // to the Mercato default page.php).
+        if (isset($config['theme']) && \is_string($config['theme'])) {
+            $theme = \sanitize_text_field($config['theme']);
+            if (\in_array($theme, ['taskfirst'], true)) {
+                $clean['theme'] = $theme;
+            }
+        }
+
+        // Task-First nested config (Gigsii-only at present). Whitelist of
+        // text-scalar fields the page-taskfirst.php template reads. Anything
+        // else under `taskfirst` is silently dropped. The `chips` and
+        // `how_steps` arrays are passed through with shallow sanitization
+        // because their items contain icon glyphs that must round-trip.
+        if (isset($config['taskfirst']) && \is_array($config['taskfirst'])) {
+            $tf = $config['taskfirst'];
+            $tfClean = [];
+            foreach ([
+                'status_chip',
+                'hero_lead',
+                'hero_accent',
+                'hero_trail',
+                'input_label',
+                'input_text',
+                'polaroid_label',
+                'polaroid_caption',
+                'sticker_top',
+                'sticker_bottom',
+                'how_eyebrow',
+                'how_h2_lead',
+                'how_h2_em',
+                'how_h2_tail',
+                'pros_eyebrow',
+                'pros_h2_lead',
+                'pros_h2_em',
+                'pros_h2_tail',
+                'pros_link',
+                'provider_cta_eyebrow',
+                'provider_cta_lead',
+                'provider_cta_em',
+                'provider_cta_tail',
+                'provider_cta_copy',
+                'provider_cta_button',
+            ] as $tfKey) {
+                if (\array_key_exists($tfKey, $tf)) {
+                    $tfClean[$tfKey] = $sanitize($tf[$tfKey]);
+                }
+            }
+            foreach (['chips', 'how_steps'] as $tfArrKey) {
+                if (!isset($tf[$tfArrKey]) || !\is_array($tf[$tfArrKey])) {
+                    continue;
+                }
+                $tfClean[$tfArrKey] = \array_map(static function (mixed $item) use ($sanitize): mixed {
+                    if (!\is_array($item)) {
+                        return $sanitize($item);
+                    }
+                    $row = [];
+                    foreach ($item as $itemKey => $itemValue) {
+                        $row[$sanitize($itemKey)] = $sanitize($itemValue);
+                    }
+                    return $row;
+                }, $tf[$tfArrKey]);
+            }
+            if ($tfClean !== []) {
+                $clean['taskfirst'] = $tfClean;
+            }
+        }
+
         return $clean;
     }
 

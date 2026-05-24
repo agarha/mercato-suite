@@ -92,4 +92,25 @@ final class TaskFirstThemeTest extends TestCase
         $this->assertStringContainsString('hero_headline = "What needs doing today?"', $contents, 'Gigsii seed must ship the Task-First hero copy');
         $this->assertStringContainsString('primary_cta = "Find me help"', $contents);
     }
+
+    public function testEnterpriseStorefrontSanitizerAllowsThemeAndTaskFirst(): void
+    {
+        // Regression test for the silent drop bug: the enterprise repository's
+        // sanitizeStorefrontConfig() previously had a strict allowlist that
+        // stripped `theme` and `taskfirst` before they reached the database.
+        // That meant the Gigsii seed script said theme="taskfirst" but the
+        // live storefront kept falling back to the Mercato default page.php.
+        $path = $this->root . '/apps/wordpress/wp-content/plugins/mercato-suite/modules/mercato-enterprise/src/Repository.php';
+        $contents = file_get_contents($path) ?: '';
+        $this->assertStringContainsString("\$config['theme']", $contents, 'Enterprise sanitizer must inspect theme');
+        $this->assertStringContainsString("'taskfirst'", $contents, 'Enterprise sanitizer must allow the taskfirst theme value');
+        $this->assertStringContainsString("\$config['taskfirst']", $contents, 'Enterprise sanitizer must inspect the taskfirst nested config');
+        // Tiny safety net: the theme enum must remain constrained — if
+        // someone tries to broaden it to arbitrary strings, this fails.
+        $this->assertMatchesRegularExpression(
+            "/in_array\\(\\\$theme,\\s*\\[[^\\]]*'taskfirst'[^\\]]*\\]/",
+            $contents,
+            'Theme must be checked against an in_array whitelist, not accepted as arbitrary string'
+        );
+    }
 }
