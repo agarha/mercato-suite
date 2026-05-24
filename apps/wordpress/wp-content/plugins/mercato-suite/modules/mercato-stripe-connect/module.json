@@ -8,7 +8,6 @@
   ],
   "provides_events": [
     "mercato.stripe.account.updated.v1",
-    "mercato.stripe.payment_intent.created.v1",
     "mercato.stripe.transfer.created.v1",
     "mercato.stripe.transfer.failed.v1",
     "mercato.stripe.charge.refunded.v1",

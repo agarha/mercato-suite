@@ -55,12 +55,6 @@ final class Provider extends ServiceProvider
                 'permission_callback' => [Permissions::class, 'canManage'],
             ]);
 
-            \register_rest_route('mercato/v1', '/stripe/payment-intents', [
-                'methods' => 'POST',
-                'callback' => [$this, 'createPaymentIntent'],
-                'permission_callback' => [Permissions::class, 'canManage'],
-            ]);
-
             \register_rest_route('mercato/v1', '/stripe/refunds', [
                 'methods' => 'POST',
                 'callback' => [$this, 'createRefund'],
@@ -114,19 +108,6 @@ final class Provider extends ServiceProvider
             });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_stripe_transfer_failed', $e->getMessage(), ['status' => 400]);
-        }
-    }
-
-    public function createPaymentIntent(WP_REST_Request $request): WP_REST_Response|WP_Error
-    {
-        try {
-            return $this->idempotent($request, function () use ($request): WP_REST_Response {
-                $intent = $this->repo()->createPaymentIntent((array) $request->get_json_params());
-                $this->audit('stripe.payment_intent.created', 'order', (int) $intent['wc_order_id'], null, $intent);
-                return new WP_REST_Response($intent, 201);
-            });
-        } catch (\Throwable $e) {
-            return new WP_Error('mercato_stripe_payment_intent_failed', $e->getMessage(), ['status' => 400]);
         }
     }
 

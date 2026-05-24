@@ -105,51 +105,6 @@ final class Repository
      * @param array<string,mixed> $data
      * @return array<string,mixed>
      */
-    public function createPaymentIntent(array $data): array
-    {
-        global $wpdb;
-
-        $tenantId = $this->tenantResolver->currentTenantId();
-        $wcOrderId = (int) ($data['wc_order_id'] ?? 0);
-        $amount = (int) ($data['amount_minor'] ?? 0);
-        $currency = \strtoupper((string) ($data['currency'] ?? 'USD'));
-        if ($wcOrderId < 1 || $amount < 1) {
-            throw new RuntimeException('Order ID and positive amount are required.');
-        }
-
-        $stripe = $this->isLiveConfigured()
-            ? $this->createStripePaymentIntent($amount, $currency)
-            : [
-                'id' => 'pi_test_' . $tenantId . '_' . $wcOrderId . '_' . \bin2hex(\random_bytes(4)),
-                'client_secret' => 'pi_test_secret_' . \bin2hex(\random_bytes(8)),
-                'status' => 'succeeded',
-            ];
-
-        $table = $wpdb->prefix . 'mercato_stripe_payment_intents';
-        $wpdb->insert($table, [
-            'tenant_id' => $tenantId,
-            'wc_order_id' => $wcOrderId,
-            'stripe_payment_intent_id' => (string) $stripe['id'],
-            'amount_minor' => $amount,
-            'currency' => $currency,
-            'status' => (string) ($stripe['status'] ?? 'requires_confirmation'),
-            'client_secret' => (string) ($stripe['client_secret'] ?? ''),
-        ]);
-
-        if ($wpdb->insert_id < 1) {
-            throw new RuntimeException('Unable to record Stripe PaymentIntent: ' . (string) $wpdb->last_error);
-        }
-
-        $intent = $this->paymentIntent((string) $stripe['id']);
-        $this->outbox->publish('mercato.stripe.payment_intent.created.v1', $intent, (string) $intent['payment_intent_id'], $tenantId);
-
-        return $intent;
-    }
-
-    /**
-     * @param array<string,mixed> $data
-     * @return array<string,mixed>
-     */
     public function createRefund(array $data): array
     {
         global $wpdb;
@@ -403,20 +358,6 @@ final class Repository
         }
 
         return $row;
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    private function createStripePaymentIntent(int $amountMinor, string $currency): array
-    {
-        return $this->stripeRequest('POST', 'https://api.stripe.com/v1/payment_intents', [
-            'amount' => (string) $amountMinor,
-            'currency' => \strtolower($currency),
-            'automatic_payment_methods[enabled]' => 'true',
-            'confirm' => 'true',
-            'payment_method' => 'pm_card_visa',
-        ]);
     }
 
     /**
