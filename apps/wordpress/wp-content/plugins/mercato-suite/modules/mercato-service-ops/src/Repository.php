@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mercato\ServiceOps;
 
+use Mercato\Core\Container;
 use Mercato\Core\Events\Outbox;
 use Mercato\Core\Tenant\Resolver;
 use RuntimeException;
@@ -21,8 +22,11 @@ final class Repository
         'cancelled' => [],
     ];
 
-    public function __construct(private readonly Resolver $tenantResolver, private readonly Outbox $outbox)
-    {
+    public function __construct(
+        private readonly Resolver $tenantResolver,
+        private readonly Outbox $outbox,
+        private readonly ?Container $container = null,
+    ) {
     }
 
     /** @param array<string,mixed> $data @return array<string,mixed> */
@@ -380,6 +384,13 @@ final class Repository
         // the existing /flags REST surface without a schema change.
         $this->enforceBidLimits($tenantId, $vendorId, $requestId);
 
+        // Rewards economy: charge the vendor owner Sparks for this bid.
+        // The cost depends on whether the request's budget exceeds the
+        // tenant-configured "premium" threshold. Module is fully optional —
+        // if mercato-rewards isn't loaded or the economy is disabled, the
+        // bid proceeds without charge.
+        $sparksSpent = $this->chargeBidSparks($vendorId, $request);
+
         $table = $wpdb->prefix . 'mercato_service_bids';
         $row = [
             'tenant_id' => $tenantId,
@@ -565,17 +576,72 @@ final class Repository
     }
 
     /**
+     * Charge the vendor's owner Sparks for placing a bid. The cost varies
+     * by budget — requests with a budget above the tenant's "premium"
+     * threshold cost more. Returns the number of Sparks debited (0 if the
+     * rewards module isn't loaded or the economy is disabled).
+     *
+     * Throws SPARKS_INSUFFICIENT if the owner doesn't have enough balance;
+     * the storefront handles that by prompting the pro to buy more.
+     *
+     * @param array<string,mixed> $request
+     */
+    private function chargeBidSparks(int $vendorId, array $request): int
+    {
+        if ($this->container === null) {
+            return 0;
+        }
+        $repoClass = '\\Mercato\\Rewards\\Repository';
+        $ledgerClass = '\\Mercato\\Rewards\\Ledger';
+        if (!$this->container->has($repoClass) || !$this->container->has($ledgerClass)) {
+            return 0;
+        }
+
+        try {
+            $cfg = $this->container->get($repoClass)->config();
+            if (empty($cfg['enabled'])) {
+                return 0;
+            }
+            $budgetMinor = (int) ($request['budget_max_minor'] ?? 0);
+            $threshold = (int) ($cfg['premium_bid_threshold_minor'] ?? 0);
+            $cost = ($threshold > 0 && $budgetMinor >= $threshold)
+                ? (int) $cfg['premium_bid_cost_sparks']
+                : (int) $cfg['bid_cost_sparks'];
+            if ($cost <= 0) {
+                return 0;
+            }
+
+            global $wpdb;
+            $vendors = $wpdb->prefix . 'mercato_vendors';
+            $ownerId = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT owner_user_id FROM `{$vendors}` WHERE tenant_id = %d AND vendor_id = %d",
+                $this->tenantResolver->currentTenantId(),
+                $vendorId
+            ));
+            if ($ownerId < 1) {
+                return 0;
+            }
+
+            $this->container->get($ledgerClass)->spend($ownerId, 'sparks', $cost, 'bid', 'service_request', (int) ($request['request_id'] ?? 0));
+            return $cost;
+        } catch (\Throwable $e) {
+            // Re-throw INSUFFICIENT_BALANCE so the API surfaces it cleanly.
+            if ($e->getMessage() === 'INSUFFICIENT_BALANCE') {
+                throw new RuntimeException('SPARKS_INSUFFICIENT');
+            }
+            // Soft-fail any other error so a misconfigured rewards module
+            // can never block bidding outright.
+            return 0;
+        }
+    }
+
+    /**
      * Enforce admin-configurable bid throttling. Limits live in
      * mercato_tenant_feature_flags so admins can tweak them via the existing
      * /flags REST surface without a schema change. Three keys:
      *   - bidding.daily_bid_limit_per_vendor  (max bids submitted in last 24h)
      *   - bidding.max_bids_per_request        (counts current+previous bids on this request)
      *   - bidding.min_seconds_between_bids    (cooldown since the vendor's most recent bid)
-     *
-     * Any limit set to 0 or unset is treated as "no limit" so a tenant can
-     * intentionally disable a control. Exceeding a limit raises a
-     * RuntimeException with a stable, machine-readable code suffix
-     * ("BID_LIMIT_*") that the storefront and admin UIs can branch on.
      */
     private function enforceBidLimits(int $tenantId, int $vendorId, int $requestId): void
     {

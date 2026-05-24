@@ -20,6 +20,7 @@ final class Provider extends ServiceProvider
         $this->container->bind(Repository::class, fn ($c): Repository => new Repository(
             $c->get(Resolver::class),
             $c->get(Outbox::class),
+            $c,
         ));
     }
 

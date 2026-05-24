@@ -59,7 +59,33 @@ final class Signup
             'service_areas' => [],
             'services' => [],
             'warnings' => [],
+            'sparks_granted' => 0,
         ];
+
+        // Grant the signup bonus from the rewards module if it's enabled.
+        // Hard-tolerant: any failure (module unloaded, table missing) is a
+        // warning, never blocks vendor creation.
+        try {
+            $rewardsRepoClass = '\\Mercato\\Rewards\\Repository';
+            $rewardsLedgerClass = '\\Mercato\\Rewards\\Ledger';
+            if ($this->container->has($rewardsRepoClass) && $this->container->has($rewardsLedgerClass)) {
+                $cfg = $this->container->get($rewardsRepoClass)->config();
+                if (!empty($cfg['enabled']) && (int) $cfg['signup_bonus_sparks'] > 0) {
+                    $granted = $this->container->get($rewardsLedgerClass)->earn(
+                        $userId,
+                        'sparks',
+                        (int) $cfg['signup_bonus_sparks'],
+                        'signup_bonus',
+                        'vendor',
+                        $vendorId
+                    );
+                    $created['sparks_granted'] = (int) $cfg['signup_bonus_sparks'];
+                    $created['sparks_balance'] = $granted;
+                }
+            }
+        } catch (\Throwable $e) {
+            $created['warnings'][] = 'sparks_grant: ' . $e->getMessage();
+        }
 
         // Primary location: required for geo-discovery to find this provider.
         $location = (array) ($payload['location'] ?? []);
@@ -176,9 +202,9 @@ final class Signup
             throw new RuntimeException('Unable to create account: ' . $userId->get_error_message());
         }
 
-        // Tag the user with a "provider applicant" capability for downstream
-        // permission checks. We deliberately don't grant full vendor caps
-        // until the admin approves; this is just for the onboarding inbox.
+        // Tag the user with first/last name + subscriber role until the
+        // admin approves the vendor. Full vendor caps are granted on
+        // approval, not on application.
         if (\function_exists('wp_update_user')) {
             \wp_update_user([
                 'ID' => (int) $userId,

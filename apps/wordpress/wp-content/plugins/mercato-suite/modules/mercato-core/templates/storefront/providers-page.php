@@ -18,7 +18,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Providers — <?= $esc($config['brand']) ?></title>
+  <title>Providers - <?= $esc($config['brand']) ?></title>
   <meta name="description" content="Verified, insured local pros on <?= $attr($config['brand']) ?>.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +66,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
               <input type="hidden" name="lat" id="pro-lat">
               <input type="hidden" name="lng" id="pro-lng">
               <div class="search-actions">
-                <button type="button" class="button secondary geo-locate-btn" data-geo-btn>📍 Use my location</button>
+                <button type="button" class="button secondary geo-locate-btn" data-geo-btn>Use my location</button>
                 <button type="submit" class="search-btn">Search</button>
               </div>
             </form>
@@ -108,7 +108,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
           <article class="vendor-card pro-card">
             <div class="vendor-avatar">
               <?php if (!empty($provider['photo_url'])): ?>
-                <img src="<?= $attr($provider['photo_url']) ?>" alt="">
+                <img src="<?= $attr($provider['photo_url']) ?>" alt="" loading="lazy">
               <?php else: ?>
                 <?= $esc(mb_substr((string) $provider['business_name'], 0, 1)) ?>
               <?php endif; ?>
@@ -116,26 +116,26 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
             <div class="pro-card-body">
               <h3>
                 <a href="<?= $attr($home . '/providers/' . $provider['store_slug']) ?>"><?= $esc($provider['business_name']) ?></a>
-                <?php if ($verified): ?><span class="badge-verified" title="Identity verified">✓</span><?php endif; ?>
+                <?php if ($verified): ?><span class="badge-verified" title="Identity verified">&check;</span><?php endif; ?>
               </h3>
               <?php if (!empty($provider['headline'])): ?>
                 <p class="pro-headline"><?= $esc($provider['headline']) ?></p>
               <?php endif; ?>
               <ul class="pro-meta">
                 <?php if ($reviews > 0): ?>
-                  <li class="rating">★ <?= number_format($rating, 1) ?> <small>(<?= $reviews ?>)</small></li>
+                  <li class="rating">&starf; <?= number_format($rating, 1) ?> <small>(<?= $reviews ?>)</small></li>
                 <?php endif; ?>
                 <?php if (!empty($provider['years_experience'])): ?>
                   <li><?= (int) $provider['years_experience'] ?>+ yrs exp</li>
                 <?php endif; ?>
                 <li><?= (int) $provider['service_count'] ?> services</li>
-                <?php if ($hourly): ?><li><?= $esc($hourly) ?></li><?php endif; ?>
+                <?php if ($hourly): ?><li class="from-rate">From <?= $esc($hourly) ?></li><?php endif; ?>
               </ul>
               <ul class="pro-badges">
-                <?php if ($bgCheckPassed): ?><li>🛡 Background-checked</li><?php endif; ?>
-                <?php if (!empty($provider['license_number'])): ?><li>📋 Licensed</li><?php endif; ?>
-                <?php if (!empty($provider['insurance_amount_minor'])): ?><li>🪪 Insured ${<?= number_format($provider['insurance_amount_minor'] / 100, 0) ?>}</li><?php endif; ?>
-                <?php if ($servesArea): ?><li class="badge-serves-area">📍 Serves your area</li>
+                <?php if ($bgCheckPassed): ?><li>Background-checked</li><?php endif; ?>
+                <?php if (!empty($provider['license_number'])): ?><li>Licensed</li><?php endif; ?>
+                <?php if (!empty($provider['insurance_amount_minor'])): ?><li>Insured $<?= number_format($provider['insurance_amount_minor'] / 100, 0) ?></li><?php endif; ?>
+                <?php if ($servesArea): ?><li class="badge-serves-area">Serves your area</li>
                 <?php elseif ($distance !== null): ?><li class="badge-distance"><?= (string) $distance ?> km away</li><?php endif; ?>
               </ul>
             </div>
@@ -150,7 +150,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
   var btn = document.querySelector('[data-geo-btn]');
   if (!btn || !navigator.geolocation) return;
   btn.addEventListener('click', function () {
-    btn.disabled = true; btn.textContent = 'Locating…';
+    btn.disabled = true; btn.textContent = 'Locating...';
     navigator.geolocation.getCurrentPosition(function (pos) {
       var lat = document.getElementById('pro-lat');
       var lng = document.getElementById('pro-lng');
@@ -158,7 +158,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
       if (lng) lng.value = pos.coords.longitude.toFixed(7);
       btn.closest('form').submit();
     }, function () {
-      btn.disabled = false; btn.textContent = '📍 Use my location';
+      btn.disabled = false; btn.textContent = 'Use my location';
     }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
   });
 })();

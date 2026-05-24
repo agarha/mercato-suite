@@ -32,12 +32,17 @@ final class Provider extends ServiceProvider
         $this->container->bind(Geo\Provider::class, fn ($c): Geo\Provider => new Geo\Provider(
             $c->get(Tenant\Resolver::class),
         ));
+        $this->container->bind(Admin\Pages::class, fn ($c): Admin\Pages => new Admin\Pages(
+            $c,
+            $c->get(Tenant\Resolver::class),
+        ));
     }
 
     public function boot(): void
     {
         $this->container->get(WooCommerce\HookAdapter::class)->register();
         $this->container->get(Geo\Provider::class)->boot();
+        $this->container->get(Admin\Pages::class)->register();
 
         if (\function_exists('add_action')) {
             \add_action('init', [$this, 'serveMetricsEndpoint']);
@@ -250,9 +255,12 @@ final class Provider extends ServiceProvider
         if (\headers_sent()) {
             return;
         }
-        \header("Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+        // Best-effort security defaults. WP themes/plugins can override
+        // any of these via the wp_headers filter; we only set them when
+        // the response header isn't already on the wire.
         \header('X-Content-Type-Options: nosniff');
-        \header('X-Frame-Options: SAMEORIGIN');
         \header('Referrer-Policy: strict-origin-when-cross-origin');
+        \header('X-Frame-Options: SAMEORIGIN');
+        \header('Permissions-Policy: geolocation=(self), microphone=(), camera=()');
     }
 }

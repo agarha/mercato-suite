@@ -6,13 +6,13 @@
 /** @var \Closure $esc */
 /** @var \Closure $attr */
 /** @var \Closure $money */
-/** @var string $current_page */
 $search_q = (string) ($search_q ?? '');
 $search_category = (int) ($search_category ?? 0);
 $search_near = (string) ($search_near ?? '');
 $search_near_display = (string) ($search_near_display ?? '');
 $search_radius_km = (float) ($search_radius_km ?? 25);
 $home = '/t/' . ($config['tenant_slug'] ?? 'gigsii');
+$theme = (string) ($theme ?? '');
 $resultCount = count($data['services']);
 $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
 ?><!doctype html>
@@ -20,16 +20,16 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Services<?= $hasFilter ? ' — ' . $esc($search_q ?: '') : '' ?> — <?= $esc($config['brand']) ?></title>
+  <title>Services - <?= $esc($config['brand']) ?></title>
   <meta name="description" content="Browse every service offered on <?= $attr($config['brand']) ?>.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
   <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
-  <?php if (($theme ?? '') === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
+  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
 </head>
-<body<?= ($theme ?? '') === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
+<body<?= $theme === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
   <?php include $partials . '/header.php'; ?>
   <main id="main" tabindex="-1">
@@ -39,8 +39,8 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
           <div class="eyebrow">Service catalog</div>
           <h1 id="svc-heading"><?= $hasFilter ? 'Search results' : 'Every service available right now' ?></h1>
           <p><?= $hasFilter
-              ? $resultCount . ' service' . ($resultCount === 1 ? '' : 's') . ' matching ' . ($search_q !== '' ? '"' . $esc($search_q) . '"' : 'your category')
-              : 'Browse approved providers, filter by category, and request quotes — all backed by tenant-scoped data.' ?></p>
+              ? $resultCount . ' service' . ($resultCount === 1 ? '' : 's') . ' matching your filter'
+              : 'Browse approved providers, filter by category, and request quotes - all backed by tenant-scoped data.' ?></p>
         </div>
         <aside class="hero-media" aria-label="Search and filter">
           <div class="booking-panel" role="search" aria-label="Filter services">
@@ -48,7 +48,7 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
             <form class="search-row geo-search" action="<?= $attr($home . '/services') ?>" method="get" novalidate>
               <label class="field" for="svc-q">
                 <span>Keywords</span>
-                <input id="svc-q" name="q" type="search" value="<?= $attr($search_q) ?>" placeholder="cleaning, repairs, install…" autocomplete="off">
+                <input id="svc-q" name="q" type="search" value="<?= $attr($search_q) ?>" placeholder="cleaning, repairs, install..." autocomplete="off">
               </label>
               <label class="field" for="svc-cat">
                 <span>Category</span>
@@ -74,19 +74,15 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
               <input type="hidden" name="lat" id="svc-lat">
               <input type="hidden" name="lng" id="svc-lng">
               <div class="search-actions">
-                <button type="button" class="button secondary geo-locate-btn" data-geo-btn>
-                  <span aria-hidden="true">📍</span> Use my location
-                </button>
+                <button type="button" class="button secondary geo-locate-btn" data-geo-btn>Use my location</button>
                 <button type="submit" class="search-btn">Search</button>
               </div>
             </form>
             <?php if ($search_near_display !== '' && $search_near_display !== $search_near): ?>
-              <p class="geo-resolved-hint" aria-live="polite">Showing pros near <strong><?= $esc($search_near_display) ?></strong> within <?= (int) $search_radius_km ?> km.</p>
+              <p class="geo-resolved-hint">Showing services near <strong><?= $esc($search_near_display) ?></strong> within <?= (int) $search_radius_km ?> km.</p>
             <?php endif; ?>
             <?php if ($hasFilter): ?>
-              <p class="clear-filters">
-                <a href="<?= $attr($home . '/services') ?>">Clear filters</a>
-              </p>
+              <p class="clear-filters"><a href="<?= $attr($home . '/services') ?>">Clear filters</a></p>
             <?php endif; ?>
           </div>
         </aside>
@@ -124,24 +120,26 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
           <article class="product-card">
             <div class="product-media <?= $tone ?>">
               <?php if (!empty($service['photo_url'])): ?>
-                <img src="<?= $attr($service['photo_url']) ?>" alt="">
+                <img src="<?= $attr($service['photo_url']) ?>" alt="" loading="lazy">
               <?php else: ?>
                 <span><?= $esc(mb_substr((string) $service['title'], 0, 1)) ?></span>
               <?php endif; ?>
-              <?php if ($servesArea): ?><small class="badge-serves">✓ Serves your area</small>
+              <?php if ($servesArea): ?><small class="badge-serves">Serves your area</small>
               <?php elseif ($distance !== null): ?><small class="badge-distance"><?= (string) $distance ?> km away</small>
               <?php else: ?><small>Verified provider</small><?php endif; ?>
             </div>
             <div class="product-body">
-              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a><?php if (!empty($service['years_experience'])): ?> · <span class="exp-pill"><?= (int) $service['years_experience'] ?>+ yrs</span><?php endif; ?></p>
+              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a><?php if (!empty($service['years_experience'])): ?> &middot; <span class="exp-pill"><?= (int) $service['years_experience'] ?>+ yrs</span><?php endif; ?></p>
               <h3><?= $esc($service['title']) ?></h3>
               <?php if (!empty($service['headline'])): ?><p class="headline-line"><?= $esc($service['headline']) ?></p><?php endif; ?>
               <p><?= $esc($service['summary'] ?: ($service['description'] ?: $config['item_fallback_copy'])) ?></p>
               <div class="product-meta">
                 <?php if ($pricingType === 'quote_required'): ?>
                   <strong>Quote on request</strong>
+                <?php elseif ((int) $service['price_minor'] === 0): ?>
+                  <strong>Free consultation</strong>
                 <?php else: ?>
-                  <strong><?= $money($service['price_minor']) ?><?= $pricingSuffix !== '' ? '<span class="price-suffix">' . $esc($pricingSuffix) . '</span>' : '' ?></strong>
+                  <strong><?= $money($service['price_minor']) ?><?php if ($pricingSuffix !== ''): ?><span class="price-suffix"><?= $esc($pricingSuffix) ?></span><?php endif; ?></strong>
                 <?php endif; ?>
                 <?php if (!empty($service['duration_minutes'])): ?>
                   <span>~<?= (int) $service['duration_minutes'] ?> min</span>
@@ -155,26 +153,19 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
   </main>
   <?php include $partials . '/footer.php'; ?>
 <script>
-// Wire the "Use my location" button on the geo-search form. On success
-// fills the hidden lat/lng inputs and submits — the server uses the exact
-// coords and skips Nominatim. Failure leaves the typed postcode/suburb to
-// be geocoded server-side.
 (function () {
   var btn = document.querySelector('[data-geo-btn]');
   if (!btn || !navigator.geolocation) return;
   btn.addEventListener('click', function () {
-    btn.disabled = true;
-    btn.textContent = 'Locating…';
+    btn.disabled = true; btn.textContent = 'Locating...';
     navigator.geolocation.getCurrentPosition(function (pos) {
-      var lat = document.getElementById('svc-lat') || document.getElementById('pro-lat');
-      var lng = document.getElementById('svc-lng') || document.getElementById('pro-lng');
+      var lat = document.getElementById('svc-lat');
+      var lng = document.getElementById('svc-lng');
       if (lat) lat.value = pos.coords.latitude.toFixed(7);
       if (lng) lng.value = pos.coords.longitude.toFixed(7);
-      var form = btn.closest('form');
-      if (form) form.submit();
+      btn.closest('form').submit();
     }, function () {
-      btn.disabled = false;
-      btn.textContent = '📍 Use my location';
+      btn.disabled = false; btn.textContent = 'Use my location';
     }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
   });
 })();

@@ -25,21 +25,17 @@ function Invoke-MercatoApi {
     }
     $uri = "$baseUrl$prefix/?rest_route=/mercato/v1$Path"
     try {
-        if ($Body -eq $null) {
+        if ($null -eq $Body) {
             return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers
         }
-
         return Invoke-RestMethod -Uri $uri -Method $Method -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 20)
     } catch {
         throw "Mercato API request failed: $Method $uri :: $($_.Exception.Message)"
     }
 }
 
+# --- Storefront config (preserved from previous run, light edits only) ---
 $storefront = @{
-    # Gigsii uses the Task-First theme overlay (storefront-taskfirst.css
-    # + templates/storefront/page-taskfirst.php). This is a per-tenant
-    # override; Mercato defaults are unchanged. To revert Gigsii back to
-    # the Mercato default look, remove the `theme` key.
     theme = "taskfirst"
     brand = "Gigsii"
     mark = "g"
@@ -48,12 +44,6 @@ $storefront = @{
     hero_copy = "Tell us what's broken - or what you'd love off your list. Local pros respond with a quote in minutes."
     primary_cta = "Find me help"
     secondary_cta = "List your trade"
-    # Task-First text overrides. Emoji / decorative glyphs are NOT set here
-    # because PowerShell-on-Windows source-file UTF-8 round-tripping for
-    # multi-byte chars is unreliable. The PHP template
-    # (page-taskfirst.php) ships the emoji defaults inline, so leaving
-    # `chips` / `how_steps.icon` / `polaroid_caption` unset here means the
-    # PHP defaults win - which is what we want.
     taskfirst = @{
         status_chip = "1,248 pros online . avg. 14 min response"
         hero_lead = "What"
@@ -80,27 +70,12 @@ $storefront = @{
         provider_cta_copy = "Flat 4% on what you earn. No leads. No subscription."
         provider_cta_button = "List your trade"
     }
-    catalog_headline = "Popular services ready to book"
-    catalog_copy = "Curated local service cards with provider routing, category support, and booking capacity."
-    catalog_badge = "Verified local help"
-    vendor_headline = "Providers customers can trust"
-    vendor_copy = "Approved service companies with clear service areas, operational workflows, and tenant-scoped accountability."
-    vendor_badge = "Verified network"
-    buyer_headline = "A cleaner path from request to done"
-    buyer_copy = "Clients choose the service and the provider offering, then Mercato keeps fulfillment, tracking, notifications, and audit evidence aligned."
-    seller_headline = "Built for serious service operators"
-    seller_copy = "Providers can publish services, manage assigned work, respond to clients, and grow inside a marketplace that feels professional from day one."
-    workflow_headline = "How Gigsii works inside Xusmo"
-    workflow_copy = "Xusmo creates the site, Mercato powers the marketplace, and every tenant gets isolated providers, services, configuration, and operations."
     footer = "Gigsii tenant running inside the Mercato SaaS platform"
     item_empty_title = "No Gigsii services yet"
     item_empty_copy = "Run tools\seed-gigsii-tenant.ps1 to create providers and services."
     item_fallback_copy = "Verified local service ready for booking."
     item_quantity_label = "booking slots"
     vendor_status_label = "verified provider"
-    # Nav uses __TENANT_HOME__ placeholders that Storefront\Config substitutes
-    # with /t/<tenant_slug> at render time. These point at real pages
-    # introduced in claude/storefront-navigation (Phase 5b) and later branches.
     nav = @(
         @{ href = "__TENANT_HOME__"; label = "Home" },
         @{ href = "__TENANT_HOME__/services"; label = "Services" },
@@ -116,138 +91,261 @@ $storefront = @{
         orders = "Jobs tracked"
         take = "Marketplace fees"
     }
-    positioning_cards = @(
-        @{ eyebrow = "Trust"; title = "Verified from the start"; copy = "Providers are approved before they appear in the marketplace." },
-        @{ eyebrow = "Choice"; title = "One service, many providers"; copy = "Customers can compare local providers offering the same service." },
-        @{ eyebrow = "Local"; title = "Service areas built in"; copy = "Categories, service radius, and provider locations are scoped per tenant." },
-        @{ eyebrow = "Ops"; title = "From booking to completion"; copy = "Orders, jobs, messages, notifications, and audit stay connected." }
-    )
-    seller_steps = @(
-        @{ eyebrow = "Join"; title = "A polished provider profile"; copy = "Service businesses can present their work with trust and clarity." },
-        @{ eyebrow = "Offer"; title = "Bookable service catalog"; copy = "Each provider can attach pricing, duration, capacity, and service area." },
-        @{ eyebrow = "Route"; title = "Correct provider fulfillment"; copy = "Checkout preserves the selected offering so the work routes correctly." },
-        @{ eyebrow = "Update"; title = "__NOTIFICATION_SUMMARY__"; copy = "Email and event updates keep clients and operators aligned." },
-        @{ eyebrow = "Control"; title = "Tenant operations evidence"; copy = "Audit, outbox, reports, and feature flags stay isolated." },
-        @{ eyebrow = "Grow"; title = "Ready for Xusmo sites"; copy = "Xusmo can enable this marketplace experience per website." }
-    )
-    workflow_steps = @(
-        @{ eyebrow = "01"; title = "Xusmo enables Mercato"; copy = "The Xusmo site maps to a Mercato tenant ID." },
-        @{ eyebrow = "02"; title = "Tenant config applies"; copy = "Storefront, domains, integrations, and flags are tenant settings." },
-        @{ eyebrow = "03"; title = "Providers publish offers"; copy = "Many providers can offer shared service templates." },
-        @{ eyebrow = "04"; title = "Clients book offerings"; copy = "Order splitting uses selected offering metadata for correct provider routing." }
-    )
 }
 
 $tenant = Invoke-MercatoApi -Path "/enterprise/tenants" -Method "POST" -Body @{
     tenant_slug = "gigsii"
     display_name = "Gigsii"
     plan_code = "xusmo-marketplace"
-    region_code = "ca-central-1"
-    control_plane_id = "xusmo-site-gigsii-local"
-    domains = @(
-        @{ domain = "localhost"; path_prefix = "/t/gigsii"; is_primary = $true; status = "active"; verified = $true }
-    )
-    # Flags listed here are tenant-visible on the storefront feature-cloud.
-    # Dead/scaffold modules (ai-copilot, collaboration, disputes, fraud-risk,
-    # avalara, paypal-marketplace, postmark, shippo, taxjar, twilio, migration,
-    # subscriptions-module) are intentionally NOT seeded for the gigsii demo
-    # tenant because their backends are 29-LOC scaffolds. Re-enable here once
-    # the corresponding modules have real implementations.
-    feature_flags = @{
-        "mercato.commissions" = $true
-        "mercato.core" = $true
-        "mercato.enterprise" = $true
-        "mercato.integration.aws_s3" = $true
-        "mercato.integration.sendgrid" = $true
-        "mercato.integration.stripe" = $true
-        "mercato.integration.stripe_connect" = $true
-        "mercato.kyc" = $true
-        "mercato.messaging" = $true
-        "mercato.notifications" = $true
-        "mercato.orders" = $true
-        "mercato.payouts" = $true
-        "mercato.products" = $true
-        "mercato.promotions" = $true
-        "mercato.reports" = $true
-        "mercato.reviews" = $true
-        "mercato.search" = $true
-        "mercato.service_ops" = $true
-        "mercato.tax" = $true
-        "mercato.vendors" = $true
-        "gigsii.otp" = $true
-        "gigsii.monetization" = $true
-        "gigsii.task_posting" = $true
-        "gigsii.referral_redemption" = $true
-    }
-    integrations = @{
-        sendgrid = @{
-            status = "test"
-            public_config = @{ from_email = "no-reply@gigsii.local"; mode = "mailpit" }
-            secret_refs = @{ api_key = "env:SENDGRID_API_KEY" }
-        }
-        s3 = @{
-            status = "test"
-            public_config = @{ bucket = "mercato-local"; endpoint = "http://localhost:9002" }
-            secret_refs = @{ access_key = "env:MERCATO_S3_ACCESS_KEY"; secret_key = "env:MERCATO_S3_SECRET_KEY" }
-        }
-        stripe = @{
-            status = "test"
-            public_config = @{ mode = "test"; connect = $true; payouts = "sandbox" }
-            secret_refs = @{ secret_key = "env:STRIPE_SECRET_KEY"; webhook_secret = "env:STRIPE_WEBHOOK_SECRET" }
-        }
-    }
     storefront = $storefront
 }
 
-$categories = @("Plumbing", "Cleaning", "Appliance Repair", "Electrical", "Handyman")
+# --- Categories ---
+$categories = @(
+    "Plumbing",
+    "Cleaning",
+    "Electrical",
+    "HVAC",
+    "Handyman",
+    "Landscaping",
+    "Painting",
+    "Moving",
+    "Pest Control",
+    "Locksmith",
+    "Roofing",
+    "Web & Marketing"
+)
 $categoryByName = @{}
+$existingCategories = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/categories"
+foreach ($existing in $existingCategories) {
+    $categoryByName[$existing.name] = $existing
+}
 foreach ($categoryName in $categories) {
-    $slug = ($categoryName.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
-    $existing = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/categories" | ForEach-Object { $_ } | Where-Object { $_.slug -eq $slug })
-    if ($existing.Count -gt 0) {
-        $categoryByName[$categoryName] = $existing[0]
-    } else {
+    if (-not $categoryByName.ContainsKey($categoryName)) {
+        $slug = ($categoryName.ToLower() -replace '[^a-z0-9]+', '-').Trim('-')
         $categoryByName[$categoryName] = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/categories" -Method "POST" -Body @{ name = $categoryName; slug = $slug }
     }
 }
 
+# --- Providers (with photos and zones) ---
 $providers = @(
-    @{ business_name = "MapleFix Home Services"; store_slug = "maplefix"; category = "Plumbing";
-       headline = "Licensed plumber, 18 years on Toronto kitchens.";
-       bio = "Family-run plumbing serving the GTA since 2007. Same-day for emergencies, transparent flat-rate quotes, and parts warranty on every job.";
-       years_experience = 18; hourly_rate_minor = 11500; phone = "+1-416-555-0142"; languages = "English, Mandarin";
-       license_number = "ON-P-44219"; insurance_carrier = "Intact"; insurance_amount_minor = 200000000;
-       latitude = 43.6532; longitude = -79.3832; service_radius_km = 30;
-       extra_areas = @(@{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15}, @{label="Etobicoke"; city="Etobicoke"; region="ON"; latitude=43.6205; longitude=-79.5132; radius_km=20});
-       services = @(
-        @{ title = "Emergency Leak Diagnosis"; sku = "GIGSII-LEAK"; price_minor = 12500; stock_quantity = 12; description = "Licensed plumbing assessment with arrival window, photos, and repair estimate."; pricing_type = "fixed"; duration_minutes = 60 },
-        @{ title = "Faucet Replacement Visit"; sku = "GIGSII-FAUCET"; price_minor = 18500; stock_quantity = 8; description = "On-site faucet replacement with parts review and completion notes."; pricing_type = "fixed"; duration_minutes = 90 },
-        @{ title = "Hourly Plumbing Labour"; sku = "GIGSII-PLUMBHR"; price_minor = 11500; stock_quantity = 99; description = "By-the-hour for non-standard jobs. Parts at cost."; pricing_type = "hourly"; duration_minutes = 60 }
-    ) },
-    @{ business_name = "BrightNest Cleaning Co"; store_slug = "brightnest"; category = "Cleaning";
-       headline = "Eco-friendly cleaning, recurring or one-off.";
-       bio = "Crew of five, all WSIB-covered, all background-checked. Non-toxic supplies provided. Bond-back guarantee on move-outs.";
-       years_experience = 9; hourly_rate_minor = 7500; phone = "+1-416-555-0188"; languages = "English, Portuguese";
-       license_number = "BL-9912"; insurance_carrier = "Co-operators"; insurance_amount_minor = 200000000;
-       latitude = 43.6605; longitude = -79.4320; service_radius_km = 25;
-       extra_areas = @(@{label="Annex / Yorkville"; city="Toronto"; region="ON"; latitude=43.6700; longitude=-79.4050; radius_km=8}, @{label="Liberty Village"; city="Toronto"; region="ON"; latitude=43.6385; longitude=-79.4225; radius_km=8});
-       services = @(
-        @{ title = "Move-Out Deep Clean"; sku = "GIGSII-MOVEOUT"; price_minor = 32000; stock_quantity = 10; description = "Turnover clean with checklist, supplies, and photo proof."; pricing_type = "fixed"; duration_minutes = 240 },
-        @{ title = "Recurring Home Cleaning"; sku = "GIGSII-RECURRING"; price_minor = 14500; stock_quantity = 20; description = "Standard recurring home visit for kitchens, baths, floors, and reset tasks."; pricing_type = "fixed"; duration_minutes = 150 },
-        @{ title = "Window Cleaning (per window)"; sku = "GIGSII-WIN"; price_minor = 800; stock_quantity = 99; description = "Inside + outside, frame wipe-down, screens rinsed."; pricing_type = "per_unit"; unit_label = "window"; duration_minutes = 15 }
-    ) },
-    @{ business_name = "UrbanSpark Electric"; store_slug = "urbanspark"; category = "Electrical";
-       headline = "ESA-licensed master electrician. Smart-home specialist.";
-       bio = "Master electrician with 22 years on residential and light commercial work. Specialises in smart-home retrofits, EV charger installs, and panel upgrades.";
-       years_experience = 22; hourly_rate_minor = 13500; phone = "+1-416-555-0203"; languages = "English";
-       license_number = "ESA-77310"; insurance_carrier = "Aviva"; insurance_amount_minor = 500000000;
-       latitude = 43.6440; longitude = -79.4000; service_radius_km = 35;
-       extra_areas = @(@{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=12}, @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=18});
-       services = @(
-        @{ title = "Smart Lighting Install"; sku = "GIGSII-LIGHTING"; price_minor = 17500; stock_quantity = 11; description = "Install connected dimmers, fixtures, and room scenes with safety verification."; pricing_type = "fixed"; duration_minutes = 120 },
-        @{ title = "Panel Safety Inspection"; sku = "GIGSII-PANEL"; price_minor = 15500; stock_quantity = 7; description = "Breaker panel inspection with findings, photos, and follow-up estimate."; pricing_type = "fixed"; duration_minutes = 90 },
-        @{ title = "EV Charger Install (Level 2)"; sku = "GIGSII-EV"; price_minor = 85000; stock_quantity = 5; description = "Hardwired Level-2 EV charger install including permit and inspection."; pricing_type = "quote_required"; duration_minutes = 240 }
-    ) }
+    @{ business_name="MapleFix Home Services"; store_slug="maplefix"; category="Plumbing";
+       headline="Licensed plumber, 18 years on Toronto kitchens.";
+       bio="Family-run plumbing serving the GTA since 2007. Same-day for emergencies, transparent flat-rate quotes, and parts warranty on every job.";
+       years_experience=18; hourly_rate_minor=11500; phone="+1-416-555-0142";
+       languages="English, Mandarin"; license_number="ON-P-44219";
+       insurance_carrier="Intact"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/maplefix/400/400"; cover_url="https://picsum.photos/seed/maplefix-cover/1200/400";
+       latitude=43.6532; longitude=-79.3832; service_radius_km=30;
+       extra_areas=@(
+            @{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15},
+            @{label="Etobicoke"; city="Etobicoke"; region="ON"; latitude=43.6205; longitude=-79.5132; radius_km=20},
+            @{label="North York"; city="Toronto"; region="ON"; latitude=43.7615; longitude=-79.4111; radius_km=12}
+       );
+       services=@(
+            @{ title="Emergency Leak Diagnosis"; sku="GIGSII-LEAK"; price_minor=12500; stock_quantity=12; description="Licensed plumbing assessment with arrival window, photos, and repair estimate."; pricing_type="fixed"; duration_minutes=60 },
+            @{ title="Faucet Replacement Visit"; sku="GIGSII-FAUCET"; price_minor=18500; stock_quantity=8; description="On-site faucet replacement with parts review and completion notes."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="Hourly Plumbing Labour"; sku="GIGSII-PLUMBHR"; price_minor=11500; stock_quantity=99; description="By-the-hour for non-standard jobs. Parts at cost."; pricing_type="hourly"; duration_minutes=60 },
+            @{ title="Water Heater Install"; sku="GIGSII-WATERHEATER"; price_minor=95000; stock_quantity=4; description="Tank or tankless installation, permit handling, old-unit removal."; pricing_type="quote_required"; duration_minutes=240 }
+       ) },
+    @{ business_name="BrightNest Cleaning Co"; store_slug="brightnest"; category="Cleaning";
+       headline="Eco-friendly cleaning, recurring or one-off.";
+       bio="Crew of five, all WSIB-covered, all background-checked. Non-toxic supplies provided. Bond-back guarantee on move-outs.";
+       years_experience=9; hourly_rate_minor=7500; phone="+1-416-555-0188";
+       languages="English, Portuguese"; license_number="BL-9912";
+       insurance_carrier="Co-operators"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/brightnest/400/400"; cover_url="https://picsum.photos/seed/brightnest-cover/1200/400";
+       latitude=43.6605; longitude=-79.432; service_radius_km=25;
+       extra_areas=@(
+            @{label="Annex / Yorkville"; city="Toronto"; region="ON"; latitude=43.67; longitude=-79.405; radius_km=8},
+            @{label="Liberty Village"; city="Toronto"; region="ON"; latitude=43.6385; longitude=-79.4225; radius_km=8},
+            @{label="Leslieville"; city="Toronto"; region="ON"; latitude=43.6646; longitude=-79.3392; radius_km=6}
+       );
+       services=@(
+            @{ title="Move-Out Deep Clean"; sku="GIGSII-MOVEOUT"; price_minor=32000; stock_quantity=10; description="Turnover clean with checklist, supplies, and photo proof."; pricing_type="fixed"; duration_minutes=240 },
+            @{ title="Recurring Home Cleaning"; sku="GIGSII-RECURRING"; price_minor=14500; stock_quantity=20; description="Standard recurring home visit for kitchens, baths, floors, and reset tasks."; pricing_type="fixed"; duration_minutes=150 },
+            @{ title="Window Cleaning"; sku="GIGSII-WIN"; price_minor=800; stock_quantity=99; description="Inside + outside, frame wipe-down, screens rinsed."; pricing_type="per_unit"; unit_label="window"; duration_minutes=15 },
+            @{ title="Post-Renovation Cleanup"; sku="GIGSII-POSTRENO"; price_minor=48000; stock_quantity=6; description="Dust + debris + paint-fleck removal after construction."; pricing_type="fixed"; duration_minutes=300 }
+       ) },
+    @{ business_name="UrbanSpark Electric"; store_slug="urbanspark"; category="Electrical";
+       headline="ESA-licensed master electrician. Smart-home specialist.";
+       bio="Master electrician with 22 years on residential and light commercial work. Specialises in smart-home retrofits, EV charger installs, and panel upgrades.";
+       years_experience=22; hourly_rate_minor=13500; phone="+1-416-555-0203";
+       languages="English"; license_number="ESA-77310";
+       insurance_carrier="Aviva"; insurance_amount_minor=500000000;
+       photo_url="https://picsum.photos/seed/urbanspark/400/400"; cover_url="https://picsum.photos/seed/urbanspark-cover/1200/400";
+       latitude=43.644; longitude=-79.4; service_radius_km=35;
+       extra_areas=@(
+            @{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=12},
+            @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=18}
+       );
+       services=@(
+            @{ title="Smart Lighting Install"; sku="GIGSII-LIGHTING"; price_minor=17500; stock_quantity=11; description="Install connected dimmers, fixtures, and room scenes with safety verification."; pricing_type="fixed"; duration_minutes=120 },
+            @{ title="Panel Safety Inspection"; sku="GIGSII-PANEL"; price_minor=15500; stock_quantity=7; description="Breaker panel inspection with findings, photos, and follow-up estimate."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="EV Charger Install (Level 2)"; sku="GIGSII-EV"; price_minor=85000; stock_quantity=5; description="Hardwired Level-2 EV charger install including permit and inspection."; pricing_type="quote_required"; duration_minutes=240 }
+       ) },
+    @{ business_name="TrueNorth HVAC"; store_slug="truenorth-hvac"; category="HVAC";
+       headline="Heating, cooling, ventilation. TSSA-certified.";
+       bio="TSSA G2-certified HVAC techs. 24/7 emergency furnace service across the GTA. Lennox, Carrier, Daikin authorised dealer.";
+       years_experience=15; hourly_rate_minor=14500; phone="+1-647-555-0234";
+       languages="English, French"; license_number="TSSA-G2-88122";
+       insurance_carrier="Intact"; insurance_amount_minor=500000000;
+       photo_url="https://picsum.photos/seed/truenorth-hvac/400/400"; cover_url="https://picsum.photos/seed/truenorth-cover/1200/400";
+       latitude=43.7615; longitude=-79.4111; service_radius_km=40;
+       extra_areas=@(
+            @{label="North York"; city="Toronto"; region="ON"; latitude=43.7615; longitude=-79.4111; radius_km=15},
+            @{label="Vaughan"; city="Vaughan"; region="ON"; latitude=43.8361; longitude=-79.4983; radius_km=20},
+            @{label="Markham"; city="Markham"; region="ON"; latitude=43.8561; longitude=-79.337; radius_km=20}
+       );
+       services=@(
+            @{ title="Furnace Tune-Up"; sku="GIGSII-FURNACE-TUNE"; price_minor=18900; stock_quantity=30; description="30-point furnace inspection and clean. Includes filter swap."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="AC Diagnostic Visit"; sku="GIGSII-AC-DIAG"; price_minor=14900; stock_quantity=20; description="Cooling fault diagnosis with repair quote within the same visit."; pricing_type="fixed"; duration_minutes=60 },
+            @{ title="Heat Pump Consultation"; sku="GIGSII-HEATPUMP"; price_minor=0; stock_quantity=99; description="Free in-home assessment for cold-climate heat-pump retrofits."; pricing_type="quote_required"; duration_minutes=60 }
+       ) },
+    @{ business_name="Kingsway Handyman"; store_slug="kingsway-handyman"; category="Handyman";
+       headline="Drywall, mounting, assembly. One-day jobs my specialty.";
+       bio="Solo handyman covering the small jobs the big firms skip. TV mounts, IKEA assembly, drywall patches, picture rails, shelving.";
+       years_experience=7; hourly_rate_minor=8500; phone="+1-647-555-0299";
+       languages="English"; license_number="";
+       insurance_carrier="Wawanesa"; insurance_amount_minor=100000000;
+       photo_url="https://picsum.photos/seed/kingsway-handyman/400/400"; cover_url="https://picsum.photos/seed/kingsway-cover/1200/400";
+       latitude=43.6519; longitude=-79.5074; service_radius_km=25;
+       extra_areas=@(
+            @{label="Etobicoke"; city="Etobicoke"; region="ON"; latitude=43.6205; longitude=-79.5132; radius_km=15},
+            @{label="High Park"; city="Toronto"; region="ON"; latitude=43.6465; longitude=-79.4637; radius_km=10},
+            @{label="The Junction"; city="Toronto"; region="ON"; latitude=43.666; longitude=-79.469; radius_km=8}
+       );
+       services=@(
+            @{ title="TV Mount Install (up to 65 in)"; sku="GIGSII-TVMOUT"; price_minor=12500; stock_quantity=30; description="Wall mount with cable management. Bring your own mount or add one."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="IKEA Assembly"; sku="GIGSII-IKEA"; price_minor=7500; stock_quantity=50; description="Per item assembly. Wardrobes and kitchens by quote."; pricing_type="per_unit"; unit_label="item"; duration_minutes=45 },
+            @{ title="Drywall Patch + Paint"; sku="GIGSII-DRYWALL"; price_minor=18500; stock_quantity=20; description="Patch up to 4 holes per visit, sanded smooth, matched paint."; pricing_type="fixed"; duration_minutes=150 },
+            @{ title="Handyman Hour"; sku="GIGSII-HANDY-HR"; price_minor=8500; stock_quantity=99; description="By-the-hour for mixed small jobs."; pricing_type="hourly"; duration_minutes=60 }
+       ) },
+    @{ business_name="Verde Landscape"; store_slug="verde-landscape"; category="Landscaping";
+       headline="Lawn, garden, hardscape. Spring-to-fall maintenance plans.";
+       bio="Family-owned since 2011. Sustainable native-plant design, seasonal lawn care, paver patios, retaining walls.";
+       years_experience=13; hourly_rate_minor=7200; phone="+1-905-555-0314";
+       languages="English, Italian"; license_number="LO-22887";
+       insurance_carrier="Northbridge"; insurance_amount_minor=300000000;
+       photo_url="https://picsum.photos/seed/verde-landscape/400/400"; cover_url="https://picsum.photos/seed/verde-cover/1200/400";
+       latitude=43.589; longitude=-79.6441; service_radius_km=35;
+       extra_areas=@(
+            @{label="Mississauga"; city="Mississauga"; region="ON"; latitude=43.589; longitude=-79.6441; radius_km=25},
+            @{label="Oakville"; city="Oakville"; region="ON"; latitude=43.4675; longitude=-79.6877; radius_km=15},
+            @{label="Burlington"; city="Burlington"; region="ON"; latitude=43.3255; longitude=-79.799; radius_km=15}
+       );
+       services=@(
+            @{ title="Weekly Lawn Service"; sku="GIGSII-LAWN-WK"; price_minor=5500; stock_quantity=40; description="Mow, edge, blow. Min 4-visit booking. Includes cleanup."; pricing_type="fixed"; duration_minutes=30 },
+            @{ title="Spring Garden Bed Refresh"; sku="GIGSII-GARDEN"; price_minor=28000; stock_quantity=12; description="Cleanup, edging, mulching, perennial split. Half-day visit."; pricing_type="fixed"; duration_minutes=240 },
+            @{ title="Hardscape Consultation"; sku="GIGSII-HARDSCAPE"; price_minor=0; stock_quantity=99; description="Patio / walkway / retaining-wall design with estimate."; pricing_type="quote_required"; duration_minutes=60 }
+       ) },
+    @{ business_name="Brushwork Painters"; store_slug="brushwork-painters"; category="Painting";
+       headline="Interior + exterior painting. Drips-free guarantee.";
+       bio="Crew of three with 10+ years of residential painting. Sherwin Williams, Benjamin Moore preferred. Drop-cloths and tape every time.";
+       years_experience=11; hourly_rate_minor=7800; phone="+1-416-555-0421";
+       languages="English, Spanish"; license_number="";
+       insurance_carrier="Aviva"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/brushwork/400/400"; cover_url="https://picsum.photos/seed/brushwork-cover/1200/400";
+       latitude=43.666; longitude=-79.469; service_radius_km=30;
+       extra_areas=@(
+            @{label="The Junction"; city="Toronto"; region="ON"; latitude=43.666; longitude=-79.469; radius_km=10},
+            @{label="Roncesvalles"; city="Toronto"; region="ON"; latitude=43.6481; longitude=-79.4486; radius_km=8},
+            @{label="Bloor West Village"; city="Toronto"; region="ON"; latitude=43.6489; longitude=-79.4756; radius_km=6}
+       );
+       services=@(
+            @{ title="Single-Room Repaint"; sku="GIGSII-PAINT-ROOM"; price_minor=42000; stock_quantity=25; description="Walls only, two coats, primer where needed. Paint included up to `$80."; pricing_type="fixed"; duration_minutes=360 },
+            @{ title="Whole-Home Interior"; sku="GIGSII-PAINT-HOUSE"; price_minor=0; stock_quantity=99; description="Multi-day project for 3+ bed homes. Quote after walk-through."; pricing_type="quote_required"; duration_minutes=480 },
+            @{ title="Exterior Trim"; sku="GIGSII-PAINT-TRIM"; price_minor=7200; stock_quantity=99; description="Per linear-foot for door / window / fascia trim."; pricing_type="per_unit"; unit_label="linear foot"; duration_minutes=20 }
+       ) },
+    @{ business_name="Lift & Shift Movers"; store_slug="lift-and-shift"; category="Moving";
+       headline="Local moves done right. Two movers, one truck, flat rate.";
+       bio="Toronto-based movers since 2015. WSIB-covered, hourly billing, no fuel surcharge, packing materials provided.";
+       years_experience=9; hourly_rate_minor=16000; phone="+1-647-555-0511";
+       languages="English, Russian"; license_number="MTO-77441";
+       insurance_carrier="Northbridge"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/lift-shift/400/400"; cover_url="https://picsum.photos/seed/lift-shift-cover/1200/400";
+       latitude=43.7065; longitude=-79.3984; service_radius_km=50;
+       extra_areas=@(
+            @{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=15},
+            @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=18},
+            @{label="Mississauga"; city="Mississauga"; region="ON"; latitude=43.589; longitude=-79.6441; radius_km=25}
+       );
+       services=@(
+            @{ title="Local Move (2 movers + truck, hourly)"; sku="GIGSII-MOVE-HR"; price_minor=16000; stock_quantity=99; description="Two movers + 26-ft truck. 3-hour minimum."; pricing_type="hourly"; duration_minutes=180 },
+            @{ title="Studio / 1-Bed Flat Move"; sku="GIGSII-MOVE-1BR"; price_minor=65000; stock_quantity=15; description="Up to 4 hours, dolly + blankets included."; pricing_type="fixed"; duration_minutes=240 },
+            @{ title="Piano Move"; sku="GIGSII-MOVE-PIANO"; price_minor=35000; stock_quantity=8; description="Upright or grand. Includes specialist gear."; pricing_type="fixed"; duration_minutes=180 }
+       ) },
+    @{ business_name="Sentinel Pest Control"; store_slug="sentinel-pest"; category="Pest Control";
+       headline="Licensed exterminator. Cockroaches, mice, bedbugs, wasps.";
+       bio="Health Canada-licensed pest tech with 14 years across GTA condos and houses. Discreet unmarked vehicles, pet-safe treatments.";
+       years_experience=14; hourly_rate_minor=12500; phone="+1-416-555-0633";
+       languages="English, Cantonese"; license_number="HC-PCO-44872";
+       insurance_carrier="Co-operators"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/sentinel-pest/400/400"; cover_url="https://picsum.photos/seed/sentinel-cover/1200/400";
+       latitude=43.6646; longitude=-79.3392; service_radius_km=35;
+       extra_areas=@(
+            @{label="Leslieville"; city="Toronto"; region="ON"; latitude=43.6646; longitude=-79.3392; radius_km=8},
+            @{label="The Beaches"; city="Toronto"; region="ON"; latitude=43.6716; longitude=-79.2941; radius_km=8},
+            @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=18}
+       );
+       services=@(
+            @{ title="Bedbug Treatment (1-bed)"; sku="GIGSII-BEDBUG"; price_minor=48000; stock_quantity=10; description="Two-visit thermal/chemical treatment with 30-day guarantee."; pricing_type="fixed"; duration_minutes=240 },
+            @{ title="Mouse / Rodent Setup"; sku="GIGSII-MICE"; price_minor=22000; stock_quantity=20; description="Initial inspection, bait + trap placement, return visit."; pricing_type="fixed"; duration_minutes=120 },
+            @{ title="Wasp Nest Removal"; sku="GIGSII-WASP"; price_minor=18500; stock_quantity=30; description="Same-day in-season. Treatment + nest removal."; pricing_type="fixed"; duration_minutes=60 }
+       ) },
+    @{ business_name="GoldKey Locksmiths"; store_slug="goldkey"; category="Locksmith";
+       headline="24/7 emergency lockout, rekeys, smart locks.";
+       bio="Mobile locksmiths covering Toronto and Peel. 30-minute response in core neighborhoods. Insured, bonded, background-checked techs.";
+       years_experience=12; hourly_rate_minor=11000; phone="+1-416-555-0755";
+       languages="English"; license_number="ON-LSM-22198";
+       insurance_carrier="Intact"; insurance_amount_minor=200000000;
+       photo_url="https://picsum.photos/seed/goldkey/400/400"; cover_url="https://picsum.photos/seed/goldkey-cover/1200/400";
+       latitude=43.6532; longitude=-79.3832; service_radius_km=40;
+       extra_areas=@(
+            @{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15},
+            @{label="Mississauga"; city="Mississauga"; region="ON"; latitude=43.589; longitude=-79.6441; radius_km=25},
+            @{label="Brampton"; city="Brampton"; region="ON"; latitude=43.7315; longitude=-79.7624; radius_km=20}
+       );
+       services=@(
+            @{ title="Emergency Lockout"; sku="GIGSII-LOCKOUT"; price_minor=14500; stock_quantity=99; description="24/7 dispatch within service area. Flat call-out + work."; pricing_type="fixed"; duration_minutes=60 },
+            @{ title="Rekey up to 4 cylinders"; sku="GIGSII-REKEY"; price_minor=18900; stock_quantity=30; description="Mobile rekey of existing locks. Includes 4 keys."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="Smart Lock Install"; sku="GIGSII-SMARTLOCK"; price_minor=22500; stock_quantity=15; description="Install of August / Schlage / Yale. Wi-Fi setup included."; pricing_type="fixed"; duration_minutes=90 }
+       ) },
+    @{ business_name="Apex Roofing Co"; store_slug="apex-roofing"; category="Roofing";
+       headline="Shingle, flat, repair. 25-year workmanship guarantee.";
+       bio="Roofing specialists since 2003. IKO, GAF, and BP authorised. WSIB-compliant crews. Detailed quote within 48 hours.";
+       years_experience=21; hourly_rate_minor=0; phone="+1-647-555-0877";
+       languages="English"; license_number="ORCA-44119";
+       insurance_carrier="Aviva"; insurance_amount_minor=500000000;
+       photo_url="https://picsum.photos/seed/apex-roofing/400/400"; cover_url="https://picsum.photos/seed/apex-cover/1200/400";
+       latitude=43.7764; longitude=-79.2318; service_radius_km=45;
+       extra_areas=@(
+            @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=20},
+            @{label="Markham"; city="Markham"; region="ON"; latitude=43.8561; longitude=-79.337; radius_km=18},
+            @{label="Pickering"; city="Pickering"; region="ON"; latitude=43.8384; longitude=-79.0868; radius_km=15}
+       );
+       services=@(
+            @{ title="Roof Inspection Report"; sku="GIGSII-ROOF-INSPECT"; price_minor=19500; stock_quantity=20; description="Full-roof inspection with photo report and quote."; pricing_type="fixed"; duration_minutes=90 },
+            @{ title="Shingle Repair (small)"; sku="GIGSII-SHINGLE-FIX"; price_minor=35000; stock_quantity=12; description="Up to 10 shingles replaced and sealed."; pricing_type="fixed"; duration_minutes=150 },
+            @{ title="Full Re-Roof"; sku="GIGSII-REROOF"; price_minor=0; stock_quantity=99; description="Tear-off + reinstall on residential roof. Quoted after inspection."; pricing_type="quote_required"; duration_minutes=480 }
+       ) },
+    @{ business_name="PixelPress Web Studio"; store_slug="pixelpress"; category="Web & Marketing";
+       headline="Websites for tradespeople. Done in two weeks.";
+       bio="Toronto micro-agency that builds and runs websites for local service businesses. WordPress, Webflow, plus Google Business Profile + review automation.";
+       years_experience=8; hourly_rate_minor=12500; phone="+1-647-555-0922";
+       languages="English, French"; license_number="";
+       insurance_carrier="Wawanesa"; insurance_amount_minor=100000000;
+       photo_url="https://picsum.photos/seed/pixelpress/400/400"; cover_url="https://picsum.photos/seed/pixelpress-cover/1200/400";
+       latitude=43.647; longitude=-79.418; service_radius_km=100;
+       extra_areas=@(
+            @{label="Queen West"; city="Toronto"; region="ON"; latitude=43.647; longitude=-79.418; radius_km=10},
+            @{label="Liberty Village"; city="Toronto"; region="ON"; latitude=43.6385; longitude=-79.4225; radius_km=8}
+       );
+       services=@(
+            @{ title="Starter Website (5 pages)"; sku="GIGSII-WEB-5"; price_minor=195000; stock_quantity=8; description="Brand kit + 5-page site + GBP setup. Two-week turnaround."; pricing_type="fixed"; duration_minutes=480 },
+            @{ title="Monthly Care Plan"; sku="GIGSII-WEB-CARE"; price_minor=25000; stock_quantity=30; description="Hosting, updates, monthly content edit, monthly call."; pricing_type="fixed"; duration_minutes=60 },
+            @{ title="Hourly Consult"; sku="GIGSII-WEB-HR"; price_minor=12500; stock_quantity=99; description="Marketing strategy / SEO / Google Ads consult by the hour."; pricing_type="hourly"; duration_minutes=60 }
+       ) }
 )
 
 $createdServices = 0
@@ -256,9 +354,6 @@ foreach ($providerSpec in $providers) {
     if ($existingVendors.Count -gt 0) {
         $provider = $existingVendors[0]
     } else {
-        # Self-signup style register: send the full profile in one shot so the
-        # storefront immediately reflects what a real pro would have filled
-        # out via the multi-step form.
         $provider = Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" -Method "POST" -Body @{
             business_name = $providerSpec.business_name
             store_slug = $providerSpec.store_slug
@@ -273,11 +368,11 @@ foreach ($providerSpec in $providers) {
             license_number = $providerSpec.license_number
             insurance_carrier = $providerSpec.insurance_carrier
             insurance_amount_minor = [int] $providerSpec.insurance_amount_minor
+            photo_url = $providerSpec.photo_url
+            cover_url = $providerSpec.cover_url
         }
     }
 
-    # Ensure profile fields are present even on re-runs against an older
-    # vendor row created before the profile migration ran.
     Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/profile" -Method "PATCH" -Body @{
         headline = $providerSpec.headline
         bio = $providerSpec.bio
@@ -288,6 +383,8 @@ foreach ($providerSpec in $providers) {
         license_number = $providerSpec.license_number
         insurance_carrier = $providerSpec.insurance_carrier
         insurance_amount_minor = [int] $providerSpec.insurance_amount_minor
+        photo_url = $providerSpec.photo_url
+        cover_url = $providerSpec.cover_url
     } | Out-Null
 
     Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/status" -Method "POST" -Body @{ status = "approved" } | Out-Null
@@ -302,7 +399,6 @@ foreach ($providerSpec in $providers) {
         is_primary = $true
     } | Out-Null
 
-    # Declare extra geo-tagged service areas (TaskRabbit-style work-area polygons).
     foreach ($area in $providerSpec.extra_areas) {
         Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors/$($provider.vendor_id)/service-areas" -Method "POST" -Body @{
             label = $area.label
@@ -341,57 +437,16 @@ foreach ($providerSpec in $providers) {
     }
 }
 
-# Sample reviews per provider. Idempotent: skips when a provider already has
-# >= 3 published reviews. Tolerant of the reviews table not existing yet.
-$reviewsByProvider = @{
-    "maplefix" = @(
-        @{ rating = 5; title = "Quick fix, clean job"; body = "Booked same-day for a leaking sink trap. Tech arrived in the window, fixed it in 25 minutes, left the area cleaner than they found it." },
-        @{ rating = 5; title = "Saved our weekend"; body = "Water heater started leaking Friday night. They came Saturday morning with the right replacement and had us back in hot water by lunch." },
-        @{ rating = 4; title = "Solid work, fair price"; body = "Replaced an outdoor hose bib. Quote matched the final invoice. Would book again." }
-    )
-    "brightnest" = @(
-        @{ rating = 5; title = "Best deep clean in years"; body = "Move-out cleaning before we handed over the keys. Got the deposit back in full. Highly recommend." },
-        @{ rating = 5; title = "Reliable weekly cleaning"; body = "Have used them every two weeks for four months now. Consistent crew, consistent quality." },
-        @{ rating = 4; title = "Good with a quick turnaround"; body = "Needed the place spotless before in-laws arrived. They squeezed us in with a day''s notice." }
-    )
-    "urbanspark" = @(
-        @{ rating = 5; title = "Smart-switch install done right"; body = "Replaced six outlets and two light switches with smart-home gear. Labelled the breaker, tested every device, walked us through the app." },
-        @{ rating = 4; title = "Diagnosed the flicker"; body = "Living room lights had been flickering for months. Found a loose neutral in the panel, fixed it inside an hour." },
-        @{ rating = 5; title = "Professional from quote to invoice"; body = "Clear scope up front, change order documented when we added a circuit. Will use them again for the basement reno." }
-    )
-}
-
-$reviewsInserted = 0
-foreach ($providerSlug in $reviewsByProvider.Keys) {
-    $providerRow = @(Invoke-MercatoApi -TenantSlug "gigsii" -Path "/vendors" | Where-Object { $_.store_slug -eq $providerSlug })
-    if ($providerRow.Count -eq 0) { continue }
-    $vendorId = [int]@($providerRow[0].vendor_id)[0]
-    foreach ($r in $reviewsByProvider[$providerSlug]) {
-        try {
-            Invoke-MercatoApi -TenantSlug "gigsii" -Path "/reviews" -Method "POST" -Body @{
-                vendor_id = $vendorId
-                buyer_user_id = 1
-                rating = [int] $r.rating
-                title = $r.title
-                body = $r.body
-                status = "published"
-            } | Out-Null
-            $reviewsInserted++
-        } catch {
-            # Reviews module / table may not be loaded yet; skip quietly.
-        }
-    }
-}
-
 Write-Host ""
 Write-Host "Gigsii seed complete:"
 Write-Host "  Categories: $($categoryByName.Count)"
 Write-Host "  Providers: $($providers.Count)"
 Write-Host "  Services created this run: $createdServices"
-Write-Host "  Reviews inserted this run: $reviewsInserted"
 Write-Host ""
 Write-Host "Open these to verify:"
 Write-Host "  http://localhost:8092/t/gigsii/signup"
 Write-Host "  http://localhost:8092/t/gigsii/providers"
 Write-Host "  http://localhost:8092/t/gigsii/services?near=Toronto&radius=25"
 Write-Host "  http://localhost:8092/t/gigsii/providers/maplefix"
+Write-Host "  http://localhost:8092/wp-admin/admin.php?page=mercato-connectors"
+Write-Host "  http://localhost:8092/wp-admin/admin.php?page=mercato-approvals"
