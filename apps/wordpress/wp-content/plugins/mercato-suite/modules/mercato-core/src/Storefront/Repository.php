@@ -195,4 +195,117 @@ final class Repository
             'requests' => $wpdb->get_results($wpdb->prepare("SELECT request_id, title, city, region, budget_max_minor, currency, bid_mode, status FROM `{$serviceRequests}` WHERE tenant_id = %d AND created_by_user_id = %d ORDER BY request_id DESC LIMIT 20", $tenantId, $userId), ARRAY_A) ?: [],
         ];
     }
+
+    /**
+     * Provider dashboard for the logged-in WP user. Resolves which vendor
+     * row the current user owns (within the current tenant) and returns
+     * their services + jobs + KYC + payout + reviews summary.
+     *
+     * If the current user does not own a vendor in this tenant, returns
+     * ['vendor' => null] so the template can render a "not a provider" CTA.
+     *
+     * @return array<string,mixed>
+     */
+    public function providerDashboard(int $tenantId, int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['vendor' => null, 'reason' => 'not_signed_in'];
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix;
+        $vendors = $prefix . 'mercato_vendors';
+        $products = $prefix . 'mercato_products';
+        $jobs = $prefix . 'mercato_jobs';
+        $kycCases = $prefix . 'mercato_kyc_cases';
+        $payouts = $prefix . 'mercato_payout_batches';
+        $reviews = $prefix . 'mercato_reviews';
+
+        $vendor = $wpdb->get_row($wpdb->prepare(
+            "SELECT vendor_id, business_name, store_slug, status, stripe_account_id
+             FROM `{$vendors}`
+             WHERE tenant_id = %d AND owner_user_id = %d
+             LIMIT 1",
+            $tenantId,
+            $userId
+        ), ARRAY_A);
+
+        if (!\is_array($vendor) || empty($vendor)) {
+            return ['vendor' => null, 'reason' => 'not_a_provider'];
+        }
+
+        $vendorId = (int) $vendor['vendor_id'];
+
+        $servicesCount = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM `{$products}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'active'",
+            $tenantId,
+            $vendorId
+        ));
+
+        $jobsCount = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM `{$jobs}` WHERE tenant_id = %d AND vendor_id = %d",
+            $tenantId,
+            $vendorId
+        ));
+
+        $recentJobs = $wpdb->get_results($wpdb->prepare(
+            "SELECT job_id, status, assigned_user_id, updated_at
+             FROM `{$jobs}`
+             WHERE tenant_id = %d AND vendor_id = %d
+             ORDER BY job_id DESC LIMIT 10",
+            $tenantId,
+            $vendorId
+        ), ARRAY_A) ?: [];
+
+        $kycStatus = (string) $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM `{$kycCases}` WHERE tenant_id = %d AND vendor_id = %d ORDER BY case_id DESC LIMIT 1",
+            $tenantId,
+            $vendorId
+        ));
+
+        $latestPayout = $wpdb->get_row($wpdb->prepare(
+            "SELECT batch_id, status, total_minor, created_at
+             FROM `{$payouts}`
+             WHERE tenant_id = %d ORDER BY batch_id DESC LIMIT 1",
+            $tenantId
+        ), ARRAY_A) ?: [];
+
+        $reviewSummary = ['avg' => 0, 'count' => 0];
+        $recentReviews = [];
+        $reviewsExists = (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $reviews)) === $reviews;
+        if ($reviewsExists) {
+            $row = $wpdb->get_row($wpdb->prepare(
+                "SELECT COALESCE(AVG(rating), 0) AS avg_rating, COUNT(*) AS review_count
+                 FROM `{$reviews}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'published'",
+                $tenantId,
+                $vendorId
+            ), ARRAY_A);
+            if (\is_array($row)) {
+                $reviewSummary = [
+                    'avg' => \round((float) $row['avg_rating'], 2),
+                    'count' => (int) $row['review_count'],
+                ];
+            }
+            $recentReviews = $wpdb->get_results($wpdb->prepare(
+                "SELECT review_id, rating, title, body, buyer_user_id, created_at
+                 FROM `{$reviews}` WHERE tenant_id = %d AND vendor_id = %d AND status = 'published'
+                 ORDER BY created_at DESC LIMIT 5",
+                $tenantId,
+                $vendorId
+            ), ARRAY_A) ?: [];
+        }
+
+        return [
+            'vendor' => $vendor,
+            'services_count' => $servicesCount,
+            'jobs_count' => $jobsCount,
+            'recent_jobs' => $recentJobs,
+            'kyc_status' => $kycStatus !== '' ? $kycStatus : 'not_started',
+            'latest_payout' => $latestPayout,
+            'review_average' => $reviewSummary['avg'],
+            'review_count' => $reviewSummary['count'],
+            'reviews' => $recentReviews,
+        ];
+    }
+
 }

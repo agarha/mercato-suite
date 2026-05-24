@@ -17,6 +17,7 @@ use Mercato\Core\Tenant\Resolver;
  *   /t/<slug>/providers                        -> provider directory
  *   /t/<slug>/providers/<provider-slug>        -> provider detail
  *   /t/<slug>/requests/new                     -> request-new form
+ *   /t/<slug>/provider/dashboard               -> provider self-service dashboard
  *   /t/<slug>/account                          -> buyer account
  *   anything else                              -> null (WP fallthrough)
  */
@@ -61,6 +62,9 @@ final class Renderer
         }
         if ($local === '/requests/new') {
             return $this->renderRequestNew();
+        }
+        if ($local === '/provider/dashboard') {
+            return $this->renderProviderDashboard();
         }
         if ($local === '/account') {
             return $this->renderAccount();
@@ -124,6 +128,16 @@ final class Renderer
         return $this->render('request-new.php', [
             'data' => $this->repository->requestNewPage($tid),
             'current_page' => 'requests',
+        ]);
+    }
+
+    public function renderProviderDashboard(): string
+    {
+        $tid = $this->tenants->currentTenantId();
+        $uid = \function_exists('get_current_user_id') ? (int) \get_current_user_id() : 0;
+        return $this->render('provider-dashboard.php', [
+            'data' => $this->repository->providerDashboard($tid, $uid),
+            'current_page' => 'provider',
         ]);
     }
 
