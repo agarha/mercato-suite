@@ -173,4 +173,52 @@ $hasFilter = ($search_q !== '' || $search_category > 0 || $search_near !== '');
               <?php elseif ($distance !== null): ?><small class="badge-distance"><?= (string) $distance ?> km away</small>
               <?php else: ?><small>Verified provider</small><?php endif; ?>
             </div>
-            <div class="product-body"
+            <div class="product-body">
+              <p class="vendor-name"><a href="<?= $attr($home . '/providers/' . $service['store_slug']) ?>"><?= $esc($service['business_name']) ?></a><?php if (!empty($service['years_experience'])): ?> &middot; <span class="exp-pill"><?= (int) $service['years_experience'] ?>+ yrs</span><?php endif; ?></p>
+              <h3>
+                <?= $esc($service['title']) ?>
+                <?php if ($listingBadge !== null): ?>
+                  <span class="listing-type-badge <?= $attr($listingBadge['class']) ?>"><?= $esc($listingBadge['label']) ?></span>
+                <?php endif; ?>
+              </h3>
+              <?php if (!empty($service['headline'])): ?><p class="headline-line"><?= $esc($service['headline']) ?></p><?php endif; ?>
+              <p><?= $esc($service['summary'] ?: ($service['description'] ?: $config['item_fallback_copy'])) ?></p>
+              <div class="product-meta">
+                <?php if ($pricingType === 'quote_required'): ?>
+                  <strong>Quote on request</strong>
+                <?php elseif ((int) $service['price_minor'] === 0): ?>
+                  <strong>Free consultation</strong>
+                <?php else: ?>
+                  <strong><?= $money($service['price_minor']) ?><?php if ($pricingSuffix !== ''): ?><span class="price-suffix"><?= $esc($pricingSuffix) ?></span><?php endif; ?></strong>
+                <?php endif; ?>
+                <?php if (!empty($service['duration_minutes'])): ?>
+                  <span>~<?= (int) $service['duration_minutes'] ?> min</span>
+                <?php endif; ?>
+              </div>
+            </div>
+          </article>
+        <?php endforeach; endif; ?>
+      </div>
+    </section>
+  </main>
+  <?php include $partials . '/footer.php'; ?>
+<script>
+(function () {
+  var btn = document.querySelector('[data-geo-btn]');
+  if (!btn || !navigator.geolocation) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true; btn.textContent = 'Locating...';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = document.getElementById('svc-lat');
+      var lng = document.getElementById('svc-lng');
+      if (lat) lat.value = pos.coords.latitude.toFixed(7);
+      if (lng) lng.value = pos.coords.longitude.toFixed(7);
+      btn.closest('form').submit();
+    }, function () {
+      btn.disabled = false; btn.textContent = 'Use my location';
+    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
+  });
+})();
+</script>
+</body>
+</html>

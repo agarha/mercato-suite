@@ -216,4 +216,22 @@ $stars = static function (float $rating): string {
       <?php if (empty($reviews)): ?>
         <article class="empty-state">
           <h3>No reviews yet</h3>
-          <p>Be the first to share your experience after a complet
+          <p>Be the first to share your experience after a completed job.</p>
+        </article>
+      <?php else: ?>
+        <div class="positioning">
+          <?php foreach ($reviews as $r): ?>
+            <article class="positioning-card">
+              <b aria-label="rating <?= $attr($r['rating']) ?> out of 5"><?= $stars((float) $r['rating']) ?></b>
+              <?php if (!empty($r['title'])): ?><strong><?= $esc($r['title']) ?></strong><?php endif; ?>
+              <p><?= $esc($r['body'] ?: 'No comment provided.') ?></p>
+              <p class="review-meta">Buyer #<?= $esc($r['buyer_user_id']) ?> &middot; <?= $esc($r['created_at']) ?></p>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+  </main>
+  <?php include $partials . '/footer.php'; ?>
+</body>
+</html>
