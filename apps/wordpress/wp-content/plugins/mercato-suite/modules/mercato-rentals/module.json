@@ -1,0 +1,37 @@
+{
+  "slug": "mercato-rentals",
+  "namespace": "Mercato\\Rentals",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1",
+    "mercato-products@^0.1"
+  ],
+  "provides_events": [
+    "mercato.rental.hold.placed.v1",
+    "mercato.rental.booking.confirmed.v1",
+    "mercato.rental.booking.cancelled.v1",
+    "mercato.rental.item.returned.v1",
+    "mercato.rental.deposit.held.v1",
+    "mercato.rental.deposit.released.v1",
+    "mercato.rental.deposit.claimed.v1",
+    "mercato.rental.overdue.flagged.v1"
+  ],
+  "consumes_events": [
+    "mercato.product.created.v1",
+    "mercato.vendor.approved.v1"
+  ],
+  "capabilities": [
+    "mercato_rentals_read",
+    "mercato_rentals_write",
+    "mercato_rentals_admin"
+  ],
+  "tables": [
+    "wp_mercato_listing_bookings",
+    "wp_mercato_listing_blackouts",
+    "wp_mercato_listing_holds"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.rentals"
+}
