@@ -62,6 +62,18 @@ final class Signup
             'sparks_granted' => 0,
         ];
 
+        // Issue an email verification token and send the confirm link via
+        // wp_mail. The verify URL lives on the storefront. Best-effort:
+        // any failure (mail not configured) is a warning, not a blocker.
+        try {
+            $token = $this->vendors->issueVerificationToken($vendorId);
+            $created['verification_token_sent'] = true;
+            $this->sendVerificationEmail($tenantId, $vendor, $token);
+        } catch (\Throwable $e) {
+            $created['warnings'][] = 'verification_email: ' . $e->getMessage();
+            $created['verification_token_sent'] = false;
+        }
+
         // Grant the signup bonus from the rewards module if it's enabled.
         // Hard-tolerant: any failure (module unloaded, table missing) is a
         // warning, never blocks vendor creation.
@@ -215,6 +227,54 @@ final class Signup
         }
 
         return (int) $userId;
+    }
+
+    /**
+     * Send the email-verification link to the applicant. Uses the tenant's
+     * storefront /verify-email page; the email body is plain-text so it
+     * survives any mail provider (Mailpit, Postmark, SendGrid) without
+     * extra setup.
+     *
+     * @param array<string,mixed> $vendor
+     */
+    private function sendVerificationEmail(int $tenantId, array $vendor, string $token): void
+    {
+        if (!\function_exists('wp_mail') || !\function_exists('home_url')) {
+            return;
+        }
+
+        $email = (string) ($vendor['contact_email'] ?? '');
+        if ($email === '') {
+            // Fall back to the WP user's email if no contact_email was supplied
+            $userId = (int) ($vendor['owner_user_id'] ?? 0);
+            if ($userId > 0 && \function_exists('get_userdata')) {
+                $u = \get_userdata($userId);
+                if ($u && !empty($u->user_email)) {
+                    $email = (string) $u->user_email;
+                }
+            }
+        }
+        if ($email === '') {
+            return;
+        }
+
+        // Resolve tenant slug for the verify URL.
+        global $wpdb;
+        $tenants = $wpdb->prefix . 'mercato_tenants';
+        $slug = (string) $wpdb->get_var($wpdb->prepare("SELECT tenant_slug FROM `{$tenants}` WHERE tenant_id = %d", $tenantId)) ?: 'gigsii';
+
+        $verifyUrl = \home_url('/t/' . $slug . '/verify-email?token=' . \urlencode($token));
+        $business = (string) ($vendor['business_name'] ?? 'your business');
+        $brand = $slug === 'gigsii' ? 'Gigsii' : 'Mercato';
+        $subject = '[' . $brand . '] Confirm your email for ' . $business;
+        $body = "Hi,\n\n"
+              . "Thanks for applying to join " . $brand . " as a pro. "
+              . "Click the link below to confirm your email and unlock the rest of your provider dashboard:\n\n"
+              . $verifyUrl . "\n\n"
+              . "If you didn't request this, you can ignore the message.\n\n"
+              . "— The " . $brand . " team";
+
+        \wp_mail($email, $subject, $body);
     }
 
     /**

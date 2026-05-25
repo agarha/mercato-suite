@@ -92,6 +92,12 @@ final class Provider extends ServiceProvider
                 ],
             ]);
 
+            \register_rest_route('mercato/v1', '/storefront/signup/verify', [
+                'methods' => 'POST',
+                'callback' => [$this, 'verifyEmail'],
+                'permission_callback' => [Permissions::class, 'canPublicRegister'],
+            ]);
+
             // Public storefront self-signup. One call drops a draft vendor
             // with the full profile, location, areas and starter services
             // attached. Admin still has to approve before products go active.
@@ -145,6 +151,24 @@ final class Provider extends ServiceProvider
             });
         } catch (\Throwable $e) {
             return new WP_Error('mercato_vendor_status_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
+    public function verifyEmail(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            $token = (string) ($request->get_param('token') ?: ($request->get_json_params()['token'] ?? ''));
+            $vendor = $this->repo()->verifyEmailToken($token);
+            $this->audit('vendor.email.verified', 'vendor', (int) $vendor['vendor_id'], null, $vendor);
+            return new WP_REST_Response([
+                'ok' => true,
+                'vendor_id' => (int) $vendor['vendor_id'],
+                'business_name' => (string) $vendor['business_name'],
+                'verified_at' => (string) ($vendor['email_verified_at'] ?? ''),
+            ], 200);
+        } catch (\Throwable $e) {
+            $code = $e->getMessage() === 'TOKEN_INVALID' ? 404 : 400;
+            return new WP_Error('mercato_verify_failed', $e->getMessage(), ['status' => $code]);
         }
     }
 

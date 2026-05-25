@@ -366,6 +366,68 @@ final class Repository
     /**
      * @return array<string,mixed>
      */
+    /**
+     * Generate or reissue an email verification token for a vendor.
+     * Returns the raw token so the caller can include it in the verify URL.
+     */
+    public function issueVerificationToken(int $vendorId): string
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $token = \bin2hex(\random_bytes(32));
+        $table = $wpdb->prefix . 'mercato_vendors';
+        $updated = $wpdb->update($table, [
+            'email_verification_token' => $token,
+            'email_verification_sent_at' => \gmdate('Y-m-d H:i:s.v'),
+        ], [
+            'tenant_id' => $tenantId,
+            'vendor_id' => $vendorId,
+        ]);
+        if ($updated === false) {
+            throw new RuntimeException('Unable to issue verification token: ' . (string) $wpdb->last_error);
+        }
+        return $token;
+    }
+
+    /**
+     * Confirm a vendor's email by token. Returns the matching vendor on
+     * success; throws "TOKEN_INVALID" if no row matches. Idempotent: a
+     * second call with the same token still succeeds (already verified).
+     *
+     * @return array<string,mixed>
+     */
+    public function verifyEmailToken(string $token): array
+    {
+        global $wpdb;
+        $tenantId = $this->tenantResolver->currentTenantId();
+        $token = \preg_replace('/[^a-f0-9]/i', '', $token) ?? '';
+        if (\strlen($token) < 32) {
+            throw new RuntimeException('TOKEN_INVALID');
+        }
+
+        $table = $wpdb->prefix . 'mercato_vendors';
+        $vendor = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM `{$table}` WHERE tenant_id = %d AND email_verification_token = %s",
+            $tenantId,
+            $token
+        ), ARRAY_A);
+        if (!\is_array($vendor)) {
+            throw new RuntimeException('TOKEN_INVALID');
+        }
+
+        if (empty($vendor['email_verified_at'])) {
+            $wpdb->update($table, [
+                'email_verified_at' => \gmdate('Y-m-d H:i:s.v'),
+            ], [
+                'tenant_id' => $tenantId,
+                'vendor_id' => (int) $vendor['vendor_id'],
+            ]);
+            $vendor = $this->find((int) $vendor['vendor_id']);
+            $this->outbox->publish('mercato.vendor.email.verified.v1', $vendor, (string) $vendor['vendor_id'], $tenantId);
+        }
+        return $vendor;
+    }
+
     public function find(int $vendorId): array
     {
         global $wpdb;
