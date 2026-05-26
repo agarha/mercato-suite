@@ -24,8 +24,8 @@ $approvedCount = (int) ($data['approved_provider_count'] ?? 0);
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
-  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
-  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
+  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront.css')) ?>">
+  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront-taskfirst.css')) ?>"><?php endif; ?>
 </head>
 <body<?= $theme === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -198,41 +198,63 @@ $approvedCount = (int) ($data['approved_provider_count'] ?? 0);
           <button type="button" class="button secondary" id="signup-add-service">+ Add another service</button>
         </fieldset>
 
-        <!-- STEP 4: service area -->
+        <!-- STEP 4: service area (cascading dropdowns from /geo/regions) -->
         <fieldset class="signup-step" data-step="4" aria-labelledby="signup-step4-title" hidden>
           <legend id="signup-step4-title" class="signup-step-title">Where do you work?</legend>
-          <p class="signup-step-help">Customers within this radius will see your services. You can add more zones from your dashboard later.</p>
+          <p class="signup-step-help">Pick where you serve customers. Pros within a customer's radius show up first in their search. You can add more zones from your dashboard later.</p>
+
           <div class="signup-row">
             <label class="signup-field">
-              <span>City / suburb *</span>
-              <input type="text" name="location[city]" autocomplete="address-level2" id="signup-city" required>
+              <span>Country *</span>
+              <select name="location[country_slug]" id="signup-country" required></select>
+              <input type="hidden" name="location[country]" id="signup-country-code">
             </label>
             <label class="signup-field">
-              <span>Region / state</span>
-              <input type="text" name="location[region]" autocomplete="address-level1">
+              <span>Province / state *</span>
+              <select name="location[region_slug]" id="signup-province" required disabled>
+                <option value="">Pick a country first</option>
+              </select>
+              <input type="hidden" name="location[region]" id="signup-region-name">
             </label>
           </div>
+
           <div class="signup-row">
             <label class="signup-field">
-              <span>Postal code *</span>
-              <input type="text" name="location[postal_code]" autocomplete="postal-code" id="signup-postcode" required>
+              <span>City *</span>
+              <select name="location[city_slug]" id="signup-city-select" required disabled>
+                <option value="">Pick a province first</option>
+              </select>
+              <input type="hidden" name="location[city]" id="signup-city">
             </label>
             <label class="signup-field">
-              <span>Country</span>
-              <input type="text" name="location[country]" autocomplete="country" maxlength="2" placeholder="US">
+              <span>Neighborhood <small>(optional)</small></span>
+              <select name="location[neighborhood_slug]" id="signup-neighborhood" disabled>
+                <option value="">Pick a city first</option>
+              </select>
             </label>
           </div>
-          <label class="signup-field">
-            <span>Travel radius *</span>
-            <input type="number" name="location[service_radius_km]" min="1" max="200" step="1" value="25" required>
-            <small>Kilometres from your base location.</small>
-          </label>
+
+          <div class="signup-row">
+            <label class="signup-field">
+              <span>Postal code <small>(optional)</small></span>
+              <input type="text" name="location[postal_code]" autocomplete="postal-code" id="signup-postcode" placeholder="M5V 1A1">
+            </label>
+            <label class="signup-field">
+              <span>Travel radius *</span>
+              <input type="number" name="location[service_radius_km]" min="1" max="200" step="1" value="25" id="signup-radius" required>
+              <small>Kilometres from your base location.</small>
+            </label>
+          </div>
+
           <input type="hidden" name="location[latitude]" id="signup-lat">
           <input type="hidden" name="location[longitude]" id="signup-lng">
-          <button type="button" class="button secondary" id="signup-geolocate">
-            <span aria-hidden="true">📍</span> Use my current location
-          </button>
-          <p class="signup-geo-status" id="signup-geo-status" role="status"></p>
+
+          <div class="signup-geo-actions">
+            <button type="button" class="button secondary" id="signup-geolocate">
+              <span aria-hidden="true">&#x1F4CD;</span> Use my current location instead
+            </button>
+            <p class="signup-geo-status" id="signup-geo-status" role="status" aria-live="polite"></p>
+          </div>
         </fieldset>
 
         <!-- STEP 5: review -->
@@ -341,6 +363,123 @@ $approvedCount = (int) ($data['approved_provider_count'] ?? 0);
       servicesWrap.appendChild(clone);
     });
   }
+
+  // Cascading geo dropdowns — country -> province -> city -> neighborhood.
+  // Each select fetches its children from /mercato/v1/geo/regions and copies
+  // the chosen row's lat/lng + recommended radius into the hidden inputs the
+  // signup payload uses, so geocoding is unnecessary unless the user clicks
+  // "Use my current location instead".
+  (function () {
+    // Derive tenant prefix from the current path (/t/<slug>/...). The REST
+    // route must be tenant-scoped so the response includes the correct
+    // geo_regions rows; /wp-json/... resolves to the default tenant which
+    // doesn't have the Canadian seed.
+    var m = location.pathname.match(/^(\/t\/[^\/]+)/);
+    var tenantHome = m ? m[1] : '';
+    var geoBase = tenantHome + '/?rest_route=/mercato/v1/geo/regions';
+    var $country = document.getElementById('signup-country');
+    var $province = document.getElementById('signup-province');
+    var $city = document.getElementById('signup-city-select');
+    var $hood = document.getElementById('signup-neighborhood');
+    var $latH = document.getElementById('signup-lat');
+    var $lngH = document.getElementById('signup-lng');
+    var $countryCode = document.getElementById('signup-country-code');
+    var $regionName = document.getElementById('signup-region-name');
+    var $cityName = document.getElementById('signup-city');
+    var $radius = document.getElementById('signup-radius');
+    if (!$country) return;
+
+    function clearSelect(el, placeholder) {
+      el.innerHTML = '<option value="">' + placeholder + '</option>';
+      el.disabled = true;
+    }
+    function fillSelect(el, rows, defaultLabel) {
+      el.innerHTML = '<option value="">' + defaultLabel + '</option>';
+      rows.forEach(function (r) {
+        var opt = document.createElement('option');
+        opt.value = r.slug;
+        opt.textContent = r.name;
+        opt.dataset.lat = r.latitude || '';
+        opt.dataset.lng = r.longitude || '';
+        opt.dataset.radius = r.radius_km || '';
+        opt.dataset.code = r.code || '';
+        opt.dataset.regionId = r.region_id;
+        el.appendChild(opt);
+      });
+      el.disabled = rows.length === 0;
+    }
+    function fetchRegions(params) {
+      var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
+      // geoBase already contains "?rest_route=..." so we need "&" not "?".
+      var sep = geoBase.indexOf('?') === -1 ? '?' : '&';
+      return fetch(geoBase + sep + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+    }
+    function pickedOption(el) {
+      return el.options[el.selectedIndex];
+    }
+    function applyPickedCoords(el) {
+      var o = pickedOption(el);
+      if (!o || !o.dataset.lat || !o.dataset.lng) return false;
+      $latH.value = o.dataset.lat;
+      $lngH.value = o.dataset.lng;
+      if (o.dataset.radius && $radius && !$radius.dataset.userTouched) {
+        $radius.value = o.dataset.radius;
+      }
+      return true;
+    }
+
+    // Step 1: load countries on first render.
+    fetchRegions({ type: 'country' }).then(function (rows) {
+      fillSelect($country, rows, 'Pick a country');
+      // Auto-select if only one country (Gigsii ships with Canada only today).
+      if (rows.length === 1) {
+        $country.value = rows[0].slug;
+        $country.dispatchEvent(new Event('change'));
+      }
+    });
+
+    $country.addEventListener('change', function () {
+      var o = pickedOption($country); if (!o || !o.value) return;
+      $countryCode.value = o.dataset.code || '';
+      applyPickedCoords($country);
+      clearSelect($province, 'Loading...');
+      clearSelect($city, 'Pick a province first');
+      clearSelect($hood, 'Pick a city first');
+      fetchRegions({ parent: o.value, type: 'province' }).then(function (rows) {
+        fillSelect($province, rows, 'Pick a province');
+      });
+    });
+
+    $province.addEventListener('change', function () {
+      var o = pickedOption($province); if (!o || !o.value) return;
+      $regionName.value = o.dataset.code || o.textContent || '';
+      applyPickedCoords($province);
+      clearSelect($city, 'Loading...');
+      clearSelect($hood, 'Pick a city first');
+      fetchRegions({ parent: o.value, type: 'city' }).then(function (rows) {
+        fillSelect($city, rows, 'Pick a city');
+      });
+    });
+
+    $city.addEventListener('change', function () {
+      var o = pickedOption($city); if (!o || !o.value) return;
+      $cityName.value = o.textContent;
+      applyPickedCoords($city);
+      clearSelect($hood, 'Loading...');
+      fetchRegions({ parent: o.value, type: 'neighborhood' }).then(function (rows) {
+        if (rows.length === 0) { clearSelect($hood, 'No neighborhoods listed (optional)'); return; }
+        fillSelect($hood, rows, 'Any neighborhood');
+      });
+    });
+
+    $hood.addEventListener('change', function () {
+      applyPickedCoords($hood);
+    });
+
+    if ($radius) {
+      $radius.addEventListener('input', function () { $radius.dataset.userTouched = '1'; });
+    }
+  })();
 
   // Geolocation: try browser API, fall back to manual postcode (Nominatim
   // geocodes on the server side when the form posts).

@@ -135,7 +135,7 @@ $providers = @(
        years_experience=18; hourly_rate_minor=11500; phone="+1-416-555-0142";
        languages="English, Mandarin"; license_number="ON-P-44219";
        insurance_carrier="Intact"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/maplefix/400/400"; cover_url="https://picsum.photos/seed/maplefix-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=1200&h=400&fit=crop&auto=format";
        latitude=43.6532; longitude=-79.3832; service_radius_km=30;
        extra_areas=@(
             @{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15},
@@ -154,7 +154,7 @@ $providers = @(
        years_experience=9; hourly_rate_minor=7500; phone="+1-416-555-0188";
        languages="English, Portuguese"; license_number="BL-9912";
        insurance_carrier="Co-operators"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/brightnest/400/400"; cover_url="https://picsum.photos/seed/brightnest-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&h=400&fit=crop&auto=format";
        latitude=43.6605; longitude=-79.432; service_radius_km=25;
        extra_areas=@(
             @{label="Annex / Yorkville"; city="Toronto"; region="ON"; latitude=43.67; longitude=-79.405; radius_km=8},
@@ -173,7 +173,7 @@ $providers = @(
        years_experience=22; hourly_rate_minor=13500; phone="+1-416-555-0203";
        languages="English"; license_number="ESA-77310";
        insurance_carrier="Aviva"; insurance_amount_minor=500000000;
-       photo_url="https://picsum.photos/seed/urbanspark/400/400"; cover_url="https://picsum.photos/seed/urbanspark-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1565608087341-404b25492fee?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1565608087341-404b25492fee?w=1200&h=400&fit=crop&auto=format";
        latitude=43.644; longitude=-79.4; service_radius_km=35;
        extra_areas=@(
             @{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=12},
@@ -190,7 +190,7 @@ $providers = @(
        years_experience=15; hourly_rate_minor=14500; phone="+1-647-555-0234";
        languages="English, French"; license_number="TSSA-G2-88122";
        insurance_carrier="Intact"; insurance_amount_minor=500000000;
-       photo_url="https://picsum.photos/seed/truenorth-hvac/400/400"; cover_url="https://picsum.photos/seed/truenorth-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1503389152951-9f343605f61e?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1503389152951-9f343605f61e?w=1200&h=400&fit=crop&auto=format";
        latitude=43.7615; longitude=-79.4111; service_radius_km=40;
        extra_areas=@(
             @{label="North York"; city="Toronto"; region="ON"; latitude=43.7615; longitude=-79.4111; radius_km=15},
@@ -208,7 +208,7 @@ $providers = @(
        years_experience=7; hourly_rate_minor=8500; phone="+1-647-555-0299";
        languages="English"; license_number="";
        insurance_carrier="Wawanesa"; insurance_amount_minor=100000000;
-       photo_url="https://picsum.photos/seed/kingsway-handyman/400/400"; cover_url="https://picsum.photos/seed/kingsway-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=1200&h=400&fit=crop&auto=format";
        latitude=43.6519; longitude=-79.5074; service_radius_km=25;
        extra_areas=@(
             @{label="Etobicoke"; city="Etobicoke"; region="ON"; latitude=43.6205; longitude=-79.5132; radius_km=15},
@@ -227,7 +227,7 @@ $providers = @(
        years_experience=13; hourly_rate_minor=7200; phone="+1-905-555-0314";
        languages="English, Italian"; license_number="LO-22887";
        insurance_carrier="Northbridge"; insurance_amount_minor=300000000;
-       photo_url="https://picsum.photos/seed/verde-landscape/400/400"; cover_url="https://picsum.photos/seed/verde-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&h=400&fit=crop&auto=format";
        latitude=43.589; longitude=-79.6441; service_radius_km=35;
        extra_areas=@(
             @{label="Mississauga"; city="Mississauga"; region="ON"; latitude=43.589; longitude=-79.6441; radius_km=25},
@@ -245,7 +245,7 @@ $providers = @(
        years_experience=11; hourly_rate_minor=7800; phone="+1-416-555-0421";
        languages="English, Spanish"; license_number="";
        insurance_carrier="Aviva"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/brushwork/400/400"; cover_url="https://picsum.photos/seed/brushwork-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=1200&h=400&fit=crop&auto=format";
        latitude=43.666; longitude=-79.469; service_radius_km=30;
        extra_areas=@(
             @{label="The Junction"; city="Toronto"; region="ON"; latitude=43.666; longitude=-79.469; radius_km=10},
@@ -263,7 +263,7 @@ $providers = @(
        years_experience=9; hourly_rate_minor=16000; phone="+1-647-555-0511";
        languages="English, Russian"; license_number="MTO-77441";
        insurance_carrier="Northbridge"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/lift-shift/400/400"; cover_url="https://picsum.photos/seed/lift-shift-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1200&h=400&fit=crop&auto=format";
        latitude=43.7065; longitude=-79.3984; service_radius_km=50;
        extra_areas=@(
             @{label="Midtown Toronto"; city="Toronto"; region="ON"; latitude=43.7065; longitude=-79.3984; radius_km=15},
@@ -281,7 +281,7 @@ $providers = @(
        years_experience=14; hourly_rate_minor=12500; phone="+1-416-555-0633";
        languages="English, Cantonese"; license_number="HC-PCO-44872";
        insurance_carrier="Co-operators"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/sentinel-pest/400/400"; cover_url="https://picsum.photos/seed/sentinel-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1200&h=400&fit=crop&auto=format";
        latitude=43.6646; longitude=-79.3392; service_radius_km=35;
        extra_areas=@(
             @{label="Leslieville"; city="Toronto"; region="ON"; latitude=43.6646; longitude=-79.3392; radius_km=8},
@@ -299,7 +299,7 @@ $providers = @(
        years_experience=12; hourly_rate_minor=11000; phone="+1-416-555-0755";
        languages="English"; license_number="ON-LSM-22198";
        insurance_carrier="Intact"; insurance_amount_minor=200000000;
-       photo_url="https://picsum.photos/seed/goldkey/400/400"; cover_url="https://picsum.photos/seed/goldkey-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1582139329536-e7284fece509?w=1200&h=400&fit=crop&auto=format";
        latitude=43.6532; longitude=-79.3832; service_radius_km=40;
        extra_areas=@(
             @{label="Downtown Toronto"; city="Toronto"; region="ON"; latitude=43.6532; longitude=-79.3832; radius_km=15},
@@ -317,7 +317,7 @@ $providers = @(
        years_experience=21; hourly_rate_minor=0; phone="+1-647-555-0877";
        languages="English"; license_number="ORCA-44119";
        insurance_carrier="Aviva"; insurance_amount_minor=500000000;
-       photo_url="https://picsum.photos/seed/apex-roofing/400/400"; cover_url="https://picsum.photos/seed/apex-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=400&fit=crop&auto=format";
        latitude=43.7764; longitude=-79.2318; service_radius_km=45;
        extra_areas=@(
             @{label="Scarborough"; city="Scarborough"; region="ON"; latitude=43.7764; longitude=-79.2318; radius_km=20},
@@ -335,7 +335,7 @@ $providers = @(
        years_experience=8; hourly_rate_minor=12500; phone="+1-647-555-0922";
        languages="English, French"; license_number="";
        insurance_carrier="Wawanesa"; insurance_amount_minor=100000000;
-       photo_url="https://picsum.photos/seed/pixelpress/400/400"; cover_url="https://picsum.photos/seed/pixelpress-cover/1200/400";
+       photo_url="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=400&h=400&fit=crop&auto=format"; cover_url="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=1200&h=400&fit=crop&auto=format";
        latitude=43.647; longitude=-79.418; service_radius_km=100;
        extra_areas=@(
             @{label="Queen West"; city="Toronto"; region="ON"; latitude=43.647; longitude=-79.418; radius_km=10},

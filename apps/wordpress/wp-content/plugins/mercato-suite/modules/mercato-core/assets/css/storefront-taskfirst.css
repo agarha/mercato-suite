@@ -1128,3 +1128,58 @@ body.dir-taskfirst .geo-locate-btn {
   border: 1px solid var(--tf-line);
 }
 body.dir-taskfirst .geo-locate-btn:disabled { opacity: 0.6; cursor: progress; }
+
+/* === Phase 8b: image sizing inside product/vendor cards =================== */
+/* The seed populates vendors.photo_url with 400x400 Unsplash crops. Without
+   explicit sizing rules they overflow their containers and the cards look
+   broken. Make every card-image fill its container as a cover-fit background
+   and float the existing small badges + initials on top. */
+
+body.dir-taskfirst .product-media {
+  position: relative;
+  overflow: hidden;
+}
+body.dir-taskfirst .product-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  display: block;
+}
+body.dir-taskfirst .product-media span,
+body.dir-taskfirst .product-media small {
+  position: relative;
+  z-index: 1;
+}
+/* Add a subtle gradient overlay so the badge text stays readable on any photo */
+body.dir-taskfirst .product-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(31,42,82,0) 40%, rgba(31,42,82,0.45) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+/* Same fix for the provider directory avatars (image filled cover, initial hidden when img present) */
+body.dir-taskfirst .pro-card .vendor-avatar {
+  position: relative;
+  overflow: hidden;
+}
+body.dir-taskfirst .pro-card .vendor-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Force the product grid to fill its parent width on any viewport - the
+   container width was collapsing in certain edge cases. */
+body.dir-taskfirst .product-grid,
+body.dir-taskfirst .vendor-grid {
+  width: 100%;
+  min-width: 0;
+}

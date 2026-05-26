@@ -24,8 +24,8 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <meta name="theme-color" content="#0a4f47">
-  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css') ?>">
-  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>"><?php endif; ?>
+  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront.css')) ?>">
+  <?php if ($theme === 'taskfirst'): ?><link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront-taskfirst.css')) ?>"><?php endif; ?>
 </head>
 <body<?= $theme === 'taskfirst' ? ' class="dir-taskfirst"' : '' ?>>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -108,7 +108,7 @@ $hasFilter = ($search_category > 0 || $search_near !== '');
           <article class="vendor-card pro-card">
             <div class="vendor-avatar">
               <?php if (!empty($provider['photo_url'])): ?>
-                <img src="<?= $attr($provider['photo_url']) ?>" alt="" loading="lazy">
+                <img src="<?= $attr($provider['photo_url']) ?>" alt="">
               <?php else: ?>
                 <?= $esc(mb_substr((string) $provider['business_name'], 0, 1)) ?>
               <?php endif; ?>

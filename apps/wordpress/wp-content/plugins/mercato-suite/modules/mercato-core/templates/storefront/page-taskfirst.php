@@ -118,7 +118,7 @@ $nav = (array) ($config['nav'] ?? []);
   <meta name="theme-color" content="#1f2a52">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css') ?>">
+  <link rel="stylesheet" href="<?= $attr($asset_url . '/css/storefront-taskfirst.css?v=' . @filemtime(MERCATO_SUITE_DIR . '/modules/mercato-core/assets/css/storefront-taskfirst.css')) ?>">
 </head>
 <body class="dir-taskfirst">
   <a class="skip-link" href="#main">Skip to content</a>
