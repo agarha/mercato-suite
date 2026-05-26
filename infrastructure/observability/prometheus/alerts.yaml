@@ -1,0 +1,24 @@
+groups:
+  - name: mercato.mvp
+    rules:
+      - alert: MercatoOutboxBacklog
+        expr: mercato_outbox_pending > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Mercato outbox backlog is above 100 events.
+      - alert: MercatoOutboxDLQ
+        expr: mercato_outbox_dlq > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Mercato outbox has dead-lettered events.
+      - alert: MercatoDatabaseDown
+        expr: mercato_database_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Mercato database health check is failing.

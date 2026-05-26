@@ -1,0 +1,33 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mercato-migrations-{{ .Release.Revision }}
+  labels:
+{{ include "mercato.labels" . | indent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: migrations
+{{ include "mercato.selectorLabels" . | indent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: wp-cli-migrate
+          image: "{{ .Values.wordpress.image.repository }}:{{ .Values.wordpress.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command:
+            - sh
+            - -lc
+            - wp plugin activate mercato-suite --path=/var/www/html && wp option get siteurl --path=/var/www/html >/dev/null
+          envFrom:
+            - configMapRef:
+                name: mercato-suite-config
+            - secretRef:
+                name: {{ .Values.wordpress.secretRef }}
+{{- end }}

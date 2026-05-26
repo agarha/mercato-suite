@@ -1,0 +1,35 @@
+{{- if .Values.cron.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mercato-scheduler
+  labels:
+{{ include "mercato.labels" . | indent 4 }}
+spec:
+  schedule: {{ .Values.cron.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: scheduler
+{{ include "mercato.selectorLabels" . | indent 12 }}
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: wp-cron
+              image: "{{ .Values.wordpress.image.repository }}:{{ .Values.wordpress.image.tag }}"
+              imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+              command:
+                - sh
+                - -lc
+                - wp cron event run --due-now --path=/var/www/html
+              envFrom:
+                - configMapRef:
+                    name: mercato-suite-config
+                - secretRef:
+                    name: {{ .Values.wordpress.secretRef }}
+{{- end }}

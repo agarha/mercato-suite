@@ -1,0 +1,20 @@
+{
+  "vendor.apply": "Solicitar vender",
+  "vendor.approved": "Vendedor aprobado",
+  "vendor.rejected": "Solicitud rechazada",
+  "vendor.onboarding.profile": "Perfil enviado",
+  "vendor.onboarding.stripe": "Cuenta de Stripe conectada",
+  "vendor.onboarding.kyc": "KYC verificado",
+  "vendor.onboarding.approval": "Tenant aprobado",
+  "vendor.onboarding.first_product": "Primer producto creado",
+  "product.create": "Crear producto",
+  "product.archive": "Archivar producto",
+  "order.tracking": "Seguimiento",
+  "refund.request": "Solicitar reembolso",
+  "payout.execute": "Ejecutar pago",
+  "report.trial_balance": "Balance de comprobacion",
+  "state.loading": "Cargando",
+  "state.empty": "No hay registros todavia",
+  "state.error": "Algo salio mal",
+  "state.permission_denied": "No tienes permiso para ver esta area"
+}

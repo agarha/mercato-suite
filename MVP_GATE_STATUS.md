@@ -1,0 +1,31 @@
+# Mercato MVP Gate Status
+
+Last updated: 2026-05-22
+
+| Gate | Status | Evidence | Next action |
+|---|---|---|---|
+| MVP Cut approved | Partial | `docs_v2/00_mvp_cut/MVP_Cut.md` | Add explicit approval record. |
+| All P1 gaps closed or formally deferred | Partial | `docs_v2/deliverables/Gap_Matrix.md`, `GITHUB_ISSUE_BACKLOG.md` | Sync GitHub issues after permissions are fixed; close or block each P1. |
+| Core plugin/module structure implemented | Done | `apps/wordpress/wp-content/plugins/mercato-suite/modules` | Maintain manifest validation in CI. |
+| Vendor onboarding works end-to-end | Done | `tools/run-e2e-smoke.ps1` verifies signup, rejection reason, Stripe, KYC, approval, onboarding checklist | Add Playwright browser scenario. |
+| Product listing works end-to-end | Done | `tools/run-e2e-smoke.ps1`, admin/vendor JS | Add moderation/category coverage. |
+| Multi-vendor checkout works end-to-end | Partial | E2E smoke covers order split path with discount, shipping, tax, and tracking allocations | Add true multi-vendor cart/browser checkout and Woo conflict matrix. |
+| Suborders created correctly | Done | `mercato-orders/src/Splitter.php`, E2E DB summary | Add integration tests around edge cases. |
+| Commissions calculated correctly | Partial | `mercato-commissions/src/Calculator.php`, E2E, balanced ledger entries | Add category/product/tier rule tests. |
+| Refund reversals work | Done | E2E smoke verifies refunds and commission reversals | Add Woo native refund integration test. |
+| Stripe payout sandbox works | Done | E2E smoke executes test-mode transfers | Add failure/retry scenario. |
+| Vendor dashboard works | Partial | WP admin vendor shell | Build richer SPA/browser tests. |
+| Tenant admin dashboard works | Partial | WP admin operations shell | Add browser/accessibility tests. |
+| Basic reports work | Done | E2E smoke verifies dashboard/export/reconciliation/trial balance | Add contract tests. |
+| RBAC tested | Partial | REST negative security smoke exists | Add route-level capability tests. |
+| Tenant isolation tested | Partial | Tenant-scoped code exists | Add automated cross-tenant tests. |
+| API contract tests pass | Partial | `tools/validate-contracts.py` validates implemented MVP route/event overlay | Sync all MVP routes/events into docs OpenAPI/AsyncAPI and add schema-level tests. |
+| Top MVP E2E tests pass | Partial | One broad E2E smoke passes, including payment/refund/payout/outbox/allocation/tracking | Add Playwright top workflow suite. |
+| k6 baseline test executed | Partial | `tools/run-k6-baseline.ps1`, `tests/performance/k6/mercato-baseline.js`, latest local report under `reports/performance` passed | Run stricter thresholds in staging and attach report. |
+| Security scans pass with no critical/high unresolved | Partial | `tools/run-security-scans.ps1` passed locally and CI gate added | Add external SAST/SCA/IaC tools in CI and retain baseline reports. |
+| Backup/restore tested | Partial | `tools/backup-restore-drill.ps1` passed locally, restoring 5 core tables | Execute AWS Aurora/S3 restore drill in staging. |
+| DR partial drill completed | Blocked | Local restore drill exists; real DR requires staging/cloud environment | Create GitHub issue after permissions fixed and execute cloud drill. |
+| UAT sign-off completed | Blocked | `docs/uat/mvp-uat-signoff.md`; requires beta tenant/user signoff | Execute UAT with named business testers. |
+| Release notes prepared | Partial | `CHANGELOG.md`, release artifact | Add tagged release process. |
+
+Gate result: **Not ready for MVP launch**. The local technical smoke path is healthy, but launch gates around tests, security, cloud operations, governance, and signoff remain open.

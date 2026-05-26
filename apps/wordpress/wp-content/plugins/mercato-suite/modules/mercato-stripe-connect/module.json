@@ -21,7 +21,10 @@
   ],
   "tables": [
     "wp_mercato_stripe_accounts",
-    "wp_mercato_stripe_webhook_events"
+    "wp_mercato_stripe_webhook_events",
+    "wp_mercato_stripe_transfers",
+    "wp_mercato_stripe_payment_intents",
+    "wp_mercato_stripe_refunds"
   ],
   "tier": "adapter",
   "feature_flag": "mercato.integration.stripe"

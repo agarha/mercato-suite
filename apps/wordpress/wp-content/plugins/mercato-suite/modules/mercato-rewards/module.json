@@ -1,0 +1,34 @@
+{
+  "slug": "mercato-rewards",
+  "namespace": "Mercato\\Rewards",
+  "version": "0.1.0",
+  "sdk_version": "^0.1",
+  "requires": [
+    "mercato-core@^0.1",
+    "mercato-vendors@^0.1"
+  ],
+  "provides_events": [
+    "mercato.rewards.balance.updated.v1",
+    "mercato.rewards.ledger.entry.v1",
+    "mercato.rewards.config.updated.v1",
+    "mercato.rewards.referral.activated.v1"
+  ],
+  "consumes_events": [
+    "mercato.vendor.registered.v1",
+    "mercato.vendor.approved.v1",
+    "mercato.service_bid.created.v1",
+    "mercato.job.completed.v1"
+  ],
+  "capabilities": [
+    "mercato_rewards_read",
+    "mercato_rewards_write",
+    "mercato_rewards_admin"
+  ],
+  "tables": [
+    "wp_mercato_user_balances",
+    "wp_mercato_reward_ledger",
+    "wp_mercato_reward_config"
+  ],
+  "tier": "domain",
+  "feature_flag": "mercato.rewards"
+}

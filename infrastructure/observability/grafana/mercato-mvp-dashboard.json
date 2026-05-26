@@ -1,0 +1,16 @@
+{
+  "title": "Mercato MVP Operations",
+  "schemaVersion": 39,
+  "tags": ["mercato", "mvp"],
+  "templating": {
+    "list": [
+      { "name": "tenant_id", "type": "query", "query": "label_values(mercato_suborders_total, tenant_id)" }
+    ]
+  },
+  "panels": [
+    { "type": "stat", "title": "Outbox Pending", "targets": [{ "expr": "mercato_outbox_pending" }] },
+    { "type": "stat", "title": "Outbox DLQ", "targets": [{ "expr": "mercato_outbox_dlq" }] },
+    { "type": "stat", "title": "Published Events", "targets": [{ "expr": "mercato_outbox_published_total" }] },
+    { "type": "stat", "title": "Modules Loaded", "targets": [{ "expr": "mercato_modules_loaded" }] }
+  ]
+}

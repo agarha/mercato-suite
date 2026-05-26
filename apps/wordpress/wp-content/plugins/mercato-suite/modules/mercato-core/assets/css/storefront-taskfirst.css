@@ -1,0 +1,1185 @@
+/*
+ * Mercato storefront — Task-First theme overlay.
+ *
+ * Tenant-scoped CSS pulled IN ADDITION TO storefront.css when a tenant
+ * sets storefront.theme = "taskfirst" in its config. Everything is
+ * scoped under body.dir-taskfirst so it cannot bleed into other tenants.
+ *
+ * Origin: GIGSii.zip design canvas, direction "Task-First" — selected
+ * by the design owner as the winning direction for Gigsii's home page.
+ * Palette: warm cream (#fff8ee) base, sage/peach/butter pastels, deep
+ * navy headlines, peach-deep CTA. Fraunces/Instrument Serif italics
+ * provide the conversational tone.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+body.dir-taskfirst {
+  /* Task-First palette — see gigsii-shared.css in the design canvas */
+  --tf-bg: #fff8ee;
+  --tf-paper: #ffffff;
+  --tf-ink: #1a1d24;
+  --tf-ink-mute: #5a6072;
+  --tf-ink-soft: #9098a8;
+  --tf-sage: #b8d4c0;
+  --tf-sage-deep: #5e8a6e;
+  --tf-peach: #ffd5b8;
+  --tf-peach-deep: #ff8a5b;
+  --tf-butter: #ffe79b;
+  --tf-sky: #c8dcf2;
+  --tf-navy: #1f2a52;
+  --tf-line: rgba(26,29,36,0.08);
+
+  --tf-font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --tf-font-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --tf-font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  font-family: var(--tf-font-sans);
+  background: var(--tf-bg);
+  color: var(--tf-ink);
+  margin: 0;
+}
+
+body.dir-taskfirst * { box-sizing: border-box; }
+body.dir-taskfirst h1,
+body.dir-taskfirst h2,
+body.dir-taskfirst h3,
+body.dir-taskfirst h4,
+body.dir-taskfirst p { margin: 0; }
+body.dir-taskfirst button { font-family: inherit; cursor: pointer; }
+body.dir-taskfirst a { color: inherit; text-decoration: none; }
+body.dir-taskfirst img { display: block; max-width: 100%; }
+
+/* ============ Skip link ============ */
+body.dir-taskfirst .skip-link {
+  position: absolute; left: -9999px; top: -9999px;
+  background: var(--tf-navy); color: var(--tf-butter);
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+}
+body.dir-taskfirst .skip-link:focus { left: 16px; top: 16px; z-index: 1000; }
+
+/* ============ NAV ============ */
+body.dir-taskfirst .tf-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 40px; background: transparent;
+  max-width: 1280px; margin: 0 auto;
+}
+body.dir-taskfirst .tf-brand { display: flex; align-items: center; gap: 10px; }
+body.dir-taskfirst .tf-mark {
+  width: 30px; height: 30px; border-radius: 10px;
+  background: var(--tf-sage-deep);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tf-butter); font-weight: 700; font-size: 14px;
+}
+body.dir-taskfirst .tf-brand-name {
+  font-weight: 700; font-size: 18px;
+  letter-spacing: -0.02em; color: var(--tf-navy);
+}
+body.dir-taskfirst .tf-nav-pills {
+  display: flex; gap: 4px; background: var(--tf-paper);
+  padding: 4px; border-radius: 999px; border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .tf-nav-pills a {
+  padding: 8px 16px; border-radius: 999px;
+  font-size: 13px; color: var(--tf-ink-mute); font-weight: 500;
+  white-space: nowrap;
+}
+body.dir-taskfirst .tf-nav-pills a.is-active {
+  color: var(--tf-navy); background: var(--tf-butter); font-weight: 600;
+}
+body.dir-taskfirst .tf-nav-actions { display: flex; gap: 10px; align-items: center; }
+body.dir-taskfirst .tf-nav-actions .ghost {
+  background: transparent; border: 0; font-size: 13px;
+  color: var(--tf-ink-mute); padding: 8px 4px;
+}
+body.dir-taskfirst .tf-cta-app {
+  background: var(--tf-navy); color: var(--tf-butter); border: 0;
+  padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 500;
+}
+
+/* ============ HERO ============ */
+body.dir-taskfirst .tf-hero {
+  padding: 56px 40px 72px;
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+body.dir-taskfirst .tf-hero-inner {
+  position: relative; z-index: 1;
+  max-width: 720px; margin: 0 auto;
+  text-align: center;
+}
+body.dir-taskfirst .tf-status-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: var(--tf-paper);
+  border-radius: 999px; border: 1px solid var(--tf-line);
+  font-size: 12px; color: var(--tf-ink-mute);
+  margin-bottom: 32px;
+}
+body.dir-taskfirst .tf-status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--tf-sage-deep);
+}
+body.dir-taskfirst .tf-hero-headline {
+  font-size: 88px; line-height: 1.02; letter-spacing: -0.04em;
+  font-weight: 500; color: var(--tf-navy); margin-bottom: 24px;
+}
+body.dir-taskfirst .tf-hero-headline em {
+  font-family: var(--tf-font-serif); font-style: italic;
+  font-weight: 400; color: var(--tf-peach-deep);
+  letter-spacing: -0.02em;
+}
+body.dir-taskfirst .tf-hero-copy {
+  font-size: 19px; color: var(--tf-ink-mute); line-height: 1.5;
+  max-width: 580px; margin: 0 auto 40px;
+}
+
+/* Polaroid photo card on the right of the hero */
+body.dir-taskfirst .tf-polaroid {
+  position: absolute; top: 56px; right: 40px;
+  width: 280px; transform: rotate(-4deg); z-index: 0;
+  background: var(--tf-paper); padding: 14px; padding-bottom: 18px;
+  border-radius: 14px;
+  box-shadow: 0 28px 56px rgba(255,138,91,0.22), 0 12px 28px rgba(31,42,82,0.10);
+}
+body.dir-taskfirst .tf-polaroid-frame {
+  width: 100%; aspect-ratio: 4 / 5;
+  border-radius: 8px; overflow: hidden;
+  background: linear-gradient(135deg, var(--tf-sage), var(--tf-peach));
+  display: flex; align-items: flex-end; padding: 14px;
+  color: rgba(255,255,255,0.95);
+  font-family: var(--tf-font-mono); font-size: 11px; letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+body.dir-taskfirst .tf-polaroid-caption {
+  font-family: var(--tf-font-serif); font-style: italic;
+  font-size: 18px; color: var(--tf-navy);
+  text-align: center; padding-top: 10px; line-height: 1.2;
+}
+body.dir-taskfirst .tf-polaroid-tape {
+  position: absolute; top: -10px; left: 50%;
+  transform: translateX(-50%) rotate(2deg);
+  width: 70px; height: 22px; background: var(--tf-butter); opacity: 0.85;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+/* Celebratory sticker — flex-column so the <br> + <small> stack vertically. */
+body.dir-taskfirst .tf-sticker {
+  position: absolute; top: 540px; right: 100px; z-index: 0;
+  width: 84px; height: 84px; border-radius: 50%;
+  background: var(--tf-sage);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transform: rotate(-8deg);
+  font-family: var(--tf-font-serif); font-style: italic;
+  font-size: 14px; color: var(--tf-navy); line-height: 1.1; text-align: center;
+  box-shadow: 0 8px 18px rgba(94,138,110,0.25);
+}
+
+/* Visually-hidden accessibility label (used by inputs etc.). The home
+   hero `<label class="sr-only">` was rendering visibly before this. */
+body.dir-taskfirst .sr-only {
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important;
+  overflow: hidden !important; clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important; border: 0 !important;
+}
+body.dir-taskfirst .tf-sticker small {
+  font-size: 11px; opacity: 0.7;
+  font-family: var(--tf-font-sans); font-style: normal;
+}
+
+/* Big conversational input */
+body.dir-taskfirst .tf-input-card {
+  background: var(--tf-paper); border-radius: 28px; padding: 8px;
+  box-shadow: 0 20px 60px rgba(31,42,82,0.12), 0 2px 8px rgba(31,42,82,0.06);
+  border: 1px solid var(--tf-line);
+  display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  align-items: center; text-align: left; margin-bottom: 28px;
+}
+body.dir-taskfirst .tf-input-body { padding: 14px 22px; }
+body.dir-taskfirst .tf-input-label {
+  font-size: 12px; color: var(--tf-ink-soft); margin-bottom: 4px;
+}
+body.dir-taskfirst .tf-input-text {
+  font-size: 18px; color: var(--tf-ink); background: transparent;
+  border: 0; outline: none; width: 100%; font-family: inherit; padding: 0;
+}
+body.dir-taskfirst .tf-input-text::placeholder { color: var(--tf-ink); opacity: 1; }
+body.dir-taskfirst .tf-input-caret {
+  display: inline-block; width: 2px; height: 22px;
+  background: var(--tf-peach-deep); vertical-align: middle; margin-left: 2px;
+  animation: tf-blink 1s steps(1) infinite;
+}
+@keyframes tf-blink { 50% { opacity: 0; } }
+body.dir-taskfirst .tf-input-submit {
+  background: var(--tf-peach-deep); color: #fff; border: 0;
+  padding: 18px 30px; border-radius: 22px;
+  font-size: 15px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+body.dir-taskfirst .tf-input-submit:hover { filter: brightness(0.95); }
+
+/* Quick chips under the input */
+body.dir-taskfirst .tf-chips {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+}
+body.dir-taskfirst .tf-chip {
+  background: var(--tf-paper); border: 1px solid var(--tf-line);
+  padding: 10px 16px; border-radius: 999px; font-size: 14px;
+  color: var(--tf-ink); display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 500;
+}
+body.dir-taskfirst .tf-chip-icon { font-size: 16px; }
+
+/* ============ HOW-IT-WORKS ============ */
+body.dir-taskfirst .tf-how {
+  padding: 72px 40px; background: var(--tf-paper);
+}
+body.dir-taskfirst .tf-how-inner { max-width: 1100px; margin: 0 auto; }
+body.dir-taskfirst .tf-eyebrow {
+  text-align: center; font-size: 13px; color: var(--tf-ink-mute);
+  text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600;
+  margin-bottom: 12px;
+}
+body.dir-taskfirst .tf-h2 {
+  text-align: center; font-size: 48px; line-height: 1.05;
+  color: var(--tf-navy); letter-spacing: -0.03em; font-weight: 500;
+  margin-bottom: 56px;
+}
+body.dir-taskfirst .tf-h2 em {
+  font-family: var(--tf-font-serif); font-style: italic; color: var(--tf-peach-deep);
+}
+body.dir-taskfirst .tf-how-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+}
+body.dir-taskfirst .tf-how-card {
+  background: var(--tf-bg); border-radius: 28px; padding: 32px;
+  position: relative; overflow: hidden; min-height: 260px;
+  border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .tf-how-blob {
+  position: absolute; top: -30px; right: -30px;
+  width: 140px; height: 140px; border-radius: 50%; opacity: 0.7;
+}
+body.dir-taskfirst .tf-how-blob.peach { background: var(--tf-peach); }
+body.dir-taskfirst .tf-how-blob.sage  { background: var(--tf-sage); }
+body.dir-taskfirst .tf-how-blob.butter{ background: var(--tf-butter); }
+body.dir-taskfirst .tf-how-row {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px;
+}
+body.dir-taskfirst .tf-how-icon { font-size: 36px; }
+body.dir-taskfirst .tf-step-tag {
+  font-family: var(--tf-font-mono); font-size: 12px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .tf-how-card h3 {
+  font-size: 22px; color: var(--tf-navy); margin-bottom: 12px;
+  letter-spacing: -0.01em; position: relative; font-weight: 600;
+}
+body.dir-taskfirst .tf-how-card p {
+  font-size: 14px; color: var(--tf-ink-mute); line-height: 1.6; position: relative;
+}
+
+/* ============ PROVIDER CARDS ============ */
+body.dir-taskfirst .tf-pros { padding: 72px 40px; }
+body.dir-taskfirst .tf-pros-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 0 auto 32px; max-width: 1200px;
+}
+body.dir-taskfirst .tf-pros-h2 {
+  font-size: 44px; color: var(--tf-navy); letter-spacing: -0.03em;
+  line-height: 1.05; font-weight: 500;
+}
+body.dir-taskfirst .tf-pros-h2 em {
+  font-family: var(--tf-font-serif); font-style: italic; color: var(--tf-peach-deep);
+}
+body.dir-taskfirst .tf-pros-eyebrow {
+  font-size: 13px; color: var(--tf-ink-mute);
+  text-transform: uppercase; letter-spacing: 0.16em;
+  font-weight: 600; margin-bottom: 8px;
+}
+body.dir-taskfirst .tf-pros-cta-link {
+  font-size: 14px; color: var(--tf-navy); font-weight: 600;
+  padding: 10px 18px; background: var(--tf-paper);
+  border-radius: 999px; border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .tf-pros-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  max-width: 1200px; margin: 0 auto;
+}
+body.dir-taskfirst .tf-pro-card {
+  background: var(--tf-paper); border-radius: 24px;
+  border: 1px solid var(--tf-line); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+body.dir-taskfirst .tf-pro-photo {
+  aspect-ratio: 4 / 3; display: block;
+  background: linear-gradient(135deg, var(--tf-sage), var(--tf-peach));
+  position: relative;
+}
+body.dir-taskfirst .tf-pro-photo.peach  { background: linear-gradient(135deg, var(--tf-peach), var(--tf-butter)); }
+body.dir-taskfirst .tf-pro-photo.butter { background: linear-gradient(135deg, var(--tf-butter), var(--tf-sage)); }
+body.dir-taskfirst .tf-pro-photo.sky    { background: linear-gradient(135deg, var(--tf-sky), var(--tf-sage)); }
+body.dir-taskfirst .tf-pro-body { padding: 18px 20px 20px; }
+body.dir-taskfirst .tf-pro-name {
+  font-size: 18px; font-weight: 600; color: var(--tf-navy);
+  letter-spacing: -0.01em;
+}
+body.dir-taskfirst .tf-pro-trade {
+  font-size: 13px; color: var(--tf-ink-mute); margin-top: 4px;
+}
+body.dir-taskfirst .tf-pro-row {
+  margin-top: 14px; display: flex; justify-content: space-between;
+  align-items: center; font-size: 12px;
+}
+body.dir-taskfirst .tf-pro-rating {
+  color: var(--tf-peach-deep); font-weight: 600;
+  font-family: var(--tf-font-mono);
+}
+body.dir-taskfirst .tf-pro-jobs { color: var(--tf-ink-mute); font-family: var(--tf-font-mono); }
+body.dir-taskfirst .tf-pro-status {
+  color: var(--tf-sage-deep); font-weight: 600;
+}
+
+/* ============ DARK CTA FOR PROVIDERS ============ */
+body.dir-taskfirst .tf-provider-cta {
+  padding: 24px 40px 96px; max-width: 1200px; margin: 0 auto;
+}
+body.dir-taskfirst .tf-provider-cta-card {
+  background: var(--tf-navy); color: var(--tf-bg);
+  border-radius: 32px; padding: 56px; position: relative; overflow: hidden;
+  display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center;
+}
+body.dir-taskfirst .tf-provider-cta-blob {
+  position: absolute; top: -60px; right: -40px;
+  width: 240px; height: 240px; border-radius: 50%;
+  background: var(--tf-peach-deep); opacity: 0.4;
+}
+body.dir-taskfirst .tf-provider-cta-eyebrow {
+  position: relative; font-size: 12px;
+  color: var(--tf-butter); text-transform: uppercase;
+  letter-spacing: 0.16em; font-weight: 600; margin-bottom: 16px;
+}
+body.dir-taskfirst .tf-provider-cta-h2 {
+  position: relative; font-size: 56px; line-height: 1.05;
+  color: var(--tf-bg); letter-spacing: -0.03em;
+  font-weight: 500; margin-bottom: 20px;
+}
+body.dir-taskfirst .tf-provider-cta-h2 em {
+  font-family: var(--tf-font-serif); font-style: italic; color: var(--tf-peach);
+}
+body.dir-taskfirst .tf-provider-cta-copy {
+  position: relative; font-size: 17px;
+  color: rgba(255,255,255,0.72); line-height: 1.55;
+  max-width: 380px;
+}
+body.dir-taskfirst .tf-provider-cta-button {
+  position: relative;
+  background: var(--tf-peach-deep); color: #fff; border: 0;
+  padding: 18px 32px; border-radius: 999px;
+  font-size: 15px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px;
+  justify-self: start;
+}
+
+/* ============ FOOTER ============ */
+body.dir-taskfirst .tf-footer {
+  padding: 32px 40px; max-width: 1280px; margin: 0 auto;
+  border-top: 1px solid var(--tf-line);
+  display: flex; flex-wrap: wrap; justify-content: space-between;
+  align-items: center; gap: 16px;
+  font-size: 13px; color: var(--tf-ink-mute);
+}
+body.dir-taskfirst .tf-footer a { color: var(--tf-ink-mute); }
+body.dir-taskfirst .tf-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+/* ============ MOBILE (<= 880px) ============ */
+@media (max-width: 880px) {
+  body.dir-taskfirst .tf-nav { padding: 16px 20px; flex-wrap: wrap; gap: 10px; }
+  body.dir-taskfirst .tf-nav-pills { display: none; }
+  body.dir-taskfirst .tf-hero { padding: 24px 20px 40px; }
+  body.dir-taskfirst .tf-hero-inner { text-align: left; }
+  body.dir-taskfirst .tf-polaroid {
+    position: absolute; top: 30px; right: 16px;
+    width: 140px; padding: 8px; padding-bottom: 12px;
+  }
+  body.dir-taskfirst .tf-polaroid-caption { font-size: 12px; padding-top: 6px; }
+  body.dir-taskfirst .tf-polaroid-tape { width: 40px; height: 14px; transform: translateX(-50%) rotate(3deg); }
+  body.dir-taskfirst .tf-sticker { display: none; }
+  body.dir-taskfirst .tf-hero-headline { font-size: 52px; margin-bottom: 18px; }
+  body.dir-taskfirst .tf-hero-copy { font-size: 16px; margin-bottom: 24px; }
+  body.dir-taskfirst .tf-input-card {
+    grid-template-columns: 1fr; padding: 14px; border-radius: 22px;
+  }
+  body.dir-taskfirst .tf-input-body { padding: 0; }
+  body.dir-taskfirst .tf-input-text { font-size: 15px; }
+  body.dir-taskfirst .tf-input-submit { width: 100%; padding: 14px; border-radius: 14px; justify-content: center; }
+  body.dir-taskfirst .tf-chips { justify-content: flex-start; }
+  body.dir-taskfirst .tf-how { padding: 40px 20px; }
+  body.dir-taskfirst .tf-h2 { font-size: 32px; margin-bottom: 24px; }
+  body.dir-taskfirst .tf-how-grid { grid-template-columns: 1fr; gap: 12px; }
+  body.dir-taskfirst .tf-how-card { padding: 20px; border-radius: 20px; min-height: 0; }
+  body.dir-taskfirst .tf-pros { padding: 40px 20px 16px; }
+  body.dir-taskfirst .tf-pros-head { flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+  body.dir-taskfirst .tf-pros-h2 { font-size: 30px; }
+  body.dir-taskfirst .tf-pros-grid { grid-template-columns: 1fr; gap: 10px; }
+  body.dir-taskfirst .tf-pro-card { flex-direction: row; align-items: stretch; }
+  body.dir-taskfirst .tf-pro-photo { width: 110px; aspect-ratio: auto; flex: 0 0 110px; }
+  body.dir-taskfirst .tf-pro-body { padding: 14px 16px; flex: 1; }
+  body.dir-taskfirst .tf-pro-name { font-size: 16px; }
+  body.dir-taskfirst .tf-provider-cta { padding: 24px 20px 40px; }
+  body.dir-taskfirst .tf-provider-cta-card { grid-template-columns: 1fr; padding: 28px; border-radius: 28px; }
+  body.dir-taskfirst .tf-provider-cta-h2 { font-size: 32px; }
+  body.dir-taskfirst .tf-provider-cta-button { width: 100%; justify-content: center; }
+  body.dir-taskfirst .tf-footer { padding: 24px 20px; }
+}
+
+/* ============================================================
+   INTERNAL PAGE OVERRIDES
+   Overlay the Mercato default storefront.css DOM classes so the
+   internal pages (services / providers / provider-detail /
+   request-new / account / provider-dashboard) inherit the
+   Task-First palette and typography. The Mercato CSS still loads
+   first; these rules override per-property.
+   ============================================================ */
+
+/* Wash the wash. */
+body.dir-taskfirst { background: var(--tf-bg) !important; }
+
+/* Top-of-page wrapper that Mercato uses around the hero + metrics.
+   Stop the green wash gradient. */
+body.dir-taskfirst .hero-wrap {
+  background: transparent !important;
+}
+
+/* Hero — internal pages use a left/right grid (.hero) wrapped in .hero-wrap.
+   Push it to the Task-First cream + serif italic accent. */
+body.dir-taskfirst .hero {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 56px 40px 24px;
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 1.1fr 0.9fr;
+  gap: 48px; align-items: center;
+}
+body.dir-taskfirst .hero h1 {
+  font-size: 60px; line-height: 1.05; letter-spacing: -0.04em;
+  font-weight: 500; color: var(--tf-navy);
+  font-family: var(--tf-font-sans);
+}
+body.dir-taskfirst .hero h1 em,
+body.dir-taskfirst .hero h1 i {
+  font-family: var(--tf-font-serif); font-style: italic;
+  color: var(--tf-peach-deep); font-weight: 400;
+}
+body.dir-taskfirst .hero p {
+  color: var(--tf-ink-mute); font-size: 17px; line-height: 1.55;
+  margin-top: 12px; max-width: 56ch;
+}
+body.dir-taskfirst .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; background: var(--tf-paper);
+  border-radius: 999px; border: 1px solid var(--tf-line);
+  font-size: 12px; color: var(--tf-ink-mute);
+  font-weight: 500; letter-spacing: 0;
+  text-transform: none; margin-bottom: 18px;
+}
+body.dir-taskfirst .eyebrow::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--tf-sage-deep);
+}
+
+/* Buttons — promote the Mercato CTA buttons to the Task-First peach pill. */
+body.dir-taskfirst .button,
+body.dir-taskfirst .search-btn {
+  background: var(--tf-peach-deep) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 12px 22px !important;
+  font-weight: 600 !important;
+  font-family: inherit;
+  box-shadow: 0 8px 20px rgba(255,138,91,0.22);
+}
+body.dir-taskfirst .button:hover,
+body.dir-taskfirst .search-btn:hover { filter: brightness(0.95); }
+body.dir-taskfirst .button.secondary {
+  background: var(--tf-paper) !important;
+  color: var(--tf-navy) !important;
+  border: 1px solid var(--tf-line) !important;
+  box-shadow: none;
+}
+body.dir-taskfirst .hero-actions { gap: 10px; }
+
+/* Search / booking panel on internal pages — cream paper + Task-First chrome. */
+body.dir-taskfirst .booking-panel {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 16px 40px rgba(31,42,82,0.08);
+}
+body.dir-taskfirst .booking-panel h3 {
+  font-size: 16px; font-weight: 600;
+  color: var(--tf-navy); margin-bottom: 14px;
+}
+body.dir-taskfirst .search-row {
+  display: grid; gap: 10px;
+}
+body.dir-taskfirst .field {
+  background: var(--tf-bg);
+  border: 1px solid var(--tf-line);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+body.dir-taskfirst .field span {
+  font-size: 11px; color: var(--tf-ink-soft);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+body.dir-taskfirst .field input,
+body.dir-taskfirst .field select,
+body.dir-taskfirst .field textarea {
+  color: var(--tf-ink) !important;
+  font-family: inherit;
+}
+
+/* Section header (used on every internal page above the grid). */
+body.dir-taskfirst .section {
+  max-width: 1280px; margin: 0 auto; padding: 40px;
+}
+body.dir-taskfirst .section-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+}
+body.dir-taskfirst .section-head h2 {
+  font-size: 36px; line-height: 1.1; letter-spacing: -0.03em;
+  font-weight: 500; color: var(--tf-navy);
+}
+body.dir-taskfirst .section-head p {
+  color: var(--tf-ink-mute); font-size: 15px; margin-top: 4px;
+}
+
+/* Pills (small badge next to section title, e.g. "19 categories"). */
+body.dir-taskfirst .pill {
+  background: var(--tf-paper);
+  color: var(--tf-navy);
+  border: 1px solid var(--tf-line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px; font-weight: 600;
+}
+
+/* Product / service cards on /services. */
+body.dir-taskfirst .product-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+body.dir-taskfirst .product-card {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 22px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 30px rgba(31,42,82,0.05);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+body.dir-taskfirst .product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(31,42,82,0.10);
+}
+/* Replace the loud "market-blue/green/red/gold" tile colours with
+   Task-First pastels. We rotate sage/peach/butter/sky in CSS order. */
+body.dir-taskfirst .product-media {
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--tf-sage), var(--tf-peach)) !important;
+  color: var(--tf-navy) !important;
+  padding: 18px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+body.dir-taskfirst .product-grid .product-card:nth-child(4n+2) .product-media {
+  background: linear-gradient(135deg, var(--tf-peach), var(--tf-butter)) !important;
+}
+body.dir-taskfirst .product-grid .product-card:nth-child(4n+3) .product-media {
+  background: linear-gradient(135deg, var(--tf-butter), var(--tf-sage)) !important;
+}
+body.dir-taskfirst .product-grid .product-card:nth-child(4n+4) .product-media {
+  background: linear-gradient(135deg, var(--tf-sky), var(--tf-sage)) !important;
+}
+body.dir-taskfirst .product-media span {
+  font-size: 56px; font-weight: 600; font-family: var(--tf-font-serif);
+  font-style: italic; color: var(--tf-navy) !important;
+  opacity: 0.55; line-height: 1;
+}
+body.dir-taskfirst .product-media small {
+  background: var(--tf-paper); color: var(--tf-navy) !important;
+  border-radius: 999px; padding: 4px 12px;
+  font-size: 11px; font-weight: 600; align-self: flex-start;
+}
+body.dir-taskfirst .product-body {
+  padding: 18px 20px 20px;
+}
+body.dir-taskfirst .product-body h3 {
+  font-size: 18px; font-weight: 600; color: var(--tf-navy);
+  letter-spacing: -0.01em; margin: 6px 0 8px;
+}
+body.dir-taskfirst .product-body p {
+  font-size: 13px; color: var(--tf-ink-mute); line-height: 1.55;
+}
+body.dir-taskfirst .vendor-name {
+  font-size: 12px; color: var(--tf-ink-soft);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600; margin: 0;
+}
+body.dir-taskfirst .vendor-name a { color: var(--tf-ink-soft); }
+body.dir-taskfirst .product-meta {
+  margin-top: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px;
+}
+body.dir-taskfirst .product-meta strong {
+  font-family: var(--tf-font-mono); font-size: 16px;
+  color: var(--tf-navy); font-weight: 700;
+}
+body.dir-taskfirst .product-meta span {
+  color: var(--tf-ink-mute); font-family: var(--tf-font-mono); font-size: 12px;
+}
+
+/* Provider list cards on /providers. */
+body.dir-taskfirst .vendor-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+body.dir-taskfirst .vendor-card {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 22px;
+  padding: 18px 20px;
+  display: flex; align-items: center; gap: 16px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+body.dir-taskfirst .vendor-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(31,42,82,0.10);
+}
+body.dir-taskfirst .vendor-avatar {
+  width: 56px !important; height: 56px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, var(--tf-sage), var(--tf-peach)) !important;
+  color: var(--tf-navy) !important;
+  font-family: var(--tf-font-serif); font-style: italic;
+  font-size: 28px !important; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+body.dir-taskfirst .vendor-card h3,
+body.dir-taskfirst .vendor-card strong {
+  font-size: 16px; color: var(--tf-navy); font-weight: 600;
+  letter-spacing: -0.01em;
+}
+body.dir-taskfirst .vendor-card p {
+  font-size: 13px; color: var(--tf-ink-mute); margin: 2px 0 0;
+}
+
+/* Empty state cards (no services match, no jobs yet, etc.). */
+body.dir-taskfirst .empty-state {
+  background: var(--tf-paper);
+  border: 1px dashed var(--tf-line);
+  border-radius: 22px;
+  padding: 36px; text-align: center;
+  color: var(--tf-ink-mute);
+  grid-column: 1 / -1;
+}
+body.dir-taskfirst .empty-state h3 {
+  font-size: 22px; color: var(--tf-navy); font-weight: 600;
+  margin-bottom: 8px;
+}
+body.dir-taskfirst .empty-state a { color: var(--tf-peach-deep); font-weight: 600; }
+
+/* Account / dashboard panels. */
+body.dir-taskfirst .account-panel,
+body.dir-taskfirst .cart-line {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 22px;
+  padding: 24px;
+}
+body.dir-taskfirst .account-panel h2,
+body.dir-taskfirst .account-panel h3 {
+  color: var(--tf-navy); font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Tables (provider-dashboard jobs list, etc.). */
+body.dir-taskfirst .table {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+body.dir-taskfirst .table th {
+  background: var(--tf-bg);
+  color: var(--tf-ink-soft);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 11px; font-weight: 600;
+  text-align: left; padding: 12px 16px;
+}
+body.dir-taskfirst .table td {
+  padding: 14px 16px; font-size: 14px; color: var(--tf-ink);
+  border-top: 1px solid var(--tf-line);
+}
+
+/* Positioning cards (provider-detail "About" tile). */
+body.dir-taskfirst .positioning {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+body.dir-taskfirst .positioning-card {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 18px;
+  padding: 20px;
+}
+body.dir-taskfirst .positioning-card b {
+  display: inline-block; font-size: 11px; color: var(--tf-ink-soft);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600; margin-bottom: 6px;
+}
+body.dir-taskfirst .positioning-card strong {
+  display: block; color: var(--tf-navy); font-weight: 600;
+    font-size: 16px; margin-bottom: 4px;
+}
+body.dir-taskfirst .positioning-card p {
+  color: var(--tf-ink-mute); font-size: 13px; line-height: 1.5;
+}
+
+/* === Phase 5p: signup, geo-search, pro cards, provider detail polish === */
+
+/* Geo-search row - extends .search-row used on /services and /providers. */
+body.dir-taskfirst .geo-search {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+body.dir-taskfirst .geo-search .field {
+  background: var(--tf-bg);
+  border: 1px solid var(--tf-line);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+body.dir-taskfirst .geo-search .field span {
+  display: block; font-size: 11px; color: var(--tf-ink-soft);
+  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  margin-bottom: 4px;
+}
+body.dir-taskfirst .geo-search input,
+body.dir-taskfirst .geo-search select {
+  width: 100%; border: 0; background: transparent;
+  font: inherit; color: var(--tf-ink); outline: none;
+}
+body.dir-taskfirst .search-actions {
+  display: flex; gap: 10px; align-items: center;
+  grid-column: 1 / -1;
+}
+body.dir-taskfirst .search-actions .search-btn {
+  margin-left: auto;
+}
+body.dir-taskfirst .geo-resolved-hint {
+  margin: 12px 0 0; font-size: 13px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .geo-resolved-hint strong { color: var(--tf-navy); }
+body.dir-taskfirst .clear-filters {
+  margin: 8px 0 0; font-size: 13px;
+}
+body.dir-taskfirst .clear-filters a {
+  color: var(--tf-peach-deep); font-weight: 600;
+}
+
+/* Service card badges (distance / serves-area / price suffix). */
+body.dir-taskfirst .badge-distance,
+body.dir-taskfirst .badge-serves {
+  display: inline-block;
+  background: var(--tf-butter);
+  color: var(--tf-navy);
+  border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px;
+  letter-spacing: 0.02em;
+}
+body.dir-taskfirst .badge-serves { background: var(--tf-sage); color: #fff; }
+body.dir-taskfirst .exp-pill {
+  display: inline-block;
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 999px;
+  font-size: 11px; padding: 1px 8px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .headline-line {
+  color: var(--tf-ink-soft); font-style: italic; font-size: 13px;
+  margin: 2px 0 8px;
+}
+body.dir-taskfirst .price-suffix {
+  font-size: 12px; font-weight: 500; color: var(--tf-ink-soft);
+  margin-left: 2px;
+}
+
+/* Pro card (provider directory) */
+body.dir-taskfirst .pro-card {
+  background: var(--tf-paper);
+  border: 1px solid var(--tf-line);
+  border-radius: 22px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 16px;
+}
+body.dir-taskfirst .pro-card .vendor-avatar {
+  width: 72px; height: 72px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--tf-sage), var(--tf-peach));
+  display: grid; place-items: center;
+  font-family: 'Inter', serif;
+  font-size: 28px; font-weight: 700; color: #fff;
+  overflow: hidden;
+}
+body.dir-taskfirst .pro-card .vendor-avatar img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
+}
+body.dir-taskfirst .pro-card h3 {
+  margin: 0 0 4px; font-size: 18px; color: var(--tf-navy);
+}
+body.dir-taskfirst .pro-card h3 a { color: inherit; text-decoration: none; }
+body.dir-taskfirst .pro-card h3 a:hover { text-decoration: underline; }
+body.dir-taskfirst .pro-headline {
+  margin: 0 0 8px; font-size: 13px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .pro-meta {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  list-style: none; margin: 0 0 8px; padding: 0;
+  font-size: 13px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .pro-meta li.rating { color: var(--tf-peach-deep); font-weight: 700; }
+body.dir-taskfirst .pro-meta li.from-rate strong { color: var(--tf-navy); }
+body.dir-taskfirst .pro-badges {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  list-style: none; margin: 0; padding: 0;
+  font-size: 11px;
+}
+body.dir-taskfirst .pro-badges li {
+  background: var(--tf-bg);
+  border: 1px solid var(--tf-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .pro-badges li.badge-serves-area {
+  background: var(--tf-sage); color: #fff; border-color: transparent;
+}
+body.dir-taskfirst .pro-badges li.badge-distance {
+  background: var(--tf-butter); color: var(--tf-navy); border-color: transparent;
+}
+body.dir-taskfirst .badge-verified {
+  display: inline-block;
+  background: var(--tf-sage); color: #fff;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  font-size: 13px; line-height: 22px; text-align: center;
+  vertical-align: middle; margin-left: 6px;
+}
+
+/* Provider detail hero - bigger avatar, two-column header. */
+body.dir-taskfirst .provider-hero { align-items: start; }
+body.dir-taskfirst .provider-header {
+  display: grid; grid-template-columns: 96px 1fr; gap: 20px;
+  align-items: center; margin-bottom: 20px;
+}
+body.dir-taskfirst .provider-avatar-large {
+  width: 96px; height: 96px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--tf-peach), var(--tf-butter));
+  display: grid; place-items: center;
+  font-size: 40px; font-weight: 700; color: #fff;
+  overflow: hidden;
+}
+body.dir-taskfirst .provider-avatar-large img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
+}
+body.dir-taskfirst .pro-tagline {
+  color: var(--tf-peach-deep); font-style: italic; font-size: 18px;
+  margin: 4px 0 12px;
+}
+body.dir-taskfirst .pro-meta.inline { font-size: 14px; }
+body.dir-taskfirst .pro-bio {
+  background: var(--tf-paper); border: 1px solid var(--tf-line);
+  border-radius: 18px; padding: 18px 20px; margin: 16px 0;
+}
+body.dir-taskfirst .pro-bio h3 {
+  margin: 0 0 8px; font-size: 14px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--tf-ink-soft); font-weight: 600;
+}
+body.dir-taskfirst .pro-trust-panel .trust-list {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 6px; font-size: 13px;
+}
+body.dir-taskfirst .pro-trust-panel .trust-list li {
+  padding: 6px 0; border-bottom: 1px solid var(--tf-line);
+  color: var(--tf-ink);
+}
+body.dir-taskfirst .pro-trust-panel .trust-list li:last-child { border-bottom: 0; }
+
+/* Service areas chip list on provider detail. */
+body.dir-taskfirst .area-label {
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 11px; color: var(--tf-ink-soft);
+  margin: 12px 0 6px; font-weight: 600;
+}
+body.dir-taskfirst .area-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  list-style: none; margin: 0 0 12px; padding: 0;
+}
+body.dir-taskfirst .area-chips li {
+  background: var(--tf-bg); border: 1px solid var(--tf-line);
+  border-radius: 14px; padding: 8px 14px; font-size: 13px;
+  color: var(--tf-ink);
+}
+body.dir-taskfirst .area-chips strong {
+  color: var(--tf-navy); margin-right: 6px;
+}
+
+/* Portfolio gallery. */
+body.dir-taskfirst .portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+body.dir-taskfirst .portfolio-item {
+  margin: 0; border-radius: 18px; overflow: hidden;
+  background: var(--tf-paper); border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .portfolio-item img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+}
+body.dir-taskfirst .portfolio-item figcaption {
+  padding: 10px 14px; font-size: 13px; color: var(--tf-ink-soft);
+}
+
+body.dir-taskfirst .review-meta {
+  margin-top: 12px; font-size: 12px; color: var(--tf-ink-soft);
+}
+
+/* === Signup multi-step form === */
+body.dir-taskfirst .signup-perks {
+  list-style: none; margin: 16px 0 0; padding: 0;
+  display: grid; gap: 8px;
+}
+body.dir-taskfirst .signup-perks li {
+  display: flex; align-items: start; gap: 10px;
+  color: var(--tf-ink); font-size: 15px;
+}
+body.dir-taskfirst .signup-perks span {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px; flex-shrink: 0;
+  border-radius: 50%; background: var(--tf-sage); color: #fff;
+  font-size: 12px; font-weight: 700;
+}
+body.dir-taskfirst .signup-progress { display: grid; gap: 14px; }
+body.dir-taskfirst .signup-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 8px;
+}
+body.dir-taskfirst .signup-steps li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 14px;
+  background: var(--tf-bg); color: var(--tf-ink-soft);
+  font-size: 14px; font-weight: 500;
+  border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .signup-steps li strong {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--tf-paper); color: var(--tf-ink-soft);
+  font-size: 12px; font-weight: 700;
+}
+body.dir-taskfirst .signup-steps li.is-active {
+  background: var(--tf-peach); color: var(--tf-navy);
+  border-color: transparent;
+}
+body.dir-taskfirst .signup-steps li.is-active strong {
+  background: var(--tf-navy); color: #fff;
+}
+body.dir-taskfirst .signup-steps li.is-done {
+  background: var(--tf-sage); color: #fff;
+  border-color: transparent;
+}
+body.dir-taskfirst .signup-steps li.is-done strong {
+  background: rgba(255,255,255,0.3); color: #fff;
+}
+body.dir-taskfirst .signup-progress-meta {
+  margin: 0; font-size: 12px; color: var(--tf-ink-soft);
+}
+
+body.dir-taskfirst .signup-form {
+  max-width: 720px; margin: 0 auto;
+  background: var(--tf-paper); border: 1px solid var(--tf-line);
+  border-radius: 22px; padding: 28px;
+}
+body.dir-taskfirst .signup-step {
+  border: 0; padding: 0; margin: 0;
+}
+body.dir-taskfirst .signup-step[hidden] { display: none; }
+body.dir-taskfirst .signup-step-title {
+  font-size: 22px; color: var(--tf-navy); font-weight: 700;
+  margin: 0 0 6px;
+}
+body.dir-taskfirst .signup-step-help {
+  margin: 0 0 18px; color: var(--tf-ink-soft); font-size: 14px;
+}
+body.dir-taskfirst .signup-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+@media (max-width: 540px) { body.dir-taskfirst .signup-row { grid-template-columns: 1fr; } }
+body.dir-taskfirst .signup-field {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 14px;
+}
+body.dir-taskfirst .signup-field span {
+  font-size: 13px; color: var(--tf-navy); font-weight: 600;
+}
+body.dir-taskfirst .signup-field input,
+body.dir-taskfirst .signup-field select,
+body.dir-taskfirst .signup-field textarea {
+  background: var(--tf-bg);
+  border: 1px solid var(--tf-line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font: inherit; color: var(--tf-ink);
+}
+body.dir-taskfirst .signup-field input:focus,
+body.dir-taskfirst .signup-field select:focus,
+body.dir-taskfirst .signup-field textarea:focus {
+  outline: 2px solid var(--tf-peach-deep);
+  outline-offset: 1px;
+}
+body.dir-taskfirst .signup-field small {
+  color: var(--tf-ink-soft); font-size: 12px;
+}
+body.dir-taskfirst .signup-consent {
+  flex-direction: row; align-items: start; gap: 10px;
+  background: var(--tf-bg); padding: 14px;
+  border-radius: 12px; border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .signup-consent input { width: 18px; height: 18px; margin-top: 2px; }
+body.dir-taskfirst .signup-services { display: grid; gap: 14px; margin-bottom: 14px; }
+body.dir-taskfirst .signup-service {
+  background: var(--tf-bg); border: 1px solid var(--tf-line);
+  border-radius: 16px; padding: 16px;
+}
+body.dir-taskfirst .signup-geo-status {
+  margin: 10px 0 0; font-size: 13px; color: var(--tf-ink-soft);
+}
+body.dir-taskfirst .signup-actions {
+  display: flex; gap: 10px; margin-top: 16px;
+  border-top: 1px solid var(--tf-line); padding-top: 18px;
+}
+body.dir-taskfirst .signup-actions #signup-next,
+body.dir-taskfirst .signup-actions #signup-submit { margin-left: auto; }
+body.dir-taskfirst .signup-error {
+  margin-top: 14px; padding: 12px 16px;
+  background: #ffe9e9; color: #b62929;
+  border-radius: 12px; font-size: 14px; font-weight: 500;
+}
+body.dir-taskfirst .signup-success {
+  background: var(--tf-paper); border: 1px solid var(--tf-line);
+  border-radius: 22px; padding: 28px; text-align: center;
+}
+body.dir-taskfirst .signup-review dl {
+  background: var(--tf-bg); border: 1px solid var(--tf-line);
+  border-radius: 14px; padding: 12px 16px;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+  margin: 0 0 14px;
+}
+body.dir-taskfirst .signup-review dt {
+  font-size: 12px; color: var(--tf-ink-soft); text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+body.dir-taskfirst .signup-review dd { margin: 0; color: var(--tf-ink); }
+body.dir-taskfirst .signup-review-services {
+  list-style: none; padding: 0; margin: 8px 0 14px;
+  display: grid; gap: 6px;
+}
+body.dir-taskfirst .signup-review-services li {
+  background: var(--tf-bg); border: 1px solid var(--tf-line);
+  border-radius: 10px; padding: 8px 12px; font-size: 14px;
+}
+
+/* "From $X/hr" pill on pro cards */
+body.dir-taskfirst .pro-meta li.from-rate {
+  background: var(--tf-butter); color: var(--tf-navy);
+  border-radius: 999px; padding: 2px 10px;
+}
+
+/* Geo-locate button polish */
+body.dir-taskfirst .geo-locate-btn {
+  background: var(--tf-paper);
+  color: var(--tf-navy);
+  border: 1px solid var(--tf-line);
+}
+body.dir-taskfirst .geo-locate-btn:disabled { opacity: 0.6; cursor: progress; }
+
+/* === Phase 8b: image sizing inside product/vendor cards =================== */
+/* The seed populates vendors.photo_url with 400x400 Unsplash crops. Without
+   explicit sizing rules they overflow their containers and the cards look
+   broken. Make every card-image fill its container as a cover-fit background
+   and float the existing small badges + initials on top. */
+
+body.dir-taskfirst .product-media {
+  position: relative;
+  overflow: hidden;
+}
+body.dir-taskfirst .product-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  display: block;
+}
+body.dir-taskfirst .product-media span,
+body.dir-taskfirst .product-media small {
+  position: relative;
+  z-index: 1;
+}
+/* Add a subtle gradient overlay so the badge text stays readable on any photo */
+body.dir-taskfirst .product-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(31,42,82,0) 40%, rgba(31,42,82,0.45) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+/* Same fix for the provider directory avatars (image filled cover, initial hidden when img present) */
+body.dir-taskfirst .pro-card .vendor-avatar {
+  position: relative;
+  overflow: hidden;
+}
+body.dir-taskfirst .pro-card .vendor-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Force the product grid to fill its parent width on any viewport - the
+   container width was collapsing in certain edge cases. */
+body.dir-taskfirst .product-grid,
+body.dir-taskfirst .vendor-grid {
+  width: 100%;
+  min-width: 0;
+}

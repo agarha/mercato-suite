@@ -5,10 +5,11 @@
   "sdk_version": "^0.1",
   "requires": [
     "mercato-core@^0.1",
-    "mercato-orders@^0.1",
     "mercato-vendors@^0.1"
   ],
-  "provides_events": [],
+  "provides_events": [
+    "mercato.review.created.v1"
+  ],
   "consumes_events": [],
   "capabilities": [
     "mercato_reviews_read",
@@ -16,11 +17,9 @@
     "mercato_reviews_admin"
   ],
   "tables": [
-    "wp_mercato_reviews",
-    "wp_mercato_review_votes"
+    "wp_mercato_reviews"
   ],
   "tier": "domain",
   "feature_flag": "mercato.reviews",
   "phase": "P2"
 }
-

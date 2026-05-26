@@ -139,4 +139,24 @@ codex/initial-scaffold
 
 First push contents:
 
-- independent reposito
+- independent repository structure
+- Docker Compose stack
+- WordPress plugin bundle scaffold
+- MVP module manifests
+- core module registry classes
+- outbox relay service scaffold
+- local smoke test
+- implementation plan
+
+Current blocker:
+
+- the GitHub app has no installed repositories visible
+- `agarha/mercato-suite` is not visible or does not exist
+- GitHub CLI is not authenticated on this machine
+
+Once GitHub access is connected, push with:
+
+```powershell
+git remote add origin https://github.com/agarha/mercato-suite.git
+git push -u origin codex/initial-scaffold
+```

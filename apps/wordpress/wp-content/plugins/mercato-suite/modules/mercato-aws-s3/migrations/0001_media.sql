@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `{prefix}mercato_media` (
+  `media_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id` BIGINT UNSIGNED NOT NULL,
+  `owner_type` ENUM('product','kyc','report','generic') NOT NULL DEFAULT 'generic',
+  `owner_id` BIGINT UNSIGNED DEFAULT NULL,
+  `bucket` VARCHAR(128) NOT NULL,
+  `object_key` VARCHAR(512) NOT NULL,
+  `content_type` VARCHAR(128) NOT NULL DEFAULT 'application/octet-stream',
+  `size_bytes` BIGINT UNSIGNED DEFAULT NULL,
+  `checksum_sha256` CHAR(64) DEFAULT NULL,
+  `visibility` ENUM('public','private') NOT NULL DEFAULT 'private',
+  `scan_status` ENUM('pending','clean','infected','failed') NOT NULL DEFAULT 'pending',
+  `kms_key_id` VARCHAR(255) DEFAULT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`media_id`),
+  UNIQUE KEY `uk_tenant_object` (`tenant_id`, `bucket`, `object_key`),
+  KEY `idx_owner` (`tenant_id`, `owner_type`, `owner_id`),
+  KEY `idx_scan` (`tenant_id`, `scan_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

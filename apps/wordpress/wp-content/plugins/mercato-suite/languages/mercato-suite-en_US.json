@@ -1,0 +1,20 @@
+{
+  "vendor.apply": "Apply to sell",
+  "vendor.approved": "Vendor approved",
+  "vendor.rejected": "Application rejected",
+  "vendor.onboarding.profile": "Profile submitted",
+  "vendor.onboarding.stripe": "Stripe account connected",
+  "vendor.onboarding.kyc": "KYC verified",
+  "vendor.onboarding.approval": "Tenant approved",
+  "vendor.onboarding.first_product": "First product created",
+  "product.create": "Create product",
+  "product.archive": "Archive product",
+  "order.tracking": "Tracking",
+  "refund.request": "Request refund",
+  "payout.execute": "Execute payout",
+  "report.trial_balance": "Trial balance",
+  "state.loading": "Loading",
+  "state.empty": "No records yet",
+  "state.error": "Something went wrong",
+  "state.permission_denied": "You do not have permission to view this area"
+}

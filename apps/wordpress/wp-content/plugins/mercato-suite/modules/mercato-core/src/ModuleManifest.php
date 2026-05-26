@@ -38,4 +38,13 @@ final class ModuleManifest
             namespace: (string) $data['namespace'],
             version: (string) $data['version'],
             requires: array_values($data['requires'] ?? []),
-            providesEvents: array_values($data['provides_e
+            providesEvents: array_values($data['provides_events'] ?? []),
+            consumesEvents: array_values($data['consumes_events'] ?? []),
+            capabilities: array_values($data['capabilities'] ?? []),
+            tables: array_values($data['tables'] ?? []),
+            tier: (string) ($data['tier'] ?? 'domain'),
+            featureFlag: (string) ($data['feature_flag'] ?? $data['slug']),
+            phase: (string) ($data['phase'] ?? 'P1'),
+        );
+    }
+}

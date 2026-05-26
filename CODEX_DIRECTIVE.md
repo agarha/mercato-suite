@@ -187,4 +187,188 @@ Group by category. Reword from Rev 1 to reflect the services-marketplace framing
 
 ### 5.5 Jobs (was: orders)
 
-❌ A `Merc
+❌ A `Mercato\Order` aggregate competing with `WC_Order` for the buyer-facing payment record. Mercato jobs *reference* WC orders; they don't replace them.
+❌ A Mercato "buyer billing/shipping address" table — snapshot from WC, never duplicate live
+
+### 5.6 Customers / Users
+
+❌ A `wp_mercato_customers` table — use `wp_users` + `buyer_user_id` references
+❌ A custom buyer login/auth flow — WP does login; SPAs mint JWTs after WP/WC auth
+
+### 5.7 Admin / sessions / nonces / cron
+
+❌ A custom session manager
+❌ A custom nonce implementation — use `wp_create_nonce()` / REST `_wpnonce`
+❌ A custom cron scheduler — use WP-Cron or system cron
+❌ A `Mercato\Admin\MenuRegistrar` that bypasses WP's menu API
+❌ Reimplementing `wp_options` / `wp_transient` semantics
+
+---
+
+## 6. NOT-forbidden — these ARE Mercato's job, please build them
+
+The Codex feedback noted "too many commodity WC areas drifted into custom Mercato implementation." That was the past mistake. The flip side of that mistake is **building the right things,** which we have not built enough of yet:
+
+✅ **Tenant routing.** `/t/<tenant>/*` resolution + tenant-scoped query injection. Subdomain mode for Pro+ tiers.
+✅ **Provider lifecycle.** Registration → approval → KYC → operational-status transitions → suspension. Different from WC vendor (because WC doesn't have a vendor concept).
+✅ **Service templates.** Tenant-scoped catalog of bookable services, with required-qualification flags.
+✅ **Service request board.** Buyers post requests; data model captures scope, urgency, location, attachments, budget.
+✅ **Provider bidding / auction.** Multiple providers respond with price + ETA; tenant policy decides award rules (auto-award lowest, manual select, AI-recommend).
+✅ **Award + WC order mint.** Once awarded, mint the WC order with line items and `mercato_job_id` meta.
+✅ **Job lifecycle state machine.** awarded → scheduled → en_route → on_site → in_progress → completed → reviewed → paid.
+✅ **Provider operations.** Operational status (`available` / `busy` / `offline` / `vacation`), service area updates, calendar, availability windows.
+✅ **Commission rules engine.** Per tenant, per category, per provider tier. Run at award time + reconciled at paid time.
+✅ **Payout orchestration.** Stripe Connect Transfers (NOT the initial charge), batch scheduling, failed-payout retry, reconciliation against Stripe Treasury.
+✅ **Tenant provisioning.** Control Plane → spin up a new tenant in <60s (pooled) or <5min (silo).
+✅ **Feature flags + capability JWT.** Per-tenant feature gates, refreshed every 24h.
+✅ **Audit log + event outbox.** Immutable history + cross-service messaging.
+✅ **Provider SPA + Tenant Admin SPA + Buyer Portal** (Phase 2).
+✅ **Xusmo integration surface.** Whatever Xusmo (the parent SaaS product) needs to wire into Mercato: branding, single-sign-on into Xusmo, billing roll-up, analytics shipment.
+
+---
+
+## 7. Mental checklist before writing a new class
+
+1. **Is this commerce mechanics WC already does?** (Cart, checkout, gateway, tax, coupons, subscriptions, customer record.) → Use WC, hook in.
+2. **Is this services-marketplace mechanics that WC doesn't model?** (Provider, service request, bid, award, job lifecycle, dispatch, service area, commission, payout, tenant.) → Build in Mercato.
+3. **Am I subscribing to a WC hook?** → Verify it's in §4 canonical list. If not: PR + architectural review.
+4. **Am I writing into `wp_postmeta` for marketplace-domain data?** → Stop. Use `wp_mercato_*`.
+5. **Am I duplicating live data WC has?** → Snapshot at event time is fine; live duplicate is not.
+
+---
+
+## 8. Decision tree
+
+```
+Need a feature?
+│
+├── Commerce mechanic (cart, checkout, gateway, tax, coupon, subscription, customer)?
+│   └── Use WooCommerce or a mature WC plugin. Mercato hooks into it.
+│
+├── Services-marketplace primitive (provider, service template, request, bid, award, job, dispatch, service area)?
+│   └── Build it in Mercato. Use wp_mercato_* tables. Emit events via the outbox.
+│
+├── SaaS-tenancy primitive (tenant, routing, branding, feature flag, billing, provisioning, control plane)?
+│   └── Build it in Mercato. mercato-enterprise + Control Plane.
+│
+├── Operational primitive (audit, outbox, idempotency, RBAC, migrations)?
+│   └── Build it in mercato-core.
+│
+└── Bridge between Mercato-domain and WC-domain (jobs ↔ WC orders, refunds ↔ commissions, subscriptions ↔ recurring services)?
+    └── Build it as an adapter module (small, single-responsibility, named *Adapter or *Bridge).
+```
+
+If still unclear: read `docs_v2/13_woocommerce_compat/WooCommerce_HPOS_Compat.md` and this directive together, then ask.
+
+---
+
+## 9. Self-audit Codex should run before each commit
+
+Drift detection greps. Run before every commit:
+
+```bash
+# 1. Mercato code calling WC mutation APIs from outside the explicit adapter
+grep -rn "wc_create_order\|wc_update_order\|wc_add_to_cart\|process_payment" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/ \
+  | grep -v "modules/mercato-stripe-connect\|modules/mercato-job-to-order-adapter"
+
+# 2. Mercato classes that look like WC competitors
+grep -rEn "class\s+(Mercato\\\\Cart|Mercato\\\\Checkout|Mercato\\\\PaymentIntent|Mercato\\\\Customer|Mercato\\\\PaymentGateway|Mercato\\\\Tax\\\\Calculator|Mercato\\\\Coupon\\\\Engine)" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/
+
+# 3. Direct postmeta writes for marketplace-domain data
+grep -rn "update_post_meta\|add_post_meta" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/ \
+  | grep -v "_mercato_vendor_id\|_mercato_provider_id\|_mercato_job_id\|_mercato_tenant_id"
+
+# 4. Hook subscriptions outside the canonical list
+grep -rEn "add_action\s*\(\s*['\"]woocommerce_" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/
+# Cross-check each line against §4 canonical hooks.
+
+# 5. Custom session / nonce systems
+grep -rEn "class\s+\w*Session\b|generateNonce|createNonce" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/
+
+# 6. Custom subscription cadence / dunning engines
+grep -rEn "class\s+\w*(Subscription|Dunning)\w*Engine\b" \
+  apps/wordpress/wp-content/plugins/mercato-suite/modules/
+```
+
+Any match outside its allowed exception is **drift** — file an issue tagged `wc-overlap` and remove that code in your next PR.
+
+---
+
+## 10. Past drift — what to roll back
+
+Per Codex's own acknowledgement, the original scaffold "let too many commodity WooCommerce areas drift into custom Mercato implementation." The cleanup direction:
+
+1. **Audit every module under `modules/` for whether its purpose is commerce-mechanic or marketplace/SaaS.**
+2. **For commerce-mechanic modules that duplicate WC:** delete the duplication; replace with a hook subscription + a thin adapter where translation is needed.
+3. **For marketplace/SaaS modules where the *naming* drifted (e.g. "vendor" everywhere):** plan a rename pass to services vocabulary (provider, service template, job). Do this in one coordinated PR per concept rather than touching every file twice.
+4. **For the `mercato-orders` module specifically:** rename to `mercato-jobs` in a Phase-2 commit. The module continues to hold what's currently called sub-orders; it just acknowledges that "sub-order" is a degenerate case of the more general "job awarded to one provider after bidding."
+
+Don't do this all at once. Plan a renaming PR, get sign-off, then execute.
+
+---
+
+## 11. What "good" looks like
+
+A good Mercato module:
+- Encapsulates a **services-marketplace, SaaS-tenancy, or operational** primitive
+- Adds `wp_mercato_*` tables
+- Subscribes to 1–3 WC hooks from the canonical list (often zero)
+- Emits Mercato events via the outbox
+- Exposes REST routes under `/wp-json/mercato/v1/`
+- Never touches `WC_Cart`, `WC_Payment_Gateway`, `WC_Tax`, or `WC_Shipping_Zone` except read-only
+- Has zero references to "checkout," "payment processing," "session management" in its class names
+
+A good adapter module:
+- Sits at the seam between Mercato and WC
+- Single responsibility (e.g. "turn an awarded job into a WC order")
+- ≤300 LOC
+- Named `*Adapter`, `*Bridge`, or `*Linker`
+
+A good `Provider::register()`:
+
+```php
+$this->container->bind(JobAwarder::class, fn($c) => new JobAwarder(
+    $c->get(\Mercato\Core\Events\Outbox::class),
+    $c->get(BidRepository::class),
+));
+```
+
+Not:
+
+```php
+class MercatoCart extends WC_Cart { ... }                     // ❌ NO — that's WC's job
+class MercatoServicePaymentIntent { ... }                     // ❌ NO — WC + Stripe gateway
+class MercatoProviderSessionManager extends WP_Session { ... } // ❌ NO — WP owns sessions
+```
+
+---
+
+## 12. Cross-references
+
+| Topic | Read |
+|---|---|
+| WC integration boundary | `docs_v2/13_woocommerce_compat/WooCommerce_HPOS_Compat.md` |
+| Hook map (canonical) | `docs_v2/04_fsd/FSD.md` §3.6 |
+| Plugin packaging (one suite, not 27 plugins) | `docs_v2/14_packaging/Plugin_Packaging.md` |
+| MVP scope | `docs_v2/00_mvp_cut/MVP_Cut.md` |
+| Architectural non-negotiables | `docs_v2/01_architecture/Blueprint.md` §16 |
+| Forbidden patterns (legacy) | `HANDOFF_FROM_CLAUDE.md` §4.3 |
+
+**Doc-debt note:** docs_v2 was originally drafted with a physical-goods marketplace mindset (vendors, products, sub-orders). The services-marketplace vocabulary in this directive is the **correct** model. A coordinated doc-update pass will reconcile docs to this directive in a follow-up; until then, treat this directive as authoritative for code decisions.
+
+---
+
+## 13. Final note
+
+Mercato exists because WooCommerce, on its own, cannot run a multi-tenant SaaS services marketplace. WooCommerce can run a single store excellently. Mercato is the layer that turns one WooCommerce install into the engine behind many branded services marketplaces.
+
+Mercato's value is everything **above** the commerce mechanic — tenancy, providers, requests, bids, jobs, operations, payouts, SaaS control. Mercato's discipline is to **let WooCommerce keep the commerce mechanic intact** and to hook in cleanly.
+
+If you catch yourself rebuilding something WooCommerce already does, delete that code and add a hook subscription instead. If you catch a gap in the services-marketplace layer, that's where Mercato code goes.
+
+— Project owner, with thanks to Codex for the framing correction

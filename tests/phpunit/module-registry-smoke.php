@@ -45,4 +45,37 @@ $expectedModules = [
     'mercato-shippo',
 ];
 
-foreach ($expectedModules as $expec
+foreach ($expectedModules as $expectedModule) {
+    if (!in_array($expectedModule, $ordered, true)) {
+        fwrite(STDERR, "{$expectedModule} manifest was not discovered\n");
+        exit(1);
+    }
+}
+
+if (count($ordered) !== count($expectedModules)) {
+    fwrite(STDERR, 'Expected ' . count($expectedModules) . ' modules, discovered ' . count($ordered) . "\n");
+    exit(1);
+}
+
+$positions = array_flip($ordered);
+$assertBefore = static function (string $required, string $dependent) use ($positions): void {
+    if (!isset($positions[$required], $positions[$dependent]) || $positions[$required] > $positions[$dependent]) {
+        fwrite(STDERR, "{$required} must be ordered before {$dependent}\n");
+        exit(1);
+    }
+};
+
+$assertBefore('mercato-core', 'mercato-vendors');
+$assertBefore('mercato-vendors', 'mercato-products');
+$assertBefore('mercato-products', 'mercato-orders');
+$assertBefore('mercato-orders', 'mercato-commissions');
+$assertBefore('mercato-stripe-connect', 'mercato-payouts');
+$assertBefore('mercato-sendgrid', 'mercato-notifications');
+$assertBefore('mercato-aws-s3', 'mercato-kyc-kyb');
+$assertBefore('mercato-orders', 'mercato-disputes');
+$assertBefore('mercato-products', 'mercato-search');
+$assertBefore('mercato-tax-engine', 'mercato-taxjar');
+$assertBefore('mercato-tax-engine', 'mercato-avalara');
+$assertBefore('mercato-orders', 'mercato-shippo');
+
+echo implode(PHP_EOL, $ordered) . PHP_EOL;
